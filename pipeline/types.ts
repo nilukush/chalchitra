@@ -66,6 +66,10 @@ export interface TitleRecord {
   episodes?: string;
   budget?: string;
   gross?: string;
+  /** poster/tagline hook shown under the title (TMDB tagline or derived) */
+  tagline?: string;
+  /** thematic mood tags (AI enrichment, future) */
+  moods?: string[];
   /** TMDB backdrop (image.tmdb.org) used as the hero band background */
   backdrop?: string;
   /** community rating (TMDB) shown in the hero chips */

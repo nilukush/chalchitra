@@ -134,6 +134,35 @@ export function languageBadgeClass(language: string | undefined): string {
   return 'text-ivory-300 bg-ink-700 ring-ink-600';
 }
 
+const GENRE_HUES: Record<string, string> = {
+  Action: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+  Adventure: 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  Animation: 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  Biography: 'text-ivory-200 bg-ink-700 ring-ink-500',
+  Comedy: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+  Crime: 'text-lotus-400 bg-lotus-500/15 ring-lotus-500/40',
+  Documentary: 'text-ivory-200 bg-ink-700 ring-ink-500',
+  Drama: 'text-lotus-400 bg-lotus-500/15 ring-lotus-500/40',
+  Family: 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  Fantasy: 'text-lotus-400 bg-lotus-500/15 ring-lotus-500/40',
+  'History': 'text-ivory-200 bg-ink-700 ring-ink-500',
+  Horror: 'text-lotus-400 bg-lotus-500/15 ring-lotus-500/40',
+  Musical: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+  Music: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+  Mystery: 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  Romance: 'text-lotus-400 bg-lotus-500/15 ring-lotus-500/40',
+  'Sci-Fi': 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  'Science Fiction': 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  Sport: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+  Thriller: 'text-peacock-400 bg-peacock-500/15 ring-peacock-500/40',
+  War: 'text-ivory-200 bg-ink-700 ring-ink-500',
+  Western: 'text-saffron-300 bg-saffron-500/15 ring-saffron-500/40',
+};
+
+export function genreChipClass(genre: string): string {
+  return GENRE_HUES[genre] ?? 'text-ivory-200 bg-ink-700 ring-ink-500';
+}
+
 export function imdbTitleUrl(imdbId: string): string {
   return `https://www.imdb.com/title/tt${imdbId}/`;
 }

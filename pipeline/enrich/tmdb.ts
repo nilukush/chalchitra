@@ -85,6 +85,15 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       backdrops++;
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
+    // Wikipedia film infoboxes carry no genre field — TMDB supplies the "type"
+    if (record.genres.length === 0 && Array.isArray(details.genres) && details.genres.length > 0) {
+      record.genres = details.genres.map((g: any) => g.name).filter(Boolean).slice(0, 4);
+      if (!sources.includes('tmdb')) sources.push('tmdb');
+    }
+    if (!record.tagline && typeof details.tagline === 'string' && details.tagline.trim()) {
+      record.tagline = details.tagline.trim();
+      if (!sources.includes('tmdb')) sources.push('tmdb');
+    }
     const votes = details.vote_count ?? 0;
     if (!record.rating && typeof details.vote_average === 'number' && votes >= 10) {
       record.rating = { source: 'tmdb', value: details.vote_average, votes };

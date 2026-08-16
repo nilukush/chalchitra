@@ -10,7 +10,7 @@ import ReferenceList from './ReferenceList.astro';
 import StatTiles from './StatTiles.astro';
 import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
-import { SITE, getPersonBySlug, languageBadgeClass, titles } from '../lib/data';
+import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -58,7 +58,11 @@ const relatedRecords = (item.relatedTitles ?? [])
 
 const plotParagraphs = (item.plotHtml ?? item.plot ?? '').split('\n').filter(Boolean);
 
-// facts as visual stat tiles
+// facts as visual stat tiles — specs only; people live in "Cast & crew" (no duplication)
+const PEOPLE_FACTS = new Set([
+  'Starring', 'Directed by', 'Created by', 'Written by', 'Produced by',
+  'Music', 'Cinematography', 'Editing',
+]);
 const TILE_ICONS: Record<string, Parameters<typeof Icon>[0]['name']> = {
   'Original title': 'pen',
   'Directed by': 'clapperboard',
@@ -84,19 +88,21 @@ const TILE_ICONS: Record<string, Parameters<typeof Icon>[0]['name']> = {
   'Genres': 'star',
 };
 const BIG_TILES = new Set(['Release date', 'First aired', 'Runtime', 'Box office', 'Budget', 'Episodes', 'Seasons']);
-const statTiles = facts.map((f) => ({
-  icon: TILE_ICONS[f.label] ?? 'link',
-  label: f.label,
-  value: f.value,
-  big: BIG_TILES.has(f.label) && f.value.length <= 22,
-}));
+const statTiles = facts
+  .filter((f) => !PEOPLE_FACTS.has(f.label))
+  .map((f) => ({
+    icon: TILE_ICONS[f.label] ?? 'link',
+    label: f.label,
+    value: f.value,
+    big: BIG_TILES.has(f.label) && f.value.length <= 22,
+  }));
 
 // in-page navigation for the long editorial page
 const navItems = [
   plotParagraphs.length > 0 && { href: '#plot', label: item.kind === 'movie' ? 'Plot' : 'Premise', icon: 'pen' as const },
   item.kind === 'series' && item.episodesList.length > 0 && { href: '#episodes', label: 'Episodes', icon: 'tv' as const },
   item.soundtrack && item.soundtrack.tracks.length > 0 && { href: '#soundtrack', label: 'Music', icon: 'music' as const },
-  castPeople.length > 0 && { href: '#cast', label: 'Cast', icon: 'users' as const },
+  (castPeople.length > 0 || crew.length > 0) && { href: '#cast', label: 'Cast & crew', icon: 'users' as const },
   statTiles.length > 0 && { href: '#facts', label: 'Details', icon: 'clapperboard' as const },
   ...item.articleSections.slice(0, 4).map((s) => ({ href: `#sec-${s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, label: s.title, icon: 'film' as const })),
   item.references.length > 0 && { href: '#references', label: 'Sources', icon: 'award' as const },
@@ -150,27 +156,60 @@ const jsonLd: Record<string, unknown>[] = [
     <Breadcrumbs crumbs={[{ label: indexLabel, href: indexHref }, { label: item.title }]} />
 
     <div class="grid gap-8 lg:grid-cols-[300px_1fr]">
-      <!-- Poster column -->
+      <!-- Poster column: sticky, with quick actions so the pane is never dead space -->
       <div>
-        <div class="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800 shadow-2xl shadow-black/40">
-          {item.poster ? (
-            <img src={item.poster} alt={`${item.title} poster`} width="480" height="720" class="w-full object-cover" />
-          ) : (
-            <div class="flex aspect-[2/3] items-center justify-center grain">
-              <span class="font-display text-6xl text-ivory-600">च</span>
+        <div class="lg:sticky lg:top-20 lg:self-start">
+          <div class="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800 shadow-2xl shadow-black/40">
+            {item.poster ? (
+              <img src={item.poster} alt={`${item.title} poster`} width="480" height="720" class="w-full object-cover" />
+            ) : (
+              <div class="flex aspect-[2/3] items-center justify-center grain">
+                <span class="font-display text-6xl text-ivory-600">च</span>
+              </div>
+            )}
+          </div>
+
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            {item.trailer && (
+              <a href={item.trailer} rel="noopener" class="focus-ring col-span-2 flex items-center justify-center gap-2 rounded-xl bg-saffron-500 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-lg shadow-saffron-500/20 transition hover:bg-saffron-400">
+                <Icon name="film" class="h-4 w-4" /> Watch trailer
+              </a>
+            )}
+            {item.external.imdbId && (
+              <a href={imdbTitleUrl(item.external.imdbId)} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                IMDb ↗
+              </a>
+            )}
+            <a href={item.wikiUrl} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+              Wikipedia ↗
+            </a>
+            {item.external.official && (
+              <a href={item.external.official} rel="noopener" class="focus-ring col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                Official website ↗
+              </a>
+            )}
+          </div>
+
+          {item.rating && (
+            <div class="mt-3 flex items-center justify-between rounded-xl border border-ink-700/70 bg-ink-850/70 px-4 py-3">
+              <span class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-ivory-600">
+                <Icon name="star" class="h-4 w-4 text-saffron-400" /> TMDB score
+              </span>
+              <span class="font-display text-2xl font-bold text-saffron-300">{item.rating.value.toFixed(1)}</span>
+            </div>
+          )}
+
+          {item.external.links.length > 0 && (
+            <div class="mt-4 space-y-1.5 text-sm">
+              <p class="text-xs font-semibold uppercase tracking-widest text-ivory-600">Elsewhere</p>
+              {item.external.links.slice(0, 6).map((link) => (
+                <a href={link.url} rel="noopener" class="focus-ring block truncate text-ivory-400 hover:text-saffron-300">
+                  {link.label} ↗
+                </a>
+              ))}
             </div>
           )}
         </div>
-        {item.external.links.length > 0 && (
-          <div class="mt-4 space-y-1.5 text-sm">
-            <p class="text-xs font-semibold uppercase tracking-widest text-ivory-600">Elsewhere</p>
-            {item.external.links.slice(0, 6).map((link) => (
-              <a href={link.url} rel="noopener" class="focus-ring block truncate text-ivory-400 hover:text-saffron-300">
-                {link.label} ↗
-              </a>
-            ))}
-          </div>
-        )}
       </div>
 
       <!-- Main column -->
@@ -196,19 +235,27 @@ const jsonLd: Record<string, unknown>[] = [
               {item.kind === 'series' && item.episodes && (
                 <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.episodes} episodes</span>
               )}
-              {item.rating && (
-                <span class="rounded-full bg-saffron-500/15 px-3 py-1 text-xs font-semibold text-saffron-300 ring-1 ring-inset ring-saffron-500/40">
-                  ★ {item.rating.value.toFixed(1)}<span class="font-normal text-saffron-300/60"> · {item.rating.source.toUpperCase()}</span>
-                </span>
-              )}
             </div>
 
             <h1 class="mt-4 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl [text-wrap:balance]">{item.title}</h1>
             {item.nativeName && <p class="mt-1 text-lg text-ivory-400" lang="hi">{item.nativeName}</p>}
 
+            {item.tagline && (
+              <p class="mt-3 max-w-xl font-display text-lg italic leading-snug text-saffron-300/90">{item.tagline}</p>
+            )}
+
+            {item.genres.length > 0 && (
+              <div class="mt-4 flex flex-wrap items-center gap-2">
+                {item.genres.map((genre) => (
+                  <span class={`rounded-full px-3.5 py-1.5 text-sm font-semibold ring-1 ring-inset ${genreChipClass(genre)}`}>
+                    {genre}
+                  </span>
+                ))}
+              </div>
+            )}
+
             <p class="mt-3 text-sm text-ivory-500">
               {item.year} · {item.language} {kindWord.toLowerCase()}
-              {item.genres.length > 0 && ` · ${item.genres.slice(0, 3).join(' / ')}`}
               {item.directedBy.length > 0 && ` · Directed by ${item.directedBy.slice(0, 2).join(', ')}`}
             </p>
           </div>
@@ -263,53 +310,55 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
-        {castPeople.length > 0 && (
+        {(castPeople.length > 0 || crew.length > 0) && (
           <section class="mt-10" aria-labelledby="cast">
-            <h2 id="cast" class="font-display text-2xl font-bold text-ivory-50">Cast</h2>
-            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {castPeople.map(({ member, person }) => (
-                <div>
-                  {person ? (
-                    <div class="flex gap-2">
-                      <div class="min-w-0 flex-1"><PersonCard person={person} /></div>
-                    </div>
-                  ) : (
-                    <div class="flex items-center gap-3 rounded-xl border border-ink-700/50 bg-ink-850/40 p-3">
-                      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-600">
-                        {member.name.slice(0, 1)}
-                      </span>
-                      <span class="min-w-0">
-                        <span class="block truncate text-sm font-semibold text-ivory-200">{member.name}</span>
-                        {member.role && <span class="block truncate text-xs text-ivory-600">{member.role}</span>}
-                      </span>
-                    </div>
-                  )}
-                  {person && member.role && (
-                    <p class="mt-1 truncate pl-1 text-xs text-ivory-600">as {member.role}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {crew.length > 0 && (
-          <section class="mt-10" aria-labelledby="crew">
-            <h2 id="crew" class="font-display text-2xl font-bold text-ivory-50">Crew</h2>
-            <dl class="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
-              {crew.map((member) => (
-                <div class="flex items-baseline justify-between gap-4 border-b border-ink-700/40 pb-2">
-                  <dt class="text-sm text-ivory-500">{member.role}</dt>
-                  <dd class="text-right text-sm font-medium text-ivory-200">
-                    {member.slug ? (
-                      <a href={`/people/${member.slug}`} class="hover:text-saffron-300">{member.name}</a>
+            <h2 id="cast" class="font-display text-2xl font-bold text-ivory-50">Cast &amp; crew</h2>
+            {castPeople.length > 0 && (
+              <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {castPeople.map(({ member, person }) => (
+                  <div>
+                    {person ? (
+                      <div class="flex gap-2">
+                        <div class="min-w-0 flex-1"><PersonCard person={person} /></div>
+                      </div>
                     ) : (
-                      member.name
+                      <div class="flex items-center gap-3 rounded-xl border border-ink-700/50 bg-ink-850/40 p-3">
+                        <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-600">
+                          {member.name.slice(0, 1)}
+                        </span>
+                        <span class="min-w-0">
+                          <span class="block truncate text-sm font-semibold text-ivory-200">{member.name}</span>
+                          {member.role && <span class="block truncate text-xs text-ivory-600">{member.role}</span>}
+                        </span>
+                      </div>
                     )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
+                    {person && member.role && (
+                      <p class="mt-1 truncate pl-1 text-xs text-ivory-600">as {member.role}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {crew.length > 0 && (
+              <div class="mt-8">
+                {castPeople.length > 0 && <h3 class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-600">Key crew</h3>}
+                <dl class="grid gap-x-8 gap-y-3 sm:grid-cols-2">
+                  {crew.map((member) => (
+                    <div class="flex items-baseline justify-between gap-4 border-b border-ink-700/40 pb-2">
+                      <dt class="text-sm text-ivory-500">{member.role}</dt>
+                      <dd class="text-right text-sm font-medium text-ivory-200">
+                        {member.slug ? (
+                          <a href={`/people/${member.slug}`} class="hover:text-saffron-300">{member.name}</a>
+                        ) : (
+                          member.name
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
           </section>
         )}
 
@@ -382,20 +431,13 @@ const jsonLd: Record<string, unknown>[] = [
 
         <section class="mt-10 border-t border-ink-700/60 pt-6" aria-labelledby="links">
           <h2 id="links" class="sr-only">External links and sources</h2>
-          <div class="flex flex-wrap items-center gap-2">
-            {item.trailer && (
-              <a href={item.trailer} rel="noopener" class="focus-ring rounded-full bg-saffron-500 px-3.5 py-1.5 text-xs font-semibold text-ink-950 transition hover:bg-saffron-400">
-                ▶ Watch trailer
-              </a>
-            )}
-            <ExternalLinks
-              imdbId={item.external.imdbId}
-              official={item.external.official}
-              links={item.external.links}
-              wikiUrl={item.wikiUrl}
-              kind="title"
-            />
-          </div>
+          <ExternalLinks
+            imdbId={item.external.imdbId}
+            official={item.external.official}
+            links={item.external.links}
+            wikiUrl={item.wikiUrl}
+            kind="title"
+          />
           <p class="mt-4 text-xs leading-relaxed text-ivory-600">
             Text, metadata and images on this page derive from the Wikipedia article
             <a href={item.wikiUrl} rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">“{item.wikiTitle}”</a>,

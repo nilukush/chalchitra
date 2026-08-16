@@ -24,6 +24,7 @@ import {
 } from './wikitext/index.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
 import { enrichTitles } from './enrich/tmdb.js';
+import { enrichWithAi } from './enrich/ai.js';
 import { loadEnv } from './env.js';
 
 loadEnv();
@@ -426,6 +427,16 @@ async function main() {
 
   // multi-source enrichment (TMDB) — fills gaps Wikipedia leaves; no-op without key
   await enrichTitles([...movies, ...series]);
+  // AI hooks/moods — key-gated; falls back to tagline/first-sentence below
+  await enrichWithAi([...movies, ...series]);
+
+  // display hook fallback: TMDB tagline → AI one-liner (already set) → first plot sentence
+  for (const record of [...movies, ...series]) {
+    if (record.tagline) continue;
+    const source = record.plot ?? record.summary ?? '';
+    const firstSentence = /^[\s\S]*?[.!?](?=\s|$)/.exec(source.trim())?.[0] ?? '';
+    if (firstSentence.length >= 40 && firstSentence.length <= 200) record.tagline = firstSentence.trim();
+  }
 
   // stats
   const languageMap = new Map<string, { movies: number; series: number }>();
