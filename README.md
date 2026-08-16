@@ -37,6 +37,8 @@ npm run pipeline:all       # all four, in order
   endpoint (7 requests for a 7-day window) and scores catalogue articles that appear in the
   daily top 1000 — a real human-interest signal. Re-run daily to refresh "Trending this week"
   on the home page. (The per-article pageviews endpoint is rate-limited hard; don't use it.)
+- **Refreshing Wikipedia content**: page payloads are cached forever by default. To re-fetch
+  everything (new posters, updated plots): `FORCE_REFRESH=1 npm run pipeline:fetch && npm run pipeline:dataset && npm run build`.
 
 ## Site
 
