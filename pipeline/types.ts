@@ -31,6 +31,10 @@ export interface TitleRecord {
   poster?: string;
   summary?: string;
   plot?: string;
+  reception?: string;
+  nativeName?: string;
+  lastAired?: string;
+  relatedTitles: string[];
   releaseDate?: string;
   runtime?: string;
   genres: string[];

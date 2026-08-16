@@ -303,6 +303,7 @@ export async function resolveImageThumbUrls(
   width = 480,
 ): Promise<Map<string, string>> {
   const map = new Map<string, string>();
+  const canonicalKey = (title: string) => title.replace(/^File:/i, '').replace(/_/g, ' ').trim();
   const normalized = [...new Set(filenames.filter(Boolean).map((f) => f.trim()))]
     .map((f) => (f.startsWith('File:') ? f : `File:${f.replace(/^Image:/i, '')}`))
     .filter((f) => f.length > 5);
@@ -319,7 +320,7 @@ export async function resolveImageThumbUrls(
     for (const page of data.query?.pages ?? []) {
       const thumb = page.imageinfo?.[0]?.thumburl;
       // API appends utm tracking params on unscaled thumbs; the bare URL is canonical
-      if (thumb) map.set(page.title.replace(/^File:/i, ''), thumb.split('?')[0]);
+      if (thumb) map.set(canonicalKey(page.title), thumb.split('?')[0]);
     }
   }
   return map;

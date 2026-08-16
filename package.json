@@ -14,7 +14,8 @@
     "pipeline:titles": "tsx pipeline/extract-titles.ts",
     "pipeline:fetch": "tsx pipeline/fetch-pages.ts",
     "pipeline:dataset": "tsx pipeline/build-dataset.ts",
-    "pipeline:all": "npm run pipeline:titles && npm run pipeline:fetch && npm run pipeline:dataset"
+    "pipeline:trends": "tsx pipeline/fetch-trends.ts",
+    "pipeline:all": "npm run pipeline:titles && npm run pipeline:fetch && npm run pipeline:dataset && npm run pipeline:trends"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.4.1",

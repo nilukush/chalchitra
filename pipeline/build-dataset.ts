@@ -33,9 +33,9 @@ const MONTHS = [
 ];
 
 const CREW_FIELDS = [
-  'director', 'creator', 'producer', 'writer', 'screenwriter', 'story',
-  'music', 'composer', 'theme_music_composer', 'cinematography', 'editor',
-  'choreographer', 'lyricist', 'production_designer', 'costume_designer',
+  'director', 'creator', 'producer', 'executive_producer', 'writer', 'screenwriter', 'story',
+  'music', 'composer', 'theme_music_composer', 'cinematography', 'editor', 'narrator',
+  'choreographer', 'lyricist', 'production_designer', 'costume_designer', 'presenter',
 ];
 
 const FACT_FIELDS: [string, string][] = [
@@ -114,7 +114,9 @@ function cleanThumb(url: string | undefined): string | undefined {
 /** "Dhurandhar poster.jpg" or "[[File:X.jpg|thumb|…]]" → "X.jpg" (null if none). */
 function imageFilenameFromInfobox(value: string | undefined): string | null {
   if (!value) return null;
-  const match = /([^\[\]|:]+\.(?:jpe?g|png|svg|gif|webp))/i.exec(value);
+  // commented-out posters must never be used (may reference another film's art)
+  const uncommented = value.replace(/<!--[\s\S]*?-->/g, '');
+  const match = /([^\[\]|:]+\.(?:jpe?g|png|svg|gif|webp))/i.exec(uncommented);
   return match ? match[1].trim() : null;
 }
 
@@ -135,6 +137,11 @@ function parseTitlePage(
     getSection(wikitext, 'Plot') ??
     getSection(wikitext, 'Premise') ??
     getSection(wikitext, 'Synopsis');
+  const reception =
+    getSection(wikitext, 'Reception') ??
+    getSection(wikitext, 'Critical response') ??
+    getSection(wikitext, 'Critical reception') ??
+    getSection(wikitext, 'Box office');
 
   const record: TitleRecord = {
     kind,
@@ -149,6 +156,10 @@ function parseTitlePage(
     poster: cleanThumb(page.thumb),
     summary: page.extract ? truncate(page.extract, 900) : leadFromWikitext(wikitext),
     plot: truncate(stripWikitext(plot ?? ''), 1600),
+    reception: truncate(stripWikitext(reception ?? ''), 1200),
+    nativeName: cleanValue(box.native_name) || undefined,
+    lastAired: cleanValue(box.last_aired) || undefined,
+    relatedTitles: splitListField(box.related),
     releaseDate: parseStartDate(box.released) ?? parseStartDate(box.first_aired) ?? undefined,
     runtime: cleanValue(box.runtime) || undefined,
     genres: splitListField(box.genre),
@@ -156,12 +167,12 @@ function parseTitlePage(
     createdBy: splitListField(box.creator),
     writtenBy: [...splitListField(box.writer), ...splitListField(box.screenplay), ...splitListField(box.story)].filter((v, i, a) => a.indexOf(v) === i),
     musicBy: splitListField(box.music).length > 0 ? splitListField(box.music) : splitListField(box.composer),
-    producedBy: splitListField(box.producer),
-    cinematographyBy: splitListField(box.cinematography),
+    producedBy: [...splitListField(box.producer), ...splitListField(box.executive_producer)].filter((v, i, a) => a.indexOf(v) === i),
+    cinematographyBy: [...splitListField(box.cinematography), ...splitListField(box.camera)].filter((v, i, a) => a.indexOf(v) === i),
     editedBy: splitListField(box.editing).length > 0 ? splitListField(box.editing) : splitListField(box.editor),
-    studios: splitListField(box.studio).length > 0 ? splitListField(box.studio) : splitListField(box.company),
+    studios: [...(splitListField(box.studio).length > 0 ? splitListField(box.studio) : splitListField(box.company)), ...splitListField(box.production_companies)].filter((v, i, a) => a.indexOf(v) === i),
     distributor: splitListField(box.distributor),
-    network: splitListField(box.network),
+    network: [...splitListField(box.network), ...splitListField(box.channel)].filter((v, i, a) => a.indexOf(v) === i),
     seasons: cleanValue(box.num_seasons) || undefined,
     episodes: cleanValue(box.num_episodes) || undefined,
     budget: cleanValue(box.budget) || undefined,
@@ -344,8 +355,9 @@ async function main() {
   if (imageTargets.size > 0) {
     console.log(`  ${imageTargets.size} unique images to resolve`);
     const thumbs = await resolveImageThumbUrls([...imageTargets.keys()]);
+    const canonicalKey = (t: string) => t.replace(/_/g, ' ').trim();
     for (const [filename, setters] of imageTargets) {
-      const url = thumbs.get(filename);
+      const url = thumbs.get(canonicalKey(filename));
       if (url) for (const apply of setters) apply(url);
     }
   }

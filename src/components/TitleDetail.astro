@@ -5,7 +5,7 @@ import ExternalLinks from './ExternalLinks.astro';
 import JsonLd from './JsonLd.astro';
 import PersonCard from './PersonCard.astro';
 import Base from '../layouts/Base.astro';
-import { SITE, getPersonBySlug, languageBadgeClass } from '../lib/data';
+import { SITE, getPersonBySlug, languageBadgeClass, titles } from '../lib/data';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -22,6 +22,7 @@ const castPeople = item.cast
 const crew = item.crew.slice(0, 18);
 
 const facts: { label: string; value: string }[] = [
+  { label: 'Original title', value: item.nativeName ?? '' },
   { label: item.kind === 'movie' ? 'Directed by' : 'Directed by', value: item.directedBy.join(', ') },
   { label: 'Created by', value: item.createdBy.join(', ') },
   { label: 'Written by', value: item.writtenBy.join(', ') },
@@ -34,6 +35,7 @@ const facts: { label: string; value: string }[] = [
   { label: 'Distributed by', value: item.distributor.join(', ') },
   { label: 'Network', value: item.network.join(', ') },
   { label: item.kind === 'movie' ? 'Release date' : 'First aired', value: item.releaseDate ?? '' },
+  { label: 'Last aired', value: item.lastAired ?? '' },
   { label: 'Seasons', value: item.seasons ?? '' },
   { label: 'Episodes', value: item.episodes ?? '' },
   { label: 'Runtime', value: item.runtime ?? '' },
@@ -42,6 +44,12 @@ const facts: { label: string; value: string }[] = [
   { label: 'Box office', value: item.gross ?? '' },
   { label: 'Genres', value: item.genres.join(', ') },
 ].filter((f) => f.value.length > 0);
+
+// internal links for related titles that exist in our catalogue
+const relatedRecords = (item.relatedTitles ?? [])
+  .map((name) => titles.find((t) => t.title.toLowerCase() === name.toLowerCase() && t.slug !== item.slug))
+  .filter((t): t is NonNullable<typeof t> => Boolean(t))
+  .slice(0, 6);
 
 const description =
   (item.plot ?? item.summary ?? `${item.title} is a ${item.year} Indian ${item.language} ${kindWord.toLowerCase()}.`)
@@ -156,6 +164,31 @@ const jsonLd: Record<string, unknown>[] = [
             <p class="mt-3 text-xs text-ivory-600">
               Excerpted from Wikipedia (CC BY-SA 4.0) — read the full article via the source link below.
             </p>
+          </section>
+        )}
+
+        {item.reception && (
+          <section class="mt-10" aria-labelledby="reception">
+            <h2 id="reception" class="font-display text-2xl font-bold text-ivory-50">Reception</h2>
+            <p class="mt-4 max-w-3xl leading-relaxed text-ivory-300">{item.reception}</p>
+            <p class="mt-3 text-xs text-ivory-600">
+              Excerpted from the article's reception coverage (CC BY-SA 4.0).
+            </p>
+          </section>
+        )}
+
+        {relatedRecords.length > 0 && (
+          <section class="mt-10" aria-labelledby="related">
+            <h2 id="related" class="font-display text-2xl font-bold text-ivory-50">Related titles</h2>
+            <ul class="mt-4 flex flex-wrap gap-2.5">
+              {relatedRecords.map((rel) => (
+                <li>
+                  <a href={rel.kind === 'movie' ? `/movies/${rel.slug}` : `/series/${rel.slug}`} class="focus-ring inline-block rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                    {rel.title} <span class="text-ivory-600">· {rel.kind === 'movie' ? 'Film' : 'Series'}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

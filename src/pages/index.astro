@@ -3,13 +3,16 @@ import Base from '../layouts/Base.astro';
 import PosterCard from '../components/PosterCard.astro';
 import PersonCard from '../components/PersonCard.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import { SITE, stats, recentTitles, upcomingTitles, spotlightPersons, languages } from '../lib/data';
+import { SITE, stats, recentTitles, upcomingTitles, spotlightPersons, languages, trendingTitles, trendingPersons } from '../lib/data';
 
 const latestMovies = recentTitles('movie', 12);
 const latestSeries = recentTitles('series', 6);
 const soon = upcomingTitles('movie', 5);
 const people = spotlightPersons(12);
 const topLanguages = languages().slice(0, 10);
+const hotTitles = trendingTitles(12);
+const hotPeople = trendingPersons(8);
+const hasTrends = hotTitles.length > 0;
 ---
 
 <Base title={SITE.name}>
@@ -54,6 +57,41 @@ const topLanguages = languages().slice(0, 10);
       </dl>
     </div>
   </section>
+
+  <!-- Trending -->
+  {hasTrends && (
+    <section class="border-b border-ink-700/60 bg-gradient-to-b from-saffron-500/[0.06] to-transparent" aria-labelledby="trending">
+      <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+        <div class="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-saffron-500">
+              🔥 Trending this week · <span class="text-ivory-600">by Wikipedia readership, last 7 days</span>
+            </p>
+            <h2 id="trending" class="font-display text-2xl font-bold tracking-tight text-ivory-50 sm:text-3xl">What India is watching</h2>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {hotTitles.map((item, i) => (
+            <div class="relative">
+              <span class="absolute -left-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-saffron-500 font-display text-sm font-bold text-ink-950 shadow-lg shadow-black/40" aria-label={`Rank ${i + 1}`}>
+                {i + 1}
+              </span>
+              <PosterCard item={item} eager={i < 6} />
+            </div>
+          ))}
+        </div>
+
+        {hotPeople.length > 0 && (
+          <div class="mt-12">
+            <h3 class="font-display text-xl font-bold text-ivory-50">Trending people</h3>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {hotPeople.map((person) => <PersonCard person={person} />)}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  )}
 
   <!-- Latest movies -->
   <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="latest-movies">

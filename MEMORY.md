@@ -1,5 +1,41 @@
 # MEMORY.md — session state log
 
+## Session 2 — 2026-08-16 (audit + trending) — COMPLETE
+
+User asked for a data audit (4 questions) + trending showcase. Findings & actions:
+
+**Q1 Images.** Was 328/425 titles. Audit found 20 more resolvable: the imageinfo API
+normalizes titles to SPACES while our keys kept UNDERSCORES → mismatch (fixed in
+`resolveImageThumbUrls` + lookup); commented-out `<!-- X.jpg -->` params now ignored (wrong-art
+risk). Now **346/425 (81%)**; remaining 79 verified as genuinely having NO image uploaded to
+Wikipedia (empty/commented poster params, mostly unreleased/obscure titles). Persons: 1,403/2,210
+portraits (63%) — remainder have no free image (Wikipedia excludes non-free from pageimages;
+their infobox images are fair-use and were resolved where present).
+
+**Q2 Title-page fields.** Census of all infobox keys vs captured: added `reception` text
+(227 titles now carry it), `last_aired`, `native_name`, `executive_producer`→producers,
+`narrator`/`presenter`→crew+persons (+9 people), `camera`→cinematography,
+`production_companies`→studios, `channel`→network, `related`→internal related-titles chips.
+NOT captured by design: full plot (>1600-char excerpts, licensing), episode tables, soundtrack
+listings, full reference list (count only).
+
+**Q3 Persons.** 100% of hyperlinked cast/crew captured (2,857 cast links + 686 crew links →
+2,219 unique persons; 82 link targets had no article). 2,598 cast names are plain-text on film
+pages (no hyperlink → out of scope by user's definition; shown as name+role only).
+Bios 100%, infobox facts 94%. NOT captured: pre-2026 filmography text (85% have such sections),
+awards-table details, personal-life text — headings listed + infobox awards string only.
+
+**Q4 Trending.** Implemented & live on the home page ("What India is watching" + "Trending
+people", ranked posters). Signal = Wikimedia **top-viewed-articles-per-day** bulk endpoint
+(7 days, 7 requests, cached per day in `data/cache/pageviews/top-*.json`), scored with recency
+weighting (`pipeline/trends-lib.ts`, tested). 49 catalogue articles currently have scores;
+#1 DC (409K), #1 Wamiqa Gabbi. LESSON: the **per-article** pageviews endpoint 429s instantly —
+never use it; the bulk endpoint lags ~2-3 days (walks back until data exists).
+Refresh cadence: re-run `npm run pipeline:trends` (then rebuild) daily.
+
+**State.** 80 tests green; 2,651 pages; 50,160 internal links 0 missing; trends section verified
+rendering with correct joins (kind-aware links).
+
 ## Session 1 — 2026-08-16 (initial build) — COMPLETE
 
 **Goal.** Beautiful graphical website for Indian movies & series, 2026 scope, from Wikipedia;

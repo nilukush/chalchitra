@@ -6,9 +6,9 @@ from Wikipedia. Product name: **Chalachitra** (चलचित्र). Data mode
 Korean cinema is the planned next dataset.
 
 ## Commands
-- `npm run pipeline:all` — titles → fetch → dataset (idempotent, disk-cached, polite ~1 req/s)
+- `npm run pipeline:all` — titles → fetch → dataset → trends (idempotent, disk-cached, polite ~1 req/s)
 - `npm run dev` / `npm run build` / `npm run preview` — port **4730** (non-standard by design)
-- `npm test` — vitest, 75 tests (wikitext parsers, dataset builders) — **TDD: extend tests first**
+- `npm test` — vitest, 80 tests (wikitext parsers, dataset builders, trends scoring) — **TDD: extend tests first**
 - Deploy env var: `SITE_URL` (canonical/OG/sitemap/JSON-LD base URL)
 
 ## Architecture
@@ -29,7 +29,11 @@ Korean cinema is the planned next dataset.
 
 ## Gotchas
 - Rate limits are real: pipeline paces itself; if a batch 429s it retries with backoff, then skips
-  (re-run to resume from cache).
+  (re-run to resume from cache). The **per-article** pageviews REST endpoint 429s almost
+  immediately — trending uses the **bulk top-per-day** endpoint instead (`pipeline/fetch-trends.ts`).
+- `prop=pageimages` excludes non-free posters → posters resolved via infobox `image` +
+  `imageinfo` (`resolveImageThumbUrls`); API normalizes file titles to spaces (watch underscores),
+  appends `utm_source` params (stripped), and commented-out `<!-- X.jpg -->` params must be ignored.
 - `parseInfobox` splits at top-level pipes only — nested templates (`{{ubl|…}}`) and piped links
   are preserved; covered by `pipeline/wikitext/*.test.ts`.
 - Year is currently hard-coded to 2026 in `pipeline/build-dataset.ts` (`YEAR`).

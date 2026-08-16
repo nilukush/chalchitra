@@ -43,6 +43,7 @@ const ROLE_LABELS: Record<string, string> = {
   director: 'Director',
   creator: 'Creator',
   producer: 'Producer',
+  executive_producer: 'Executive producer',
   writer: 'Writer',
   screenwriter: 'Writer',
   story: 'Writer',

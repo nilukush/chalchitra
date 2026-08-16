@@ -22,7 +22,8 @@ crew, credits, external links and references.
 npm run pipeline:titles    # walk Wikipedia categories (paginated, subcategory-recursive)
 npm run pipeline:fetch     # fetch 425 title pages (batched, cached in data/cache/pages)
 npm run pipeline:dataset   # parse → movies/series/persons/search-index/stats JSON
-npm run pipeline:all       # all three, in order
+npm run pipeline:trends    # trending signal → data/trends.json (see below)
+npm run pipeline:all       # all four, in order
 ```
 
 - **Politeness**: custom User-Agent, ~1 req/s pacing, `Retry-After`-aware exponential backoff,
@@ -32,6 +33,10 @@ npm run pipeline:all       # all three, in order
   - `Category:2026 Indian films` → `data/movies.json`
   - `Category:2026 Indian television series debuts` (incl. subcategories) → `data/series.json`
   - Cast/crew wikilinks → `data/persons.json` (redirect-resolved, deduped, credits computed)
+- **Trending**: `pipeline:trends` uses the Wikimedia **top-viewed-articles-per-day** bulk
+  endpoint (7 requests for a 7-day window) and scores catalogue articles that appear in the
+  daily top 1000 — a real human-interest signal. Re-run daily to refresh "Trending this week"
+  on the home page. (The per-article pageviews endpoint is rate-limited hard; don't use it.)
 
 ## Site
 
