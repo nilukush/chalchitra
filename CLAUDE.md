@@ -12,12 +12,16 @@ Korean cinema is the planned next dataset.
 - Deploy env var: `SITE_URL` (canonical/OG/sitemap/JSON-LD base URL)
 
 ## Architecture
-- `pipeline/wikitext/` — pure, fixture-tested parsers: infobox, sections, cast bullets,
-  external links (IMDb/official), dates, person-link heuristics. Never throw — degrade.
+- `pipeline/wikitext/` — pure, fixture-tested parsers: infobox + generic `findTemplates`
+  (recursive-safe), sections, cast bullets, external links (IMDb/official), dates, person-link
+  heuristics, episodes ({{Episode list}} + wikitables), soundtrack ({{Track listing}} + lists),
+  references (cite templates, named refs, bare links). Never throw — degrade.
 - `pipeline/wiki-api.ts` — cached API client (sha1-keyed response cache; `data/cache/pages/{pageid}.json`),
   redirect-aware title resolution, batched fetch (10/batch), 429 backoff honoring Retry-After.
 - `pipeline/build-dataset.ts` — parse titles → collect person links → fetch persons → compute
-  back-link credits → emit `data/*.json` + `public/search-index.json`.
+  back-link credits → emit `data/*.json` + `public/search-index.json`. Plot/reception/summary
+  and references are stored FULL (no truncation) — product policy: the site is the destination.
+- `pipeline/fetch-trends.ts` + `trends-lib.ts` — trending via bulk top-per-day pageviews endpoint.
 - `src/` — Astro static site. `src/lib/data.ts` is the single data-access layer.
   `TitleDetail.astro` is shared by movie & series pages. Person credits reuse real title records.
 

@@ -1,0 +1,50 @@
+---
+import type { EpisodeRow } from '../../pipeline/wikitext/episodes.js';
+
+interface Props {
+  episodes: EpisodeRow[];
+}
+const { episodes } = Astro.props;
+const COLLAPSE_AFTER = 20;
+const collapsed = episodes.length > COLLAPSE_AFTER;
+---
+
+<div class="overflow-hidden rounded-2xl border border-ink-700/70">
+  <table class="w-full text-sm">
+    <caption class="sr-only">Episode guide</caption>
+    <thead>
+      <tr class="border-b border-ink-700/70 bg-ink-800/60 text-left text-[11px] uppercase tracking-widest text-ivory-600">
+        <th scope="col" class="w-12 px-4 py-2.5">Ep</th>
+        <th scope="col" class="px-4 py-2.5">Title</th>
+        <th scope="col" class="hidden px-4 py-2.5 md:table-cell">Director</th>
+        <th scope="col" class="hidden px-4 py-2.5 lg:table-cell">Writer</th>
+        <th scope="col" class="px-4 py-2.5 text-right">Air date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {episodes.map((ep, i) => (
+        <tr class={`border-b border-ink-700/40 last:border-0 hover:bg-ink-800/40 ${collapsed && i >= COLLAPSE_AFTER ? 'ep-overflow hidden' : ''}`}>
+          <td class="px-4 py-3 align-top font-display text-base font-bold text-saffron-400">{ep.number}</td>
+          <td class="px-4 py-3 align-top">
+            <span class="font-semibold text-ivory-100">{ep.title || 'Untitled'}</span>
+            {ep.summary && <span class="mt-1 block max-w-xl text-xs leading-relaxed text-ivory-500">{ep.summary}</span>}
+          </td>
+          <td class="hidden px-4 py-3 align-top text-ivory-300 md:table-cell">{ep.director ?? '—'}</td>
+          <td class="hidden px-4 py-3 align-top text-ivory-300 lg:table-cell">{ep.writer ?? '—'}</td>
+          <td class="whitespace-nowrap px-4 py-3 text-right align-top text-ivory-500">{ep.airDate ?? '—'}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {collapsed && (
+    <button
+      type="button"
+      class="toggle-btn w-full bg-ink-800/60 px-4 py-3 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+      data-target="ep-overflow"
+      data-label-show={`Show all ${episodes.length} episodes`}
+      data-label-hide="Show fewer episodes"
+    >
+      Show all {episodes.length} episodes
+    </button>
+  )}
+</div>

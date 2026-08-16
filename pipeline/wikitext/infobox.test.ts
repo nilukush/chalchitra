@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseInfobox, splitListField } from './infobox.js';
+import { findTemplates, parseInfobox, splitListField } from './infobox.js';
 
 const filmWikitext = `{{Short description|2025 Indian film}}
 {{Use dmy dates|date=March 2026}}
@@ -23,6 +23,47 @@ const filmWikitext = `{{Short description|2025 Indian film}}
 
 Some lead text here.
 `;
+
+describe('findTemplates', () => {
+  const page = `
+{{Episode table |episodes=
+{{Episode list
+| EpisodeNumber = 1
+| Title = Taqdeer!
+| OriginalAirDate = {{Start date|2026|4|17|df=y}}
+}}
+{{Episode list
+| EpisodeNumber = 2
+| Title = Umeed Ka Karkhana
+| WrittenBy = Abhay Koranne
+}}
+}}
+{{Track listing
+| title1 = "Dhoom" | length1 = 4:28
+| title2 = "Second" | singer2 = [[Shreya Ghoshal]]
+}}
+`;
+
+  it('finds all templates matching a name pattern with parsed params', () => {
+    const lists = findTemplates(page, /^episode list$/i);
+    expect(lists).toHaveLength(2);
+    expect(lists[0].params['titlenumber'] ?? lists[0].params['episodenumber']).toBe('1');
+    expect(lists[1].params['title']).toBe('Umeed Ka Karkhana');
+  });
+
+  it('params keep nested templates intact', () => {
+    const lists = findTemplates(page, /^episode list$/i);
+    expect(lists[0].params['originalairdate']).toBe('{{Start date|2026|4|17|df=y}}');
+  });
+
+  it('finds other templates independently', () => {
+    expect(findTemplates(page, /^track listing$/i)).toHaveLength(1);
+  });
+
+  it('returns empty array when nothing matches', () => {
+    expect(findTemplates('no templates here', /^episode list$/i)).toEqual([]);
+  });
+});
 
 describe('parseInfobox', () => {
   it('extracts the infobox with normalised keys', () => {

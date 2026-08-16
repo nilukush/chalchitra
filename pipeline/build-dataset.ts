@@ -9,8 +9,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   extractCast,
+  extractEpisodes,
   extractExternalLinks,
+  extractReferences,
   extractSections,
+  extractSoundtrack,
   getSection,
   listSectionTitles,
   parseInfobox,
@@ -154,9 +157,9 @@ function parseTitlePage(
     language: cleanValue(box.language) || (kind === 'movie' ? 'Hindi' : 'Hindi'),
     year: YEAR,
     poster: cleanThumb(page.thumb),
-    summary: page.extract ? truncate(page.extract, 900) : leadFromWikitext(wikitext),
-    plot: truncate(stripWikitext(plot ?? ''), 1600),
-    reception: truncate(stripWikitext(reception ?? ''), 1200),
+    summary: page.extract ? page.extract.trim() : leadFromWikitext(wikitext),
+    plot: stripWikitext(plot ?? '') || undefined,
+    reception: stripWikitext(reception ?? '') || undefined,
     nativeName: cleanValue(box.native_name) || undefined,
     lastAired: cleanValue(box.last_aired) || undefined,
     relatedTitles: splitListField(box.related),
@@ -177,6 +180,9 @@ function parseTitlePage(
     episodes: cleanValue(box.num_episodes) || undefined,
     budget: cleanValue(box.budget) || undefined,
     gross: cleanValue(box.gross) || undefined,
+    episodesList: extractEpisodes(wikitext),
+    soundtrack: extractSoundtrack(wikitext) ?? undefined,
+    references: extractReferences(wikitext),
     cast: [], // filled after person resolution
     crew: [],
     referenceCount: (wikitext.match(/<ref[\s>]/gi) ?? []).length,
@@ -320,11 +326,12 @@ async function main() {
       wikiUrl: wikiUrlFor(finalTitle),
       pageid: page.pageid,
       image: cleanThumb(page.thumb),
-      summary: page.extract ? truncate(page.extract, 900) : leadFromWikitext(page.wikitext),
+      summary: page.extract ? page.extract.trim() : leadFromWikitext(page.wikitext),
       occupations: splitListField(box.occupation),
       facts,
       credits,
       external: { imdbId: external.imdbId, official: external.official, links: external.links.slice(0, 8) },
+      references: extractReferences(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });
   }

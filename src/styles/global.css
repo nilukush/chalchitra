@@ -77,6 +77,27 @@ body {
   background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.04), transparent 45%);
 }
 
+/* Long-form article prose (full plot/bio text) with a film-magazine drop cap */
+.prose-article p {
+  line-height: 1.85;
+  color: var(--color-ivory-200);
+}
+
+.prose-article p + p {
+  margin-top: 1.1rem;
+}
+
+.prose-article > p:first-child::first-letter {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 3.1em;
+  line-height: 0.82;
+  float: left;
+  padding-right: 0.14em;
+  padding-top: 0.08em;
+  color: var(--color-saffron-400);
+}
+
 a {
   text-underline-offset: 3px;
 }

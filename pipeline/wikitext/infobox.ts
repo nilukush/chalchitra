@@ -30,16 +30,17 @@ export function findTemplateEnd(text: string, start: number): number {
   return -1;
 }
 
-export function parseInfobox(text: string): Record<string, string> | null {
-  const match = /\{\{\s*[Ii]nfobox\s/.exec(text);
-  if (!match) return null;
-  const start = match.index;
-  const end = findTemplateEnd(text, start);
-  if (end < 0) return null;
-  // body excludes the opening {{ and the closing }}
-  const body = text.slice(start + 2, end - 2);
+export interface ParsedTemplate {
+  name: string;
+  params: Record<string, string>;
+  start: number;
+  /** index just past the closing braces */
+  end: number;
+}
 
-  const params: string[] = [];
+/** Split a template body (no outer braces, no name chunk) into key=value params. */
+function splitParams(body: string): Record<string, string> {
+  const parts: string[] = [];
   let braceDepth = 0;
   let linkDepth = 0;
   let current = '';
@@ -62,23 +63,61 @@ export function parseInfobox(text: string): Record<string, string> | null {
       current += two;
       i++;
     } else if (body[i] === '|' && braceDepth === 0 && linkDepth === 0) {
-      params.push(current);
+      parts.push(current);
       current = '';
     } else {
       current += body[i];
     }
   }
-  params.push(current);
+  parts.push(current);
 
   const record: Record<string, string> = {};
-  for (const param of params.slice(1)) {
-    const eq = param.indexOf('=');
+  for (const part of parts) {
+    const eq = part.indexOf('=');
     if (eq <= 0) continue;
-    const key = param.slice(0, eq).trim().toLowerCase();
-    const value = param.slice(eq + 1).replace(/^\s*\n/, '').trim();
+    const key = part.slice(0, eq).trim().toLowerCase();
+    const value = part.slice(eq + 1).replace(/^\s*\n/, '').trim();
     if (key) record[key] = value;
   }
-  return Object.keys(record).length > 0 ? record : null;
+  return record;
+}
+
+/**
+ * Find every {{Template}} whose name matches `namePattern` and parse its
+ * top-level params (keys lowercased; nested templates preserved as raw text).
+ */
+export function findTemplates(text: string, namePattern: RegExp): ParsedTemplate[] {
+  const found: ParsedTemplate[] = [];
+  let pos = 0;
+  while (pos < (text?.length ?? 0)) {
+    const at = text.indexOf('{{', pos);
+    if (at < 0) break;
+    const end = findTemplateEnd(text, at);
+    if (end < 0) break;
+    const body = text.slice(at + 2, end - 2);
+    const nameEnd = body.indexOf('|');
+    const name = (nameEnd >= 0 ? body.slice(0, nameEnd) : body).trim();
+    if (namePattern.test(name)) {
+      const paramBody = nameEnd >= 0 ? body.slice(nameEnd + 1) : '';
+      found.push({ name, params: splitParams(paramBody), start: at, end });
+    }
+    // continue INSIDE this template so nested templates are found too
+    pos = at + 2;
+  }
+  return found;
+}
+
+export function parseInfobox(text: string): Record<string, string> | null {
+  const match = /\{\{\s*[Ii]nfobox\s/.exec(text);
+  if (!match) return null;
+  const start = match.index;
+  const end = findTemplateEnd(text, start);
+  if (end < 0) return null;
+  // body excludes the opening {{ and the closing }}
+  const body = text.slice(start + 2, end - 2);
+  const nameEnd = body.indexOf('|');
+  const params = splitParams(nameEnd >= 0 ? body.slice(nameEnd + 1) : '');
+  return Object.keys(params).length > 0 ? params : null;
 }
 
 const LIST_TEMPLATES = /^(plainlist|flatlist|ubl|unbulleted list|hlist|bulleted list|plain list)$/i;

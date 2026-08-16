@@ -1,0 +1,37 @@
+---
+import type { Soundtrack } from '../../pipeline/wikitext/soundtrack.js';
+
+interface Props {
+  soundtrack: Soundtrack;
+}
+const { soundtrack } = Astro.props;
+const hasAnyMeta = soundtrack.tracks.some((t) => t.singers || t.lyrics || t.length);
+---
+
+<div class="overflow-hidden rounded-2xl border border-ink-700/70">
+  {soundtrack.title && (
+    <p class="border-b border-ink-700/70 bg-ink-800/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
+      {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
+    </p>
+  )}
+  <table class="w-full text-sm">
+    <caption class="sr-only">Track listing</caption>
+    <tbody>
+      {soundtrack.tracks.map((track) => (
+        <tr class="border-b border-ink-700/40 last:border-0 hover:bg-ink-800/40">
+          <td class="w-10 px-4 py-3 align-top font-display text-base font-bold text-saffron-400">{track.number}</td>
+          <td class="px-2 py-3 align-top">
+            <span class="font-semibold text-ivory-100">{track.title}</span>
+            {track.singers && <span class="block text-xs text-ivory-500">{track.singers}</span>}
+          </td>
+          {hasAnyMeta && (
+            <td class="hidden px-4 py-3 align-top text-xs text-ivory-500 md:table-cell">
+              {track.lyrics ? `Lyrics: ${track.lyrics}` : ''}
+            </td>
+          )}
+          <td class="whitespace-nowrap px-4 py-3 text-right align-top text-xs text-ivory-600">{track.length ?? ''}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>

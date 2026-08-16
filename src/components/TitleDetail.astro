@@ -1,9 +1,12 @@
 ---
 import type { TitleRecord } from '../../pipeline/types';
 import Breadcrumbs from './Breadcrumbs.astro';
+import EpisodesTable from './EpisodesTable.astro';
 import ExternalLinks from './ExternalLinks.astro';
 import JsonLd from './JsonLd.astro';
 import PersonCard from './PersonCard.astro';
+import ReferenceList from './ReferenceList.astro';
+import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, languageBadgeClass, titles } from '../lib/data';
 
@@ -159,21 +162,41 @@ const jsonLd: Record<string, unknown>[] = [
 
         {item.plot && (
           <section class="mt-10" aria-labelledby="plot">
-            <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Plot' : 'Premise'}</h2>
-            <p class="mt-4 max-w-3xl leading-relaxed text-ivory-300">{item.plot}</p>
-            <p class="mt-3 text-xs text-ivory-600">
-              Excerpted from Wikipedia (CC BY-SA 4.0) — read the full article via the source link below.
-            </p>
+            <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
+            <div class="prose-article mt-4 max-w-3xl">
+              {item.plot.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+            </div>
+          </section>
+        )}
+
+        {item.kind === 'series' && item.episodesList.length > 0 && (
+          <section class="mt-10" aria-labelledby="episodes">
+            <h2 id="episodes" class="font-display text-2xl font-bold text-ivory-50">
+              Episode guide <span class="text-lg text-ivory-600">({item.episodesList.length})</span>
+            </h2>
+            <div class="mt-4">
+              <EpisodesTable episodes={item.episodesList} />
+            </div>
+          </section>
+        )}
+
+        {item.soundtrack && item.soundtrack.tracks.length > 0 && (
+          <section class="mt-10" aria-labelledby="soundtrack">
+            <h2 id="soundtrack" class="font-display text-2xl font-bold text-ivory-50">
+              Soundtrack <span class="text-lg text-ivory-600">({item.soundtrack.tracks.length} tracks)</span>
+            </h2>
+            <div class="mt-4">
+              <TrackList soundtrack={item.soundtrack} />
+            </div>
           </section>
         )}
 
         {item.reception && (
           <section class="mt-10" aria-labelledby="reception">
             <h2 id="reception" class="font-display text-2xl font-bold text-ivory-50">Reception</h2>
-            <p class="mt-4 max-w-3xl leading-relaxed text-ivory-300">{item.reception}</p>
-            <p class="mt-3 text-xs text-ivory-600">
-              Excerpted from the article's reception coverage (CC BY-SA 4.0).
-            </p>
+            <div class="prose-article mt-4 max-w-3xl">
+              {item.reception.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+            </div>
           </section>
         )}
 
@@ -249,6 +272,20 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
+        {item.references.length > 0 && (
+          <section class="mt-10" aria-labelledby="references">
+            <h2 id="references" class="font-display text-2xl font-bold text-ivory-50">
+              Sources &amp; references <span class="text-lg text-ivory-600">({item.references.length})</span>
+            </h2>
+            <p class="mt-2 text-sm text-ivory-500">
+              Every claim on this page traces to these cited sources — follow them for the full story elsewhere.
+            </p>
+            <div class="mt-4">
+              <ReferenceList references={item.references} />
+            </div>
+          </section>
+        )}
+
         <section class="mt-10 border-t border-ink-700/60 pt-6" aria-labelledby="links">
           <h2 id="links" class="sr-only">External links and sources</h2>
           <ExternalLinks
@@ -258,8 +295,28 @@ const jsonLd: Record<string, unknown>[] = [
             wikiUrl={item.wikiUrl}
             kind="title"
           />
+          <p class="mt-4 text-xs leading-relaxed text-ivory-600">
+            Text, metadata and images on this page derive from the Wikipedia article
+            <a href={item.wikiUrl} rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">“{item.wikiTitle}”</a>,
+            licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">CC BY-SA 4.0</a>
+            — see the source for its edit history and authors.
+          </p>
         </section>
       </div>
     </div>
   </article>
 </Base>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn').forEach((btn) => {
+    const target = btn.dataset.target ?? '';
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

@@ -1,5 +1,27 @@
 # MEMORY.md — session state log
 
+## Session 3 — 2026-08-16 (completeness mandate) — COMPLETE
+
+User's binding product decisions: this site is the DESTINATION, not a teaser.
+1. **Full plot text** (no truncation, no "go to Wikipedia" nudge) → plot/reception/summary now
+   stored & rendered untruncated (drop-cap prose styling `.prose-article`); attribution block
+   kept on every page (full text + CC BY-SA 4.0 + source link = compliant share-alike posture).
+2. **Episodes + soundtracks captured**: new parsers `wikitext/episodes.ts` ({{Episode list}}
+   templates + wikitable header-mapping fallback; 131 episode rows across 12 titles — many
+   Indian TV articles simply have no episode table) and `wikitext/soundtrack.ts`
+   ({{Track listing}} titleN/singerN/lyricistN/lengthN + all_lyrics fallback + numbered-list
+   fallback; 150 titles, 725 tracks).
+3. **Full references**: `wikitext/references.ts` — every unique <ref> → {label,url,source,date};
+   handles cite-web/news templates, named refs defined out of order, bare-link refs;
+   **8,026 refs on title pages (100% coverage) + 68,561 on person pages**, all rendered as
+   linked "Sources & references" lists (collapse-toggle > 25; two-column when dense).
+
+New shared infra: `findTemplates(text, namePattern)` in infobox.ts — recursive-safe template
+scanner (scans INSIDE outer templates; the initial lastIndex-skip version missed nested
+{{Episode list}}). clean.ts: `{{ill|X}}`/`{{lang|code|X}}` now render their display param.
+
+Tests: 98 green (was 80). Biggest page 1.5MB (a star with ~500 refs) — accepted; gzip/CDN fine.
+
 ## Session 2 — 2026-08-16 (audit + trending) — COMPLETE
 
 User asked for a data audit (4 questions) + trending showcase. Findings & actions:

@@ -1,3 +1,7 @@
+import type { EpisodeRow } from './wikitext/episodes.js';
+import type { Soundtrack } from './wikitext/soundtrack.js';
+import type { ReferenceEntry } from './wikitext/references.js';
+
 export interface CastMember {
   name: string;
   /** site slug when the person has a page on Chalachitra, else null */
@@ -52,6 +56,9 @@ export interface TitleRecord {
   episodes?: string;
   budget?: string;
   gross?: string;
+  episodesList: EpisodeRow[];
+  soundtrack?: Soundtrack;
+  references: ReferenceEntry[];
   cast: CastMember[];
   crew: { name: string; role: string; slug: string | null }[];
   referenceCount: number;
@@ -85,6 +92,7 @@ export interface PersonRecord {
   facts: PersonFact[];
   credits: Credit[];
   external: ExternalRefs;
+  references: ReferenceEntry[];
   sections: string[];
 }
 

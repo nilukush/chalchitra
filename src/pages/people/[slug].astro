@@ -4,6 +4,7 @@ import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ExternalLinks from '../../components/ExternalLinks.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
+import ReferenceList from '../../components/ReferenceList.astro';
 import { SITE, persons, personInitials, getTitleBySlug } from '../../lib/data';
 
 export function getStaticPaths() {
@@ -89,7 +90,9 @@ const creditTitleRecords = person.credits
         <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl">{person.name}</h1>
 
         {person.summary && (
-          <p class="mt-6 max-w-3xl text-lg leading-relaxed text-ivory-300">{person.summary}</p>
+          <div class="prose-article mt-6 max-w-3xl">
+            {person.summary.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+          </div>
         )}
 
         <section class="mt-10" aria-labelledby="credits">
@@ -114,6 +117,20 @@ const creditTitleRecords = person.credits
             ))}
           </ul>
         </section>
+
+        {person.references.length > 0 && (
+          <section class="mt-10" aria-labelledby="references">
+            <h2 id="references" class="font-display text-2xl font-bold text-ivory-50">
+              Sources &amp; references <span class="text-lg text-ivory-600">({person.references.length})</span>
+            </h2>
+            <p class="mt-2 text-sm text-ivory-500">
+              The biographical facts above trace to these cited sources.
+            </p>
+            <div class="mt-4">
+              <ReferenceList references={person.references} />
+            </div>
+          </section>
+        )}
 
         {person.sections.length > 0 && (
           <section class="mt-10" aria-labelledby="article">

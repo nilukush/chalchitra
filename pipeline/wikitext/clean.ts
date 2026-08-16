@@ -57,6 +57,11 @@ export function stripWikitext(raw: string): string {
       (m, name: string) => VALUE_TEMPLATES[name.trim().toLowerCase()] ?? '',
     );
 
+    // Display-preserving templates: {{ill|Article|lang|…}} → Article,
+    // {{lang|code|Text}} → Text
+    text = text.replace(/\{\{\s*ill\s*\|\s*([^|}]+)[^{}]*\}\}/gi, (_m, first: string) => first.trim());
+    text = text.replace(/\{\{\s*langx?\s*\|\s*[a-zA-Z-]+\s*\|\s*([^|}]+)[^{}]*\}\}/gi, (_m, shown: string) => shown.trim());
+
     // Remaining templates removed innermost-first
     for (let i = 0; i < 20 && text.includes('{{'); i++) {
       const next = text.replace(/\{\{[^{}]*\}\}/g, '');
