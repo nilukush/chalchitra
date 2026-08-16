@@ -1,5 +1,26 @@
 # MEMORY.md — session state log
 
+## Session 7 — 2026-08-16 (graphical redesign + live TMDB) — COMPLETE
+
+**User's critique**: site was "extremely textual — if I wanted only text I'd send users to
+Wikipedia". Response — graphical layer shipped:
+- `Icon.astro`: inline SVG set (calendar/clock/globe/rupee/chart/tv/film/users/star/ticket/
+  music/award/clapperboard/camera/pen/link).
+- `StatTiles.astro`: facts tables replaced by icon tiles ("Details at a glance" on titles,
+  fact tiles on person pages); big-value tiles for dates/runtime/box-office.
+- Sticky in-page section nav (icon chips, horizontally scrollable) on title pages.
+- Article deep-dive sections rendered as numbered "chapters" (01/02… saffron badges, ruled
+  left border) instead of bare prose headings.
+
+**TMDB LIVE** (user provided key; moved from .env.example to gitignored .env — never committed;
+added `pipeline/env.ts` mini-loader, called at build-dataset start):
+- 384/425 titles matched; **304 backdrops** (hero bands now cinematic); **123/131 episode
+  summaries** (was 9/131 — TMDB filled 114); **198 trailers** (▶ Watch trailer button — needed
+  `append_to_response=videos` fix on the details call); 57 ratings (≥10 votes gate).
+- Per-page TMDB attribution shows only where fields were enriched.
+
+113 tests green; 2,651 pages; 50,262 links / 0 missing.
+
 ## Session 6 — 2026-08-16 (multi-source go-ahead + hero redesign) — COMPLETE
 
 **Policy change**: site is NO LONGER Wikipedia-only. Wikipedia = canonical backbone;

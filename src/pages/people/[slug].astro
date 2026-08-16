@@ -2,9 +2,11 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ExternalLinks from '../../components/ExternalLinks.astro';
+import Icon from '../../components/Icon.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
 import ReferenceList from '../../components/ReferenceList.astro';
+import StatTiles from '../../components/StatTiles.astro';
 import { SITE, persons, personInitials, getTitleBySlug } from '../../lib/data';
 
 export function getStaticPaths() {
@@ -45,6 +47,34 @@ const jsonLd: Record<string, unknown>[] = [
 const creditTitleRecords = person.credits
   .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug, credit.kind) }))
   .filter((entry) => entry.title !== undefined);
+
+const FACT_ICONS: Record<string, Parameters<typeof Icon>[0]['name']> = {
+  'Born': 'calendar',
+  'Died': 'calendar',
+  'Birthplace': 'globe',
+  'Place of death': 'globe',
+  'Occupation': 'clapperboard',
+  'Years active': 'clock',
+  'Nationality': 'globe',
+  'Citizenship': 'globe',
+  'Spouse(s)': 'users',
+  'Partner(s)': 'users',
+  'Children': 'users',
+  'Parents': 'users',
+  'Relatives': 'users',
+  'Alma mater': 'award',
+  'Education': 'award',
+  'Awards': 'award',
+  'Known for': 'star',
+  'Height': 'users',
+  'Home town': 'globe',
+  'Other names': 'pen',
+  'Genres': 'music',
+  'Instruments': 'music',
+  'Labels': 'music',
+  'Notable works': 'star',
+  'Birth name': 'pen',
+};
 ---
 
 <Base title={person.name} description={description} image={person.image} type="article">
@@ -70,14 +100,16 @@ const creditTitleRecords = person.credits
         )}
 
         {person.facts.length > 0 && (
-          <dl class="mt-6 space-y-3 text-sm">
-            {person.facts.map((fact) => (
-              <div class="border-b border-ink-700/40 pb-2">
-                <dt class="text-xs uppercase tracking-wider text-ivory-600">{fact.label}</dt>
-                <dd class="mt-0.5 text-ivory-200">{fact.value}</dd>
-              </div>
-            ))}
-          </dl>
+          <div class="mt-6">
+            <StatTiles
+              tiles={person.facts.map((fact) => ({
+                icon: FACT_ICONS[fact.label] ?? 'link',
+                label: fact.label,
+                value: fact.value,
+                big: fact.value.length <= 18,
+              }))}
+            />
+          </div>
         )}
       </div>
 

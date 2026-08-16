@@ -1,0 +1,30 @@
+---
+import Icon from './Icon.astro';
+
+interface Tile {
+  icon: Parameters<typeof Icon>[0]['name'];
+  label: string;
+  value: string;
+  /** emphasize value (big display numbers) */
+  big?: boolean;
+}
+
+interface Props {
+  tiles: Tile[];
+}
+const { tiles } = Astro.props;
+---
+
+<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+  {tiles.map((tile) => (
+    <div class="card-sheen group rounded-xl border border-ink-700/70 bg-ink-850/70 p-4 transition duration-200 hover:border-saffron-500/40">
+      <div class="mb-2 flex items-center gap-2 text-saffron-400">
+        <Icon name={tile.icon} class="h-4.5 w-4.5 h-[18px] w-[18px]" />
+        <span class="text-[10px] font-semibold uppercase tracking-[0.15em] text-ivory-600 group-hover:text-ivory-500">{tile.label}</span>
+      </div>
+      <p class:list={['leading-snug text-ivory-100', tile.big ? 'font-display text-xl font-bold' : 'text-sm font-medium']}>
+        {tile.value}
+      </p>
+    </div>
+  ))}
+</div>

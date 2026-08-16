@@ -77,7 +77,7 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
 
     const sources: string[] = record.enrichedFrom ?? [];
 
-    const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US`, apiKey);
+    const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US&append_to_response=videos`, apiKey);
     if (!details) continue;
 
     if (!record.backdrop && details.backdrop_path) {

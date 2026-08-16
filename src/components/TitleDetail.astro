@@ -3,9 +3,11 @@ import type { TitleRecord } from '../../pipeline/types';
 import Breadcrumbs from './Breadcrumbs.astro';
 import EpisodesTable from './EpisodesTable.astro';
 import ExternalLinks from './ExternalLinks.astro';
+import Icon from './Icon.astro';
 import JsonLd from './JsonLd.astro';
 import PersonCard from './PersonCard.astro';
 import ReferenceList from './ReferenceList.astro';
+import StatTiles from './StatTiles.astro';
 import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, languageBadgeClass, titles } from '../lib/data';
@@ -55,6 +57,50 @@ const relatedRecords = (item.relatedTitles ?? [])
   .slice(0, 6);
 
 const plotParagraphs = (item.plotHtml ?? item.plot ?? '').split('\n').filter(Boolean);
+
+// facts as visual stat tiles
+const TILE_ICONS: Record<string, Parameters<typeof Icon>[0]['name']> = {
+  'Original title': 'pen',
+  'Directed by': 'clapperboard',
+  'Created by': 'clapperboard',
+  'Written by': 'pen',
+  'Starring': 'users',
+  'Music': 'music',
+  'Cinematography': 'camera',
+  'Editing': 'film',
+  'Produced by': 'users',
+  'Production': 'film',
+  'Distributed by': 'ticket',
+  'Network': 'tv',
+  'Release date': 'calendar',
+  'First aired': 'calendar',
+  'Last aired': 'calendar',
+  'Seasons': 'tv',
+  'Episodes': 'tv',
+  'Runtime': 'clock',
+  'Language': 'globe',
+  'Budget': 'rupee',
+  'Box office': 'chart',
+  'Genres': 'star',
+};
+const BIG_TILES = new Set(['Release date', 'First aired', 'Runtime', 'Box office', 'Budget', 'Episodes', 'Seasons']);
+const statTiles = facts.map((f) => ({
+  icon: TILE_ICONS[f.label] ?? 'link',
+  label: f.label,
+  value: f.value,
+  big: BIG_TILES.has(f.label) && f.value.length <= 22,
+}));
+
+// in-page navigation for the long editorial page
+const navItems = [
+  plotParagraphs.length > 0 && { href: '#plot', label: item.kind === 'movie' ? 'Plot' : 'Premise', icon: 'pen' as const },
+  item.kind === 'series' && item.episodesList.length > 0 && { href: '#episodes', label: 'Episodes', icon: 'tv' as const },
+  item.soundtrack && item.soundtrack.tracks.length > 0 && { href: '#soundtrack', label: 'Music', icon: 'music' as const },
+  castPeople.length > 0 && { href: '#cast', label: 'Cast', icon: 'users' as const },
+  statTiles.length > 0 && { href: '#facts', label: 'Details', icon: 'clapperboard' as const },
+  ...item.articleSections.slice(0, 4).map((s) => ({ href: `#sec-${s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, label: s.title, icon: 'film' as const })),
+  item.references.length > 0 && { href: '#references', label: 'Sources', icon: 'award' as const },
+].filter(Boolean) as { href: string; label: string; icon: Parameters<typeof Icon>[0]['name'] }[];
 
 const description =
   (item.plot ?? item.summary ?? `${item.title} is a ${item.year} Indian ${item.language} ${kindWord.toLowerCase()}.`)
@@ -168,6 +214,22 @@ const jsonLd: Record<string, unknown>[] = [
           </div>
         </div>
 
+        <!-- sticky in-page nav -->
+        {navItems.length > 1 && (
+          <nav aria-label="On this page" class="sticky top-[64px] z-30 -mx-4 mt-6 border-b border-ink-700/50 bg-ink-950/90 px-4 py-2 backdrop-blur-md sm:-mx-6 sm:px-6">
+            <ul class="flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {navItems.map((nav) => (
+                <li class="shrink-0">
+                  <a href={nav.href} class="focus-ring flex items-center gap-1.5 rounded-full border border-ink-700 bg-ink-800/80 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                    <Icon name={nav.icon} class="h-3.5 w-3.5" />
+                    {nav.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+
         {plotParagraphs.length > 0 && (
           <section class="mt-10" aria-labelledby="plot">
             <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
@@ -260,37 +322,34 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
-        {facts.length > 0 && (
+        {statTiles.length > 0 && (
           <section class="mt-10" aria-labelledby="facts">
-            <h2 id="facts" class="font-display text-2xl font-bold text-ivory-50">Key details</h2>
-            <div class="mt-4 overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-850/60">
-              <table class="w-full text-sm">
-                <caption class="sr-only">Key facts about {item.title}</caption>
-                <tbody>
-                  {facts.map((fact) => (
-                    <tr class="border-b border-ink-700/40 last:border-0">
-                      <th scope="row" class="w-40 bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">{fact.label}</th>
-                      <td class="px-4 py-2.5 text-ivory-200">{fact.value}</td>
-                    </tr>
-                  ))}
-                  <tr class="border-t border-ink-700/40">
-                    <th scope="row" class="bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">Sources</th>
-                    <td class="px-4 py-2.5 text-ivory-400">{item.referenceCount} cited references on Wikipedia</td>
-                  </tr>
-                </tbody>
-              </table>
+            <h2 id="facts" class="font-display text-2xl font-bold text-ivory-50">Details at a glance</h2>
+            <div class="mt-4">
+              <StatTiles tiles={statTiles} />
             </div>
+            <p class="mt-3 text-xs text-ivory-600">
+              {item.referenceCount} cited references on Wikipedia back the facts on this page.
+            </p>
           </section>
         )}
 
-        {item.articleSections.map((section) => (
-          <section class="mt-10" aria-labelledby={`sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
-            <h2 id={`sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-display text-2xl font-bold text-ivory-50">{section.title}</h2>
-            <div class="prose-article mt-4 max-w-3xl">
-              {section.text.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
-            </div>
-          </section>
-        ))}
+        {item.articleSections.map((section, si) => {
+          const secId = `sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+          return (
+            <section class="mt-10" aria-labelledby={secId}>
+              <div class="flex items-center gap-3">
+                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
+                  {String(si + 1).padStart(2, '0')}
+                </span>
+                <h2 id={secId} class="font-display text-2xl font-bold tracking-tight text-ivory-50">{section.title}</h2>
+              </div>
+              <div class="prose-article mt-4 max-w-3xl border-l-2 border-ink-700 pl-5">
+                {section.text.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+              </div>
+            </section>
+          );
+        })}
 
         {relatedRecords.length > 0 && (
           <section class="mt-10" aria-labelledby="related">

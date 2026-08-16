@@ -24,6 +24,9 @@ import {
 } from './wikitext/index.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
 import { enrichTitles } from './enrich/tmdb.js';
+import { loadEnv } from './env.js';
+
+loadEnv();
 import { fetchPages, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
 import { SlugRegistry, buildSearchDocuments, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
