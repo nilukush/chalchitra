@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/noto-sans-devanagari';
+@import '@fontsource/fraunces/400.css';
+@import '@fontsource/fraunces/600.css';
+@import '@fontsource/fraunces/700.css';
+@import '@fontsource/fraunces/400-italic.css';
+
+/*
+ * Chalachitra design system — "midnight premiere".
+ * Deep ink-blue surfaces, warm saffron accent, ivory typography.
+ */
+@theme {
+  --font-sans: 'Inter Variable', 'Noto Sans Devanagari Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Noto Sans Devanagari Variable', Georgia, serif;
+
+  --color-ink-950: #07090f;
+  --color-ink-900: #0a0d16;
+  --color-ink-850: #0e1220;
+  --color-ink-800: #12172a;
+  --color-ink-700: #1a2138;
+  --color-ink-600: #262f4d;
+  --color-ink-500: #3a4568;
+
+  --color-ivory-50: #faf7f0;
+  --color-ivory-100: #f2eee3;
+  --color-ivory-300: #cfcbbe;
+  --color-ivory-500: #a9a89b;
+  --color-ivory-600: #878a7f;
+
+  --color-saffron-300: #ffce7a;
+  --color-saffron-400: #fbb850;
+  --color-saffron-500: #f4a72c;
+  --color-saffron-600: #dd8f16;
+  --color-saffron-700: #b8720e;
+
+  --color-lotus-400: #f080a1;
+  --color-lotus-500: #e35d87;
+
+  --color-peacock-400: #55c7b4;
+  --color-peacock-500: #2fa998;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink-950);
+  color: var(--color-ivory-100);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--color-saffron-500);
+  color: var(--color-ink-950);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+}
+
+/* Film-grain texture for hero surfaces */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 3px 3px;
+}
+
+.card-sheen {
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.04), transparent 45%);
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+.focus-ring:focus-visible {
+  outline: 2px solid var(--color-saffron-400);
+  outline-offset: 2px;
+  border-radius: 4px;
+}

@@ -1,0 +1,140 @@
+---
+import Base from '../../layouts/Base.astro';
+import Breadcrumbs from '../../components/Breadcrumbs.astro';
+import ExternalLinks from '../../components/ExternalLinks.astro';
+import JsonLd from '../../components/JsonLd.astro';
+import PosterCard from '../../components/PosterCard.astro';
+import { SITE, persons, personInitials, getTitleBySlug } from '../../lib/data';
+
+export function getStaticPaths() {
+  return persons.map((person) => ({ params: { slug: person.slug }, props: { person } }));
+}
+
+const { person } = Astro.props;
+const canonical = new URL(`/people/${person.slug}`, SITE.url).href;
+const description =
+  (person.summary ?? `${person.name} — credits and facts on ${SITE.name}.`).slice(0, 300).trim() + '…';
+
+const jsonLd: Record<string, unknown>[] = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: person.name,
+    url: canonical,
+    image: person.image,
+    description: (person.summary ?? '').slice(0, 500),
+    jobTitle: person.occupations[0],
+    hasOccupation: person.occupations.map((o) => ({ '@type': 'Occupation', name: o })),
+    sameAs: [
+      person.wikiUrl,
+      ...(person.external.imdbId ? [`https://www.imdb.com/name/nm${person.external.imdbId}/`] : []),
+    ].filter(Boolean),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE.url },
+      { '@type': 'ListItem', position: 2, name: 'People', item: new URL('/people', SITE.url).href },
+      { '@type': 'ListItem', position: 3, name: person.name, item: canonical },
+    ],
+  },
+];
+
+const creditTitleRecords = person.credits
+  .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug) }))
+  .filter((entry) => entry.title !== undefined);
+---
+
+<Base title={person.name} description={description} image={person.image} type="article">
+  <JsonLd data={jsonLd} />
+
+  <article class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <Breadcrumbs crumbs={[{ label: 'People', href: '/people' }, { label: person.name }]} />
+
+    <div class="grid gap-10 lg:grid-cols-[280px_1fr]">
+      <div>
+        {person.image ? (
+          <img
+            src={person.image}
+            alt={`Portrait of ${person.name}`}
+            width="480"
+            height="480"
+            class="w-full rounded-2xl border border-ink-700 object-cover shadow-2xl shadow-black/40"
+          />
+        ) : (
+          <div class="flex aspect-square w-full items-center justify-center rounded-2xl border border-ink-700 bg-ink-800 grain">
+            <span class="font-display text-7xl text-ivory-600">{personInitials(person.name)}</span>
+          </div>
+        )}
+
+        {person.facts.length > 0 && (
+          <dl class="mt-6 space-y-3 text-sm">
+            {person.facts.map((fact) => (
+              <div class="border-b border-ink-700/40 pb-2">
+                <dt class="text-xs uppercase tracking-wider text-ivory-600">{fact.label}</dt>
+                <dd class="mt-0.5 text-ivory-200">{fact.value}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+
+      <div>
+        {person.occupations.length > 0 && (
+          <p class="text-sm font-semibold uppercase tracking-[0.2em] text-saffron-500">
+            {person.occupations.slice(0, 3).join(' · ')}
+          </p>
+        )}
+        <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl">{person.name}</h1>
+
+        {person.summary && (
+          <p class="mt-6 max-w-3xl text-lg leading-relaxed text-ivory-300">{person.summary}</p>
+        )}
+
+        <section class="mt-10" aria-labelledby="credits">
+          <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
+            2026 credits <span class="text-lg text-ivory-600">({person.credits.length})</span>
+          </h2>
+          {person.credits.length > 0 ? (
+            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {creditTitleRecords.map(({ title }) => <PosterCard item={title} />)}
+            </div>
+          ) : (
+            <p class="mt-4 text-ivory-500">No 2026 titles recorded yet.</p>
+          )}
+          <ul class="mt-6 space-y-1.5 text-sm text-ivory-500">
+            {person.credits.slice(0, 30).map((credit) => (
+              <li>
+                <a href={credit.kind === 'movie' ? `/movies/${credit.titleSlug}` : `/series/${credit.titleSlug}`} class="text-ivory-300 hover:text-saffron-300">
+                  {credit.title}
+                </a>
+                <span class="text-ivory-600"> — {credit.role}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {person.sections.length > 0 && (
+          <section class="mt-10" aria-labelledby="article">
+            <h2 id="article" class="font-display text-2xl font-bold text-ivory-50">On the Wikipedia article</h2>
+            <p class="mt-3 text-sm text-ivory-500">
+              The biographical article covers: {person.sections.join(' · ')}
+            </p>
+          </section>
+        )}
+
+        <section class="mt-10 border-t border-ink-700/60 pt-6" aria-labelledby="links">
+          <h2 id="links" class="sr-only">External links</h2>
+          <ExternalLinks
+            imdbId={person.external.imdbId}
+            official={person.external.official}
+            links={person.external.links}
+            wikiUrl={person.wikiUrl}
+            kind="person"
+          />
+        </section>
+      </div>
+    </div>
+  </article>
+</Base>

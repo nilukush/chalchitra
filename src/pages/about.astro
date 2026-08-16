@@ -1,0 +1,55 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE, stats } from '../lib/data';
+---
+
+<Base title="About" description={`About ${SITE.name} — mission, data sources, licensing and roadmap.`}>
+  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">About</p>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">
+      Why {SITE.name} exists
+    </h1>
+
+    <div class="mt-8 space-y-6 leading-relaxed text-ivory-300">
+      <p>
+        Global film databases were built with Hollywood as the centre of gravity. Indian cinema —
+        a constellation of industries in Hindi, Tamil, Telugu, Malayalam, Kannada, Marathi,
+        Bengali, Punjabi and beyond — ends up flattened into a corner of someone else's catalogue.
+        <strong class="text-ivory-50">{SITE.name}</strong> (चलचित्र, "motion picture") flips the
+        lens: Indian movies and series are the whole catalogue, presented with the visual richness
+        they deserve.
+      </p>
+      <p>
+        We launched with the <strong class="text-ivory-50">class of 2026</strong> —
+        {stats.movies} feature films and {stats.series} television and streaming series debuts,
+        with {stats.persons} cast and crew profiles. Earlier years will follow, and the data model
+        is origin-agnostic: South Korean cinema, equally under-served in the English-language web,
+        is on the roadmap.
+      </p>
+
+      <h2 class="pt-4 font-display text-2xl font-bold text-ivory-50">Where the data comes from</h2>
+      <p>
+        Every page is built from the corresponding English Wikipedia article, fetched through the
+        MediaWiki API. Plot summaries are excerpts; facts (release dates, cast, budgets, ratings)
+        come from infobox templates and article text; posters and portraits are Wikimedia-hosted
+        images. Each page links back to its source article.
+      </p>
+
+      <h2 class="pt-4 font-display text-2xl font-bold text-ivory-50">Licensing &amp; attribution</h2>
+      <p>
+        Wikipedia text is licensed under
+        <a class="text-saffron-300 underline decoration-ink-500 hover:decoration-saffron-400" href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener">CC BY-SA 4.0</a>.
+        Excerpts on this site are attributed to their source articles, and re-use of that text must
+        follow the same license. Posters remain on Wikimedia servers and identify the works they
+        belong to.
+      </p>
+
+      <h2 class="pt-4 font-display text-2xl font-bold text-ivory-50">For humans and machines</h2>
+      <p>
+        Beyond classic SEO, {SITE.name} publishes structured data (<code class="rounded bg-ink-800 px-1.5 py-0.5 text-sm">schema.org</code>
+        Movie / TVSeries / Person JSON-LD), a sitemap, and an <a class="text-saffron-300 underline decoration-ink-500 hover:decoration-saffron-400" href="/llms.txt">llms.txt</a>
+        manifest so AI assistants and search engines alike can index this catalogue accurately.
+      </p>
+    </div>
+  </section>
+</Base>

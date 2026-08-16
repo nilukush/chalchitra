@@ -1,0 +1,35 @@
+---
+import type { PersonRecord } from '../../pipeline/types';
+import { personInitials } from '../lib/data';
+
+interface Props {
+  person: PersonRecord;
+}
+const { person } = Astro.props;
+---
+
+<article>
+  <a href={`/people/${person.slug}`} class="focus-ring group flex items-center gap-3 rounded-xl border border-ink-700/70 bg-ink-850/60 p-3 transition duration-200 hover:border-saffron-500/40 hover:bg-ink-800">
+    {person.image ? (
+      <img
+        src={person.image}
+        alt={person.name}
+        loading="lazy"
+        decoding="async"
+        width="56"
+        height="56"
+        class="h-14 w-14 shrink-0 rounded-full border border-ink-600 object-cover"
+      />
+    ) : (
+      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-500">
+        {personInitials(person.name)}
+      </span>
+    )}
+    <span class="min-w-0">
+      <span class="block truncate text-sm font-semibold text-ivory-100 group-hover:text-saffron-300">{person.name}</span>
+      <span class="block truncate text-xs text-ivory-600">
+        {person.occupations.length > 0 ? person.occupations.slice(0, 2).join(', ') : `Credits: ${person.credits.length}`}
+      </span>
+    </span>
+  </a>
+</article>

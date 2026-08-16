@@ -1,0 +1,30 @@
+---
+import { imdbTitleUrl, imdbNameUrl } from '../lib/data';
+
+interface Props {
+  imdbId?: string;
+  official?: string;
+  links: { label: string; url: string }[];
+  wikiUrl: string;
+  kind: 'title' | 'person';
+}
+
+const { imdbId, official, links, wikiUrl, kind } = Astro.props;
+const imdb = imdbId ? (kind === 'title' ? imdbTitleUrl(imdbId) : imdbNameUrl(imdbId)) : null;
+const all = [
+  official ? { label: 'Official website', url: official } : null,
+  imdb ? { label: 'IMDb', url: imdb } : null,
+  ...links.filter((l) => !l.url.includes('wikipedia.org')),
+].filter(Boolean) as { label: string; url: string }[];
+---
+
+<div class="flex flex-wrap gap-2">
+  <a href={wikiUrl} rel="noopener" class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-3.5 py-1.5 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+    Read on Wikipedia ↗
+  </a>
+  {all.map((link) => (
+    <a href={link.url} rel="noopener" class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-3.5 py-1.5 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      {link.label} ↗
+    </a>
+  ))}
+</div>

@@ -1,0 +1,12 @@
+---
+import TitleDetail from '../../components/TitleDetail.astro';
+import { series } from '../../lib/data';
+
+export function getStaticPaths() {
+  return series.map((show) => ({ params: { slug: show.slug }, props: { show } }));
+}
+
+const { show } = Astro.props;
+---
+
+<TitleDetail item={show} />

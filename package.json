@@ -1,0 +1,35 @@
+{
+  "name": "chalachitra",
+  "version": "0.1.0",
+  "description": "Chalachitra — a graphical discovery destination for Indian cinema & series (extensible to other origins), built from Wikipedia data",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --port 4730",
+    "build": "astro build",
+    "preview": "astro preview --port 4730",
+    "check": "astro check",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "pipeline:titles": "tsx pipeline/extract-titles.ts",
+    "pipeline:fetch": "tsx pipeline/fetch-pages.ts",
+    "pipeline:dataset": "tsx pipeline/build-dataset.ts",
+    "pipeline:all": "npm run pipeline:titles && npm run pipeline:fetch && npm run pipeline:dataset"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.4.1",
+    "@fontsource-variable/inter": "^5.2.6",
+    "@fontsource-variable/noto-sans-devanagari": "^5.2.8",
+    "@fontsource/fraunces": "^5.2.0",
+    "astro": "^5.12.0",
+    "minisearch": "^7.1.2",
+    "tailwindcss": "^4.1.11",
+    "@tailwindcss/vite": "^4.1.11"
+  },
+  "devDependencies": {
+    "@types/node": "^24.2.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

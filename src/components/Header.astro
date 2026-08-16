@@ -1,0 +1,44 @@
+---
+import { SITE } from '../lib/data';
+---
+
+<header class="sticky top-0 z-40 border-b border-ink-700/60 bg-ink-950/85 backdrop-blur-md">
+  <div class="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3 sm:px-6">
+    <a href="/" class="focus-ring group flex items-baseline gap-2" aria-label={`${SITE.name} home`}>
+      <span class="font-display text-2xl font-bold tracking-tight text-ivory-50 transition-colors group-hover:text-saffron-400">
+        {SITE.name}
+      </span>
+      <span class="hidden text-sm text-ivory-500 sm:inline" lang="hi">{SITE.devanagari}</span>
+    </a>
+
+    <nav class="ml-auto hidden items-center gap-1 md:flex" aria-label="Primary">
+      <a class="focus-ring rounded-md px-3 py-2 text-sm font-medium text-ivory-300 hover:bg-ink-800 hover:text-ivory-50" href="/movies">Movies</a>
+      <a class="focus-ring rounded-md px-3 py-2 text-sm font-medium text-ivory-300 hover:bg-ink-800 hover:text-ivory-50" href="/series">Series</a>
+      <a class="focus-ring rounded-md px-3 py-2 text-sm font-medium text-ivory-300 hover:bg-ink-800 hover:text-ivory-50" href="/people">People</a>
+      <a class="focus-ring rounded-md px-3 py-2 text-sm font-medium text-ivory-300 hover:bg-ink-800 hover:text-ivory-50" href="/about">About</a>
+    </nav>
+
+    <form action="/search" method="get" role="search" class="ml-auto md:ml-4">
+      <label for="site-search" class="sr-only">Search titles and people</label>
+      <div class="flex items-center rounded-full border border-ink-600 bg-ink-800/80 focus-within:border-saffron-500/60">
+        <input
+          id="site-search"
+          type="search"
+          name="q"
+          placeholder="Search films, series, people…"
+          autocomplete="off"
+          class="w-36 bg-transparent px-4 py-1.5 text-sm text-ivory-100 placeholder:text-ivory-600 focus:outline-none sm:w-56"
+        />
+        <button type="submit" class="focus-ring m-1 rounded-full bg-saffron-500 px-3 py-1 text-xs font-semibold text-ink-950 hover:bg-saffron-400" aria-label="Search">
+          Search
+        </button>
+      </div>
+    </form>
+  </div>
+  <nav class="flex items-center gap-1 border-t border-ink-700/40 px-4 py-2 md:hidden" aria-label="Primary mobile">
+    <a class="rounded-md px-3 py-1.5 text-sm font-medium text-ivory-300 hover:bg-ink-800" href="/movies">Movies</a>
+    <a class="rounded-md px-3 py-1.5 text-sm font-medium text-ivory-300 hover:bg-ink-800" href="/series">Series</a>
+    <a class="rounded-md px-3 py-1.5 text-sm font-medium text-ivory-300 hover:bg-ink-800" href="/people">People</a>
+    <a class="rounded-md px-3 py-1.5 text-sm font-medium text-ivory-300 hover:bg-ink-800" href="/about">About</a>
+  </nav>
+</header>

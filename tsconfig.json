@@ -1,0 +1,13 @@
+{
+  "extends": "astro/tsconfigs/strict",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@pipeline/*": ["pipeline/*"],
+      "@data/*": ["data/*"]
+    },
+    "types": ["node"]
+  },
+  "include": [".astro/types.d.ts", "src/**/*", "pipeline/**/*"],
+  "exclude": ["dist", "node_modules", "data/cache"]
+}

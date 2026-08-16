@@ -1,0 +1,21 @@
+---
+interface Props {
+  title: string;
+  kicker?: string;
+  href?: string;
+  linkLabel?: string;
+}
+const { title, kicker, href, linkLabel = 'View all' } = Astro.props;
+---
+
+<div class="mb-5 flex items-end justify-between gap-4">
+  <div>
+    {kicker && <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-saffron-500">{kicker}</p>}
+    <h2 class="font-display text-2xl font-bold tracking-tight text-ivory-50 sm:text-3xl">{title}</h2>
+  </div>
+  {href && (
+    <a href={href} class="focus-ring shrink-0 rounded-full border border-ink-600 px-4 py-1.5 text-sm font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      {linkLabel} →
+    </a>
+  )}
+</div>

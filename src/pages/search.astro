@@ -1,0 +1,131 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE, stats } from '../lib/data';
+---
+
+<Base
+  title="Search"
+  description={`Search ${stats.movies} movies, ${stats.series} series and ${stats.persons} people on ${SITE.name} by title or cast name.`}
+>
+  <section class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">Search</p>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Find any title or person</h1>
+    <p class="mt-3 text-ivory-500">
+      Type a film or series name — or an actor, director, writer, musician — and results appear as you type.
+    </p>
+
+    <div class="mt-8">
+      <label for="q" class="sr-only">Search query</label>
+      <input
+        id="q"
+        type="search"
+        placeholder="e.g. Matka King, Vijay Varma, Malayalam…"
+        autocomplete="off"
+        autofocus
+        class="w-full rounded-2xl border border-ink-600 bg-ink-800 px-6 py-4 text-lg text-ivory-50 placeholder:text-ivory-600 shadow-inner focus:border-saffron-500/60 focus:outline-none"
+      />
+    </div>
+
+    <p id="search-status" class="mt-4 text-sm text-ivory-600" aria-live="polite">Loading search index…</p>
+
+    <div id="results" class="mt-6 space-y-10"></div>
+  </section>
+</Base>
+
+<script>
+  import MiniSearch from 'minisearch';
+
+  interface Doc {
+    s: string;
+    k: 'movie' | 'series' | 'person';
+    t: string;
+    y?: number;
+    l?: string;
+    q: string[];
+  }
+
+  const input = document.getElementById('q') as HTMLInputElement;
+  const status = document.getElementById('search-status')!;
+  const results = document.getElementById('results')!;
+
+  const GROUPS: { kind: Doc['k']; label: string; href: (slug: string) => string }[] = [
+    { kind: 'movie', label: 'Movies', href: (s) => `/movies/${s}` },
+    { kind: 'series', label: 'Series', href: (s) => `/series/${s}` },
+    { kind: 'person', label: 'People', href: (s) => `/people/${s}` },
+  ];
+
+  const miniSearch = new MiniSearch<Doc>({
+    fields: ['t', 'q'],
+    storeFields: ['s', 'k', 't', 'y', 'l'],
+    searchOptions: { prefix: true, fuzzy: 0.2, boost: { t: 3 } },
+  });
+
+  function render(query: string, docs: Doc[]) {
+    if (!query) {
+      status.textContent = 'Type to search — titles, cast names, directors…';
+      results.innerHTML = '';
+      return;
+    }
+    const found = miniSearch.search(query, { limit: 60 }) as any[];
+    const byKind = new Map<string, any[]>();
+    for (const hit of found) {
+      const list = byKind.get(hit.k) ?? [];
+      list.push(hit);
+      byKind.set(hit.k, list);
+    }
+    const total = found.length;
+    status.textContent = total === 0 ? `No matches for “${query}”.` : `${total} result${total === 1 ? '' : 's'} for “${query}”`;
+    results.innerHTML = '';
+    for (const group of GROUPS) {
+      const hits = byKind.get(group.kind) ?? [];
+      if (hits.length === 0) continue;
+      const section = document.createElement('section');
+      const h2 = document.createElement('h2');
+      h2.className = 'font-display text-xl font-bold text-ivory-50';
+      h2.textContent = `${group.label} (${hits.length})`;
+      const ul = document.createElement('ul');
+      ul.className = 'mt-3 grid gap-2 sm:grid-cols-2';
+      for (const hit of hits) {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = group.href(hit.s);
+        a.className = 'focus-ring block rounded-xl border border-ink-700 bg-ink-850/60 px-4 py-3 text-sm hover:border-saffron-500/40';
+        const strong = document.createElement('span');
+        strong.className = 'font-semibold text-ivory-100';
+        strong.textContent = hit.t;
+        a.appendChild(strong);
+        const meta = hit.k === 'person' ? '' : ` — ${hit.l ?? ''} · ${hit.y ?? ''}`;
+        if (meta) {
+          const span = document.createElement('span');
+          span.className = 'text-ivory-600';
+          span.textContent = meta;
+          a.appendChild(span);
+        }
+        li.appendChild(a);
+        ul.appendChild(li);
+      }
+      section.appendChild(h2);
+      section.appendChild(ul);
+      results.appendChild(section);
+    }
+  }
+
+  fetch('/search-index.json')
+    .then((r) => r.json())
+    .then((index: { docs: Doc[] }) => {
+      miniSearch.addAll(index.docs);
+      const initial = new URLSearchParams(location.search).get('q') ?? '';
+      if (initial) input.value = initial;
+      status.textContent = `Ready — ${index.docs.length} pages searchable.`;
+      render(initial, index.docs);
+    })
+    .catch(() => {
+      status.textContent = 'Could not load the search index.';
+    });
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => render(input.value.trim(), []), 120);
+  });
+</script>

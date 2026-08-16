@@ -1,0 +1,232 @@
+---
+import type { TitleRecord } from '../../pipeline/types';
+import Breadcrumbs from './Breadcrumbs.astro';
+import ExternalLinks from './ExternalLinks.astro';
+import JsonLd from './JsonLd.astro';
+import PersonCard from './PersonCard.astro';
+import Base from '../layouts/Base.astro';
+import { SITE, getPersonBySlug, languageBadgeClass } from '../lib/data';
+
+const { item }: { item: TitleRecord } = Astro.props;
+
+const indexHref = item.kind === 'movie' ? '/movies' : '/series';
+const indexLabel = item.kind === 'movie' ? 'Movies' : 'Series';
+const kindWord = item.kind === 'movie' ? 'Film' : 'Series';
+const base = item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.slug}`;
+const canonical = new URL(base, SITE.url).href;
+
+const castPeople = item.cast
+  .map((member) => ({ member, person: member.slug ? getPersonBySlug(member.slug) : undefined }))
+  .slice(0, 24);
+
+const crew = item.crew.slice(0, 18);
+
+const facts: { label: string; value: string }[] = [
+  { label: item.kind === 'movie' ? 'Directed by' : 'Directed by', value: item.directedBy.join(', ') },
+  { label: 'Created by', value: item.createdBy.join(', ') },
+  { label: 'Written by', value: item.writtenBy.join(', ') },
+  { label: 'Starring', value: item.cast.slice(0, 6).map((c) => c.name).join(', ') },
+  { label: 'Music', value: item.musicBy.join(', ') },
+  { label: 'Cinematography', value: item.cinematographyBy.join(', ') },
+  { label: 'Editing', value: item.editedBy.join(', ') },
+  { label: 'Produced by', value: item.producedBy.join(', ') },
+  { label: 'Production', value: item.studios.join(', ') },
+  { label: 'Distributed by', value: item.distributor.join(', ') },
+  { label: 'Network', value: item.network.join(', ') },
+  { label: item.kind === 'movie' ? 'Release date' : 'First aired', value: item.releaseDate ?? '' },
+  { label: 'Seasons', value: item.seasons ?? '' },
+  { label: 'Episodes', value: item.episodes ?? '' },
+  { label: 'Runtime', value: item.runtime ?? '' },
+  { label: 'Language', value: item.language },
+  { label: 'Budget', value: item.budget ?? '' },
+  { label: 'Box office', value: item.gross ?? '' },
+  { label: 'Genres', value: item.genres.join(', ') },
+].filter((f) => f.value.length > 0);
+
+const description =
+  (item.plot ?? item.summary ?? `${item.title} is a ${item.year} Indian ${item.language} ${kindWord.toLowerCase()}.`)
+    .slice(0, 300)
+    .trim() + '…';
+
+const jsonLd: Record<string, unknown>[] = [
+  {
+    '@context': 'https://schema.org',
+    '@type': item.kind === 'movie' ? 'Movie' : 'TVSeries',
+    name: item.title,
+    url: canonical,
+    datePublished: item.releaseDate,
+    inLanguage: item.language,
+    image: item.poster,
+    description: (item.plot ?? item.summary ?? '').slice(0, 500),
+    genre: item.genres,
+    countryOfOrigin: { '@type': 'Country', name: 'India' },
+    ...(item.kind === 'movie'
+      ? { director: item.directedBy.map((n) => ({ '@type': 'Person', name: n })) }
+      : { creator: item.createdBy.map((n) => ({ '@type': 'Person', name: n })) }),
+    actor: item.cast.slice(0, 15).map((c) => ({ '@type': 'Person', name: c.name })),
+    ...(item.kind === 'series' && item.episodes ? { numberOfEpisodes: Number(item.episodes) || undefined } : {}),
+    sameAs: [
+      item.wikiUrl,
+      ...(item.external.imdbId
+        ? [`https://www.imdb.com/title/tt${item.external.imdbId}/`]
+        : []),
+    ].filter(Boolean),
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE.url },
+      { '@type': 'ListItem', position: 2, name: indexLabel, item: new URL(indexHref, SITE.url).href },
+      { '@type': 'ListItem', position: 3, name: item.title, item: canonical },
+    ],
+  },
+];
+---
+
+<Base title={`${item.title} (${item.year})`} description={description} image={item.poster} type="article">
+  <JsonLd data={jsonLd} />
+
+  <article class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <Breadcrumbs crumbs={[{ label: indexLabel, href: indexHref }, { label: item.title }]} />
+
+    <div class="grid gap-8 lg:grid-cols-[300px_1fr]">
+      <!-- Poster column -->
+      <div>
+        <div class="overflow-hidden rounded-2xl border border-ink-700 bg-ink-800 shadow-2xl shadow-black/40">
+          {item.poster ? (
+            <img src={item.poster} alt={`${item.title} poster`} width="480" height="720" class="w-full object-cover" />
+          ) : (
+            <div class="flex aspect-[2/3] items-center justify-center grain">
+              <span class="font-display text-6xl text-ivory-600">च</span>
+            </div>
+          )}
+        </div>
+        {item.external.links.length > 0 && (
+          <div class="mt-4 space-y-1.5 text-sm">
+            <p class="text-xs font-semibold uppercase tracking-widest text-ivory-600">Elsewhere</p>
+            {item.external.links.slice(0, 6).map((link) => (
+              <a href={link.url} rel="noopener" class="focus-ring block truncate text-ivory-400 hover:text-saffron-300">
+                {link.label} ↗
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- Main column -->
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${languageBadgeClass(item.language)}`}>{item.language}</span>
+          <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{kindWord}</span>
+          <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.year}</span>
+          {item.genres.slice(0, 4).map((genre) => (
+            <span class="rounded-full bg-ink-800 px-3 py-1 text-xs text-ivory-500">{genre}</span>
+          ))}
+        </div>
+
+        <h1 class="mt-4 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl">{item.title}</h1>
+
+        {item.summary && (
+          <p class="mt-5 max-w-3xl text-lg leading-relaxed text-ivory-300">{item.summary}</p>
+        )}
+
+        <div class="mt-8 overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-850/60">
+          <table class="w-full text-sm">
+            <caption class="sr-only">Key facts about {item.title}</caption>
+            <tbody>
+              {facts.map((fact) => (
+                <tr class="border-b border-ink-700/40 last:border-0">
+                  <th scope="row" class="w-40 bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">{fact.label}</th>
+                  <td class="px-4 py-2.5 text-ivory-200">{fact.value}</td>
+                </tr>
+              ))}
+              <tr class="border-t border-ink-700/40">
+                <th scope="row" class="bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">Sources</th>
+                <td class="px-4 py-2.5 text-ivory-400">{item.referenceCount} cited references on Wikipedia</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {item.plot && (
+          <section class="mt-10" aria-labelledby="plot">
+            <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Plot' : 'Premise'}</h2>
+            <p class="mt-4 max-w-3xl leading-relaxed text-ivory-300">{item.plot}</p>
+            <p class="mt-3 text-xs text-ivory-600">
+              Excerpted from Wikipedia (CC BY-SA 4.0) — read the full article via the source link below.
+            </p>
+          </section>
+        )}
+
+        {castPeople.length > 0 && (
+          <section class="mt-10" aria-labelledby="cast">
+            <h2 id="cast" class="font-display text-2xl font-bold text-ivory-50">Cast</h2>
+            <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {castPeople.map(({ member, person }) => (
+                <div>
+                  {person ? (
+                    <div class="flex gap-2">
+                      <div class="min-w-0 flex-1"><PersonCard person={person} /></div>
+                    </div>
+                  ) : (
+                    <div class="flex items-center gap-3 rounded-xl border border-ink-700/50 bg-ink-850/40 p-3">
+                      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-600">
+                        {member.name.slice(0, 1)}
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block truncate text-sm font-semibold text-ivory-200">{member.name}</span>
+                        {member.role && <span class="block truncate text-xs text-ivory-600">{member.role}</span>}
+                      </span>
+                    </div>
+                  )}
+                  {person && member.role && (
+                    <p class="mt-1 truncate pl-1 text-xs text-ivory-600">as {member.role}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {crew.length > 0 && (
+          <section class="mt-10" aria-labelledby="crew">
+            <h2 id="crew" class="font-display text-2xl font-bold text-ivory-50">Crew</h2>
+            <dl class="mt-4 grid gap-x-8 gap-y-3 sm:grid-cols-2">
+              {crew.map((member) => (
+                <div class="flex items-baseline justify-between gap-4 border-b border-ink-700/40 pb-2">
+                  <dt class="text-sm text-ivory-500">{member.role}</dt>
+                  <dd class="text-right text-sm font-medium text-ivory-200">
+                    {member.slug ? (
+                      <a href={`/people/${member.slug}`} class="hover:text-saffron-300">{member.name}</a>
+                    ) : (
+                      member.name
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
+        {item.sections.length > 0 && (
+          <section class="mt-10" aria-labelledby="article">
+            <h2 id="article" class="font-display text-2xl font-bold text-ivory-50">On the Wikipedia article</h2>
+            <p class="mt-3 text-sm text-ivory-500">The source article covers: {item.sections.join(' · ')}</p>
+          </section>
+        )}
+
+        <section class="mt-10 border-t border-ink-700/60 pt-6" aria-labelledby="links">
+          <h2 id="links" class="sr-only">External links and sources</h2>
+          <ExternalLinks
+            imdbId={item.external.imdbId}
+            official={item.external.official}
+            links={item.external.links}
+            wikiUrl={item.wikiUrl}
+            kind="title"
+          />
+        </section>
+      </div>
+    </div>
+  </article>
+</Base>
