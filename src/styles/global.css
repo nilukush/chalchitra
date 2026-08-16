@@ -43,6 +43,7 @@
 
 html {
   scroll-behavior: smooth;
+  color-scheme: dark;
 }
 
 body {
@@ -87,7 +88,14 @@ body {
   margin-top: 1.1rem;
 }
 
-.prose-article > p:first-child::first-letter {
+/* The plot is the hero content — slightly larger, more generous */
+.prose-hero p {
+  font-size: 1.08rem;
+  line-height: 1.9;
+}
+
+.prose-article > p:first-child::first-letter,
+.prose-hero > p:first-child::first-letter {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 3.1em;
@@ -96,6 +104,24 @@ body {
   padding-right: 0.14em;
   padding-top: 0.08em;
   color: var(--color-saffron-400);
+}
+
+section[id] {
+  scroll-margin-top: 5.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 a {

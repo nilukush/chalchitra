@@ -1,5 +1,29 @@
 # MEMORY.md — session state log
 
+## Session 6 — 2026-08-16 (multi-source go-ahead + hero redesign) — COMPLETE
+
+**Policy change**: site is NO LONGER Wikipedia-only. Wikipedia = canonical backbone;
+TMDB (and later YouTube etc.) = enrichment for gaps. Implemented `pipeline/enrich/`:
+- `tmdb-lib.ts` (pure, tested): `pickTmdbMatch` (name+year match), `mergeEpisodeSummaries`
+  (fills ONLY empty episode summaries — wiki text always wins).
+- `tmdb.ts` connector gated on `TMDB_API_KEY` env (no key → logged skip, pipeline unchanged);
+  adds backdrop (w780), rating (≥10 votes), official trailer (YouTube key), episode summaries
+  via /tv/{id}/season/1; caches to data/cache/tmdb/; `enrichedFrom: ['tmdb']` on records for
+  per-page attribution (TMDB notice appended only when fields were used). UI ready: hero band
+  renders backdrop when present, ★ rating chip, ▶ Watch trailer button.
+
+**Hero redesign** (after loading web-design-guidelines + frontend-design skills — user's
+fair criticism): title band is now identity-only (badges: language/release/runtime/episodes/
+rating + one-line year·genre·director context) — NO encyclopedic lead paragraph at top.
+**Full plot is the hero content immediately below the band** (larger type via .prose-hero).
+Wikipedia lead demoted to "Overview" section above Key details.
+
+**Guidelines fixes applied**: prefers-reduced-motion (kills smooth-scroll/animations),
+color-scheme: dark + theme-color meta, scroll-margin-top on anchored sections,
+text-wrap: balance on display H1. 113 tests green; 2,651 pages; 50,262 links / 0 missing.
+
+**To enable TMDB**: put TMDB_API_KEY in .env → `npm run pipeline:dataset && npm run build`.
+
 ## Session 5 — 2026-08-16 (six-part audit) — COMPLETE
 
 **Q1 Episode summaries**: 9/131 episodes have summaries on Wikipedia (ShortSummary is usually

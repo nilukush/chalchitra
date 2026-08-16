@@ -129,25 +129,49 @@ const jsonLd: Record<string, unknown>[] = [
 
       <!-- Main column -->
       <div>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${languageBadgeClass(item.language)}`}>{item.language}</span>
-          <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{kindWord}</span>
-          <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.year}</span>
-          {item.genres.slice(0, 4).map((genre) => (
-            <span class="rounded-full bg-ink-800 px-3 py-1 text-xs text-ivory-500">{genre}</span>
-          ))}
+        <!-- Title band: identity at a glance, no prose. Plot is the hero content below. -->
+        <div class="relative -mx-4 overflow-hidden border-b border-ink-700/60 px-4 pb-8 pt-2 sm:-mx-6 sm:px-6">
+          {item.backdrop && (
+            <img src={item.backdrop} alt="" aria-hidden="true" class="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-25" loading="eager" />
+          )}
+          <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-ink-950/40 via-ink-950/80 to-ink-950"></div>
+          <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_60%_at_75%_10%,rgba(244,167,44,0.12),transparent_65%)]"></div>
+
+          <div class="relative">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class={`rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${languageBadgeClass(item.language)}`}>{item.language}</span>
+              <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{kindWord}</span>
+              {item.releaseDate && (
+                <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.releaseDate}</span>
+              )}
+              {item.runtime && (
+                <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.runtime}</span>
+              )}
+              {item.kind === 'series' && item.episodes && (
+                <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.episodes} episodes</span>
+              )}
+              {item.rating && (
+                <span class="rounded-full bg-saffron-500/15 px-3 py-1 text-xs font-semibold text-saffron-300 ring-1 ring-inset ring-saffron-500/40">
+                  ★ {item.rating.value.toFixed(1)}<span class="font-normal text-saffron-300/60"> · {item.rating.source.toUpperCase()}</span>
+                </span>
+              )}
+            </div>
+
+            <h1 class="mt-4 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl [text-wrap:balance]">{item.title}</h1>
+            {item.nativeName && <p class="mt-1 text-lg text-ivory-400" lang="hi">{item.nativeName}</p>}
+
+            <p class="mt-3 text-sm text-ivory-500">
+              {item.year} · {item.language} {kindWord.toLowerCase()}
+              {item.genres.length > 0 && ` · ${item.genres.slice(0, 3).join(' / ')}`}
+              {item.directedBy.length > 0 && ` · Directed by ${item.directedBy.slice(0, 2).join(', ')}`}
+            </p>
+          </div>
         </div>
-
-        <h1 class="mt-4 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl">{item.title}</h1>
-
-        {item.summary && (
-          <p class="mt-5 max-w-3xl text-lg leading-relaxed text-ivory-300">{item.summary}</p>
-        )}
 
         {plotParagraphs.length > 0 && (
           <section class="mt-10" aria-labelledby="plot">
             <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
-            <div class="prose-article mt-4 max-w-3xl">
+            <div class="prose-article prose-hero mt-4 max-w-3xl">
               {plotParagraphs.map((para) =>
                 item.plotHtml ? <p set:html={para} /> : <p>{para}</p>,
               )}
@@ -227,6 +251,15 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
+        {item.summary && (
+          <section class="mt-10" aria-labelledby="overview">
+            <h2 id="overview" class="font-display text-2xl font-bold text-ivory-50">Overview</h2>
+            <div class="prose-article mt-4 max-w-3xl">
+              {item.summary.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+            </div>
+          </section>
+        )}
+
         {facts.length > 0 && (
           <section class="mt-10" aria-labelledby="facts">
             <h2 id="facts" class="font-display text-2xl font-bold text-ivory-50">Key details</h2>
@@ -290,18 +323,28 @@ const jsonLd: Record<string, unknown>[] = [
 
         <section class="mt-10 border-t border-ink-700/60 pt-6" aria-labelledby="links">
           <h2 id="links" class="sr-only">External links and sources</h2>
-          <ExternalLinks
-            imdbId={item.external.imdbId}
-            official={item.external.official}
-            links={item.external.links}
-            wikiUrl={item.wikiUrl}
-            kind="title"
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            {item.trailer && (
+              <a href={item.trailer} rel="noopener" class="focus-ring rounded-full bg-saffron-500 px-3.5 py-1.5 text-xs font-semibold text-ink-950 transition hover:bg-saffron-400">
+                ▶ Watch trailer
+              </a>
+            )}
+            <ExternalLinks
+              imdbId={item.external.imdbId}
+              official={item.external.official}
+              links={item.external.links}
+              wikiUrl={item.wikiUrl}
+              kind="title"
+            />
+          </div>
           <p class="mt-4 text-xs leading-relaxed text-ivory-600">
             Text, metadata and images on this page derive from the Wikipedia article
             <a href={item.wikiUrl} rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">“{item.wikiTitle}”</a>,
             licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">CC BY-SA 4.0</a>
             — see the source for its edit history and authors.
+            {(item.enrichedFrom ?? []).includes('tmdb') && (
+              <> Episode summaries, imagery, ratings and/or trailer data from <a href="https://www.themoviedb.org/" rel="noopener" class="text-ivory-400 underline decoration-ink-500 hover:text-saffron-300">TMDB</a>.</>
+            )}
           </p>
         </section>
       </div>

@@ -66,6 +66,14 @@ export interface TitleRecord {
   episodes?: string;
   budget?: string;
   gross?: string;
+  /** TMDB backdrop (image.tmdb.org) used as the hero band background */
+  backdrop?: string;
+  /** community rating (TMDB) shown in the hero chips */
+  rating?: { source: 'tmdb'; value: number; votes: number };
+  /** official trailer (YouTube) discovered via enrichment */
+  trailer?: string;
+  /** non-Wikipedia sources that contributed fields to this record */
+  enrichedFrom?: string[];
   episodesList: EpisodeRow[];
   soundtrack?: Soundtrack;
   references: ReferenceEntry[];

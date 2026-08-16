@@ -23,6 +23,7 @@ import {
   parseStartDate,
 } from './wikitext/index.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
+import { enrichTitles } from './enrich/tmdb.js';
 import { fetchPages, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
 import { SlugRegistry, buildSearchDocuments, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
@@ -419,6 +420,9 @@ async function main() {
     if (record.plotHtml) plotLinkCount += (record.plotHtml.match(/<a /g) ?? []).length;
   }
   console.log(`→ Plot texts carry ${plotLinkCount} internal links to people/title pages`);
+
+  // multi-source enrichment (TMDB) — fills gaps Wikipedia leaves; no-op without key
+  await enrichTitles([...movies, ...series]);
 
   // stats
   const languageMap = new Map<string, { movies: number; series: number }>();
