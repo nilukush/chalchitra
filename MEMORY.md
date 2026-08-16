@@ -1,5 +1,30 @@
 # MEMORY.md — session state log
 
+## Session 4 — 2026-08-16 (external-links audit) — COMPLETE
+
+User audit (episodes/soundtracks/external links/Vadhandhi S2 image). Findings & fixes:
+
+**Q1 Episodes** — 11/60 series have episode data (rest have NO table on Wikipedia);
+all 11 render the "Episode guide" (EpisodesTable, saffron-numbered rows, >20 collapse toggle).
+
+**Q2 Soundtracks** — 150 titles (141 movies + 9 series, 725 tracks), all rendering TrackList.
+
+**Q3 External links** — census found missed templates: Instagram (224), Facebook (121),
+Twitter/X (110), Rotten Tomatoes (63+22), YouTube (52), Netflix (9), {{URL}} (151),
+Bollywood Hungama person/movie (264!), Wikiquote (32), Spotify (1). Implemented
+LINK_TEMPLATES registry in `wikitext/links.ts` (+ `findTemplates` now supports positional
+params as '1','2'…, incl. explicit `|2=` numeric params). Coverage after fix:
+**74% of titles, 84% of persons have ≥1 external link** (remainder have none on Wikipedia).
+Non-links correctly skipped: succession boxes (s-*), stubs, award navbars, webarchive.
+Display limit raised: 14 chips/titles, 12/persons, deduped by URL.
+
+**Q4 Vadhandhi season 2** — its Wikipedia infobox has `| image =` EMPTY (no poster uploaded
+to Wikipedia yet). Extraction correct; nothing to capture. Added `FORCE_REFRESH=1` env flag
+(readCachedPage bypass) so future Wikipedia updates (e.g. new posters) can be re-fetched
+without nuking the whole cache: `FORCE_REFRESH=1 npm run pipeline:fetch && npm run pipeline:dataset`.
+
+Tests: 101 green. 2,651 pages, 50,180 internal links, 0 missing. Committed.
+
 ## Session 3 — 2026-08-16 (completeness mandate) — COMPLETE
 
 User's binding product decisions: this site is the DESTINATION, not a teaser.

@@ -172,6 +172,7 @@ function pageCacheFile(pageid: number): string {
 }
 
 export function readCachedPage(pageid: number): CachedPage | null {
+  if (process.env.FORCE_REFRESH === '1') return null; // re-fetch everything this run
   const file = pageCacheFile(pageid);
   if (!existsSync(file)) return null;
   try {

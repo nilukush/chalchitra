@@ -102,6 +102,16 @@ function cleanValue(raw: string | undefined): string {
   return splitListField(raw).join(', ');
 }
 
+/** Keep link chips unique by URL, most meaningful labels first. */
+function dedupeLinks(links: { label: string; url: string }[]): { label: string; url: string }[] {
+  const seen = new Set<string>();
+  return links.filter((l) => {
+    if (!l.url || seen.has(l.url)) return false;
+    seen.add(l.url);
+    return true;
+  });
+}
+
 function leadFromWikitext(wikitext: string): string | undefined {
   const firstHeading = wikitext.search(/^={2,}.*$/m);
   const lead = firstHeading > 0 ? wikitext.slice(0, firstHeading) : wikitext;
@@ -187,7 +197,7 @@ function parseTitlePage(
     crew: [],
     referenceCount: (wikitext.match(/<ref[\s>]/gi) ?? []).length,
     sections: listSectionTitles(wikitext).filter((s) => !BORING_SECTIONS.has(s)),
-    external: { imdbId: external.imdbId, official, links: external.links.slice(0, 10) },
+    external: { imdbId: external.imdbId, official, links: dedupeLinks(external.links).slice(0, 14) },
   };
   void cast;
   return record;
@@ -330,7 +340,7 @@ async function main() {
       occupations: splitListField(box.occupation),
       facts,
       credits,
-      external: { imdbId: external.imdbId, official: external.official, links: external.links.slice(0, 8) },
+      external: { imdbId: external.imdbId, official: external.official, links: dedupeLinks(external.links).slice(0, 12) },
       references: extractReferences(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });

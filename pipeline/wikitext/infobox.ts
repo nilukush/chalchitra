@@ -38,7 +38,8 @@ export interface ParsedTemplate {
   end: number;
 }
 
-/** Split a template body (no outer braces, no name chunk) into key=value params. */
+/** Split a template body (no outer braces, no name chunk) into params.
+ *  Named params are lowercased; positional params become '1', '2', … */
 function splitParams(body: string): Record<string, string> {
   const parts: string[] = [];
   let braceDepth = 0;
@@ -72,12 +73,21 @@ function splitParams(body: string): Record<string, string> {
   parts.push(current);
 
   const record: Record<string, string> = {};
+  let positional = 0;
   for (const part of parts) {
+    const explicit = /^\s*(\d+)\s*=(.*)$/.exec(part);
     const eq = part.indexOf('=');
-    if (eq <= 0) continue;
-    const key = part.slice(0, eq).trim().toLowerCase();
-    const value = part.slice(eq + 1).replace(/^\s*\n/, '').trim();
-    if (key) record[key] = value;
+    if (explicit) {
+      record[explicit[1]] = explicit[2].replace(/^\s*\n/, '').trim();
+      positional = Math.max(positional, Number(explicit[1]));
+    } else if (eq > 0) {
+      const key = part.slice(0, eq).trim().toLowerCase();
+      const value = part.slice(eq + 1).replace(/^\s*\n/, '').trim();
+      if (key) record[key] = value;
+    } else if (part.trim().length > 0) {
+      positional++;
+      record[String(positional)] = part.trim();
+    }
   }
   return record;
 }

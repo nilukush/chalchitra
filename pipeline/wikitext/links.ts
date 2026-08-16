@@ -1,4 +1,5 @@
 import { stripWikitext } from './clean.js';
+import { findTemplates } from './infobox.js';
 
 const NAMESPACES =
   /^(file|image|media|category|categories|wikipedia|wp|template|portal|help|special|draft|module|user|wikt|wiktionary|commons|w|s|b|q|v|d|m):/i;
@@ -32,7 +33,91 @@ export function extractWikiLinks(text: string): WikiLink[] {
   return result;
 }
 
-/** Extract IMDb id, official website, and labelled external-link bullets. */
+/** Streaming / social / ratings link templates → labelled URLs. */
+const LINK_TEMPLATES: {
+  name: RegExp;
+  label: string;
+  build: (p: Record<string, string>) => string | null;
+}[] = [
+  {
+    name: /^netflix (title|show)$/i,
+    label: 'Netflix',
+    build: (p) => (p['1'] || p['id'] ? `https://www.netflix.com/title/${p['1'] ?? p['id']}` : null),
+  },
+  {
+    name: /^instagram$/i,
+    label: 'Instagram',
+    build: (p) => {
+      const h = p['1'] ?? p['user'] ?? p['username'];
+      return h ? `https://www.instagram.com/${h.replace(/^@/, '')}` : null;
+    },
+  },
+  {
+    name: /^(twitter|x)$/i,
+    label: 'X (Twitter)',
+    build: (p) => {
+      const h = p['1'] ?? p['user'] ?? p['username'];
+      return h ? `https://twitter.com/${h.replace(/^@/, '')}` : null;
+    },
+  },
+  {
+    name: /^facebook$/i,
+    label: 'Facebook',
+    build: (p) => {
+      const h = p['1'] ?? p['user'] ?? p['username'];
+      return h ? `https://www.facebook.com/${h}` : null;
+    },
+  },
+  {
+    name: /^youtube$/i,
+    label: 'YouTube',
+    build: (p) => {
+      const h = p['1'] ?? p['channel'];
+      return h && /^https?:/.test(h) ? h : h ? `https://www.youtube.com/${h.replace(/^@/, '')}` : null;
+    },
+  },
+  {
+    name: /^youtube channel$/i,
+    label: 'YouTube',
+    build: (p) => (p['1'] ? `https://www.youtube.com/channel/${p['1']}` : null),
+  },
+  {
+    name: /^rotten tomatoes$/i,
+    label: 'Rotten Tomatoes',
+    build: (p) => (p['1'] || p['id'] ? `https://www.rottentomatoes.com/m/${p['1'] ?? p['id']}` : null),
+  },
+  {
+    name: /^spotify artist$/i,
+    label: 'Spotify',
+    build: (p) => (p['1'] ? `https://open.spotify.com/artist/${p['1']}` : null),
+  },
+  {
+    name: /^(bollywood hungama person|bh person)$/i,
+    label: 'Bollywood Hungama',
+    build: (p) => (p['1'] ? `https://www.bollywoodhungama.com/person/${p['1']}/` : null),
+  },
+  {
+    name: /^bollywood hungama (movie|film)$/i,
+    label: 'Bollywood Hungama',
+    build: (p) => (p['1'] ? `https://www.bollywoodhungama.com/movie/${p['1']}/` : null),
+  },
+  {
+    name: /^rotten tomatoes person$/i,
+    label: 'Rotten Tomatoes',
+    build: (p) => (p['1'] || p['id'] ? `https://www.rottentomatoes.com/celebrity/${p['1'] ?? p['id']}` : null),
+  },
+  {
+    name: /^wikiquote$/i,
+    label: 'Wikiquote',
+    build: (p) => (p['1'] ? `https://en.wikiquote.org/wiki/${encodeURIComponent(p['1'].replace(/ /g, '_'))}` : null),
+  },
+];
+
+function firstPositional(params: Record<string, string>): string | undefined {
+  return params['1'] ?? params['id'] ?? params['url'];
+}
+
+/** Extract IMDb id, official website, social/streaming templates, and labelled link bullets. */
 export function extractExternalLinks(text: string): ExternalLinks {
   const result: ExternalLinks = { links: [] };
 
@@ -47,6 +132,29 @@ export function extractExternalLinks(text: string): ExternalLinks {
     );
   if (official && /^https?:\/\//i.test(official[1])) result.official = official[1];
 
+  const seenUrls = new Set<string>(result.official ? [result.official] : []);
+  const push = (label: string, url: string) => {
+    if (!url || seenUrls.has(url)) return;
+    seenUrls.add(url);
+    result.links.push({ label, url });
+  };
+
+  for (const entry of LINK_TEMPLATES) {
+    for (const tpl of findTemplates(text ?? '', entry.name)) {
+      const url = entry.build(tpl.params);
+      if (url) push(entry.label, url);
+    }
+  }
+
+  // {{URL|https://site.com|label}} — official-ish plain links
+  for (const tpl of findTemplates(text ?? '', /^url$/i)) {
+    const url = firstPositional(tpl.params);
+    if (url && /^https?:\/\//i.test(url)) {
+      const label = tpl.params['2']?.replace(/\[\[[^\]|]*\|?([^\]]*)\]\]/g, '$1') || url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+      push(label, url);
+    }
+  }
+
   const bulletRe = /^[ \t]*\*[ \t]*(.+)$/gm;
   let bullet: RegExpExecArray | null;
   while ((bullet = bulletRe.exec(text ?? '')) !== null) {
@@ -59,10 +167,7 @@ export function extractExternalLinks(text: string): ExternalLinks {
     )
       .replace(/[|*]/g, '')
       .trim();
-    result.links.push({
-      label: label || url.replace(/^https?:\/\//, ''),
-      url,
-    });
+    push(label || url.replace(/^https?:\/\//, ''), url);
   }
 
   return result;
