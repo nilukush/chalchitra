@@ -1,0 +1,143 @@
+{
+  "generatedAt": "2026-08-16T11:47:45.917Z",
+  "movies": 365,
+  "series": 60,
+  "persons": 2210,
+  "languages": [
+    {
+      "language": "Hindi",
+      "movies": 77,
+      "series": 34
+    },
+    {
+      "language": "Tamil",
+      "movies": 83,
+      "series": 20
+    },
+    {
+      "language": "Telugu",
+      "movies": 63,
+      "series": 1
+    },
+    {
+      "language": "Kannada",
+      "movies": 41,
+      "series": 1
+    },
+    {
+      "language": "Malayalam",
+      "movies": 39,
+      "series": 1
+    },
+    {
+      "language": "Bengali",
+      "movies": 18,
+      "series": 0
+    },
+    {
+      "language": "Marathi",
+      "movies": 15,
+      "series": 2
+    },
+    {
+      "language": "Gujarati",
+      "movies": 9,
+      "series": 0
+    },
+    {
+      "language": "Punjabi",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Telugu, Hindi",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Telugu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Bengali Budget= 2 Corer Box Office 1 Corer",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Korean, English",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "English, Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "English, Hindi, Polish",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Assamese, Hindi, English",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Rajasthani",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, English, Marathi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Tulu, Kannada",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Marathi, Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Punjabi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Malayalam",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Meitei (Manipuri)",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "KannadaEnglish",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Telugu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Tamil (Original), Telugu, Kannada, Hindi, Malayalam.",
+      "movies": 0,
+      "series": 1
+    }
+  ]
+}

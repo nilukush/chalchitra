@@ -19,7 +19,7 @@ import {
   collectPersonLinks,
   parseStartDate,
 } from './wikitext/index.js';
-import { fetchPages, type CachedPage } from './wiki-api.js';
+import { fetchPages, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
 import { SlugRegistry, buildSearchDocuments, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
@@ -106,6 +106,18 @@ function leadFromWikitext(wikitext: string): string | undefined {
   return truncate(stripped, 900);
 }
 
+/** "Jana Nayagan.jpg?utm_source=…" → "Jana Nayagan.jpg" (API appends utm on unscaled thumbs). */
+function cleanThumb(url: string | undefined): string | undefined {
+  return url ? url.split('?')[0] : undefined;
+}
+
+/** "Dhurandhar poster.jpg" or "[[File:X.jpg|thumb|…]]" → "X.jpg" (null if none). */
+function imageFilenameFromInfobox(value: string | undefined): string | null {
+  if (!value) return null;
+  const match = /([^\[\]|:]+\.(?:jpe?g|png|svg|gif|webp))/i.exec(value);
+  return match ? match[1].trim() : null;
+}
+
 function parseTitlePage(
   kind: 'movie' | 'series',
   wikiTitle: string,
@@ -134,7 +146,7 @@ function parseTitlePage(
     origin: 'in',
     language: cleanValue(box.language) || (kind === 'movie' ? 'Hindi' : 'Hindi'),
     year: YEAR,
-    poster: page.thumb,
+    poster: cleanThumb(page.thumb),
     summary: page.extract ? truncate(page.extract, 900) : leadFromWikitext(wikitext),
     plot: truncate(stripWikitext(plot ?? ''), 1600),
     releaseDate: parseStartDate(box.released) ?? parseStartDate(box.first_aired) ?? undefined,
@@ -296,7 +308,7 @@ async function main() {
       wikiTitle: finalTitle,
       wikiUrl: wikiUrlFor(finalTitle),
       pageid: page.pageid,
-      image: page.thumb,
+      image: cleanThumb(page.thumb),
       summary: page.extract ? truncate(page.extract, 900) : leadFromWikitext(page.wikitext),
       occupations: splitListField(box.occupation),
       facts,
@@ -306,6 +318,39 @@ async function main() {
     });
   }
   persons.sort((a, b) => a.name.localeCompare(b.name));
+
+  // Resolve posters/portraits: prop=pageimages skips non-free posters, so fall
+  // back to the infobox image param resolved through imageinfo.
+  console.log('→ Resolving infobox images…');
+  const imageTargets = new Map<string, Array<(url: string) => void>>();
+  const addImageTarget = (filename: string | null, apply: (url: string) => void) => {
+    if (!filename) return;
+    const list = imageTargets.get(filename) ?? [];
+    list.push(apply);
+    imageTargets.set(filename, list);
+  };
+  for (const record of [...movies, ...series]) {
+    if (record.poster) continue;
+    const page = titlePages.get(record.wikiTitle);
+    const filename = imageFilenameFromInfobox(parseInfobox(page?.wikitext ?? '')?.image);
+    addImageTarget(filename, (url) => { record.poster = url; });
+  }
+  for (const person of persons) {
+    if (person.image) continue;
+    const page = finalPersons.get(person.wikiTitle);
+    const filename = imageFilenameFromInfobox(parseInfobox(page?.wikitext ?? '')?.image);
+    addImageTarget(filename, (url) => { person.image = url; });
+  }
+  if (imageTargets.size > 0) {
+    console.log(`  ${imageTargets.size} unique images to resolve`);
+    const thumbs = await resolveImageThumbUrls([...imageTargets.keys()]);
+    for (const [filename, setters] of imageTargets) {
+      const url = thumbs.get(filename);
+      if (url) for (const apply of setters) apply(url);
+    }
+  }
+  const posterCount = [...movies, ...series].filter((t) => t.poster).length;
+  console.log(`  posters on titles: ${posterCount}/${movies.length + series.length}`);
 
   // stats
   const languageMap = new Map<string, { movies: number; series: number }>();

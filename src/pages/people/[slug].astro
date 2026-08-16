@@ -42,7 +42,7 @@ const jsonLd: Record<string, unknown>[] = [
 ];
 
 const creditTitleRecords = person.credits
-  .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug) }))
+  .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug, credit.kind) }))
   .filter((entry) => entry.title !== undefined);
 ---
 

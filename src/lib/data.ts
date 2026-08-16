@@ -27,9 +27,10 @@ export function getPersonBySlug(slug: string): PersonRecord | undefined {
   return persons.find((p) => p.slug === slug);
 }
 
-/** Real title record (movie or series) by its slug, for credit grids. */
-export function getTitleBySlug(slug: string): TitleRecord | undefined {
-  return titles.find((t) => t.slug === slug);
+/** Real title record by slug AND kind (slugs are unique per kind, not across kinds). */
+export function getTitleBySlug(slug: string, kind?: 'movie' | 'series'): TitleRecord | undefined {
+  const pool = kind === 'movie' ? movies : kind === 'series' ? series : titles;
+  return pool.find((t) => t.slug === slug);
 }
 
 /** Most recently released titles that actually have a date. */
@@ -60,7 +61,7 @@ export const SITE = {
   tagline: 'The definitive guide to Indian cinema & series',
   description:
     'Chalachitra is a graphical discovery destination for Indian movies and television series — posters, plots, cast, crew, credits and facts, curated from open knowledge. Launching with the class of 2026.',
-  url: 'https://chalachitra.example',
+  url: (import.meta.env.SITE as string | undefined)?.replace(/\/$/, '') ?? 'https://chalachitra.example',
 } as const;
 
 const LANGUAGE_HUES: Record<string, string> = {

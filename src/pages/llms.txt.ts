@@ -1,7 +1,8 @@
 import type { APIRoute } from 'astro';
 import { SITE, stats } from '../lib/data';
 
-export const GET: APIRoute = () => {
+export const GET: APIRoute = ({ site }) => {
+  const base = (site?.href ?? SITE.url).replace(/\/$/, '');
   const body = `# ${SITE.name}
 
 > ${SITE.tagline}. A structured catalogue of Indian movies and television series,
@@ -18,7 +19,7 @@ Detail pages carry structured metadata as schema.org JSON-LD (Movie, TVSeries, P
 plus canonical URLs. Content excerpts are attributed to their Wikipedia source articles
 linked from every page.
 
-Site: ${SITE.url}
+Site: ${base}
 `;
   return new Response(body, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
 };

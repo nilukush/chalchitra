@@ -5,7 +5,7 @@
  * - disk cache of page payloads (data/cache/pages) and API responses (data/cache/api)
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -64,7 +64,16 @@ async function apiGet(params: Record<string, string | number>): Promise<any> {
   const cacheFile = path.join(CACHE_API_DIR, `${cacheKey}.json`);
 
   if (existsSync(cacheFile)) {
-    return JSON.parse(readFileSync(cacheFile, 'utf8'));
+    try {
+      return JSON.parse(readFileSync(cacheFile, 'utf8'));
+    } catch {
+      console.warn(`  ! corrupt cache entry ${cacheFile}, refetching`);
+      try {
+        rmSync(cacheFile);
+      } catch {
+        /* ignore */
+      }
+    }
   }
 
   let lastError: unknown = null;
@@ -280,6 +289,37 @@ export async function resolvePageIds(titles: string[]): Promise<Map<string, numb
       const finalTitle = resolveTitle(requested, chains);
       const page = byTitle.get(finalTitle);
       map.set(requested, page?.missing ? -1 : (page?.pageid ?? -1));
+    }
+  }
+  return map;
+}
+
+/**
+ * Resolve file names (e.g. "Poster.jpg") to 480px thumb URLs via imageinfo.
+ * Needed because prop=pageimages deliberately excludes non-free posters.
+ */
+export async function resolveImageThumbUrls(
+  filenames: string[],
+  width = 480,
+): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  const normalized = [...new Set(filenames.filter(Boolean).map((f) => f.trim()))]
+    .map((f) => (f.startsWith('File:') ? f : `File:${f.replace(/^Image:/i, '')}`))
+    .filter((f) => f.length > 5);
+
+  for (const batch of chunk(normalized, 50)) {
+    const data = await apiGet({
+      action: 'query',
+      titles: batch.join('|'),
+      prop: 'imageinfo',
+      iiprop: 'url',
+      iiurlwidth: width,
+      redirects: 1,
+    });
+    for (const page of data.query?.pages ?? []) {
+      const thumb = page.imageinfo?.[0]?.thumburl;
+      // API appends utm tracking params on unscaled thumbs; the bare URL is canonical
+      if (thumb) map.set(page.title.replace(/^File:/i, ''), thumb.split('?')[0]);
     }
   }
   return map;
