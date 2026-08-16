@@ -22,6 +22,7 @@ import {
   collectPersonLinks,
   parseStartDate,
 } from './wikitext/index.js';
+import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
 import { fetchPages, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
 import { SlugRegistry, buildSearchDocuments, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
@@ -133,6 +134,24 @@ function imageFilenameFromInfobox(value: string | undefined): string | null {
   return match ? match[1].trim() : null;
 }
 
+/** Sections rendered elsewhere (plot, cast, tables) or pure navigation → excluded
+ *  from the article deep-dive text. */
+const SKIP_ARTICLE_SECTIONS =
+  /^(references?|external links?|see also|notes?|citations?|further reading|bibliography|sources?|footnotes?|gallery|trivia|plot|premise|synopsis|cast( and (characters|crew))?|main cast|principal cast|recurring|guest|cameo appearances|voice cast|episodes?|series overview|season \d+|soundtracks?|music|music \(album\)|songs?|soundtrack album|marketing|promotion)$/i;
+
+function extractArticleSections(wikitext: string): { title: string; text: string }[] {
+  return extractSections(wikitext)
+    .filter((s) => !SKIP_ARTICLE_SECTIONS.test(s.title.trim()) && !/^\d+$/.test(s.title.trim()))
+    .map((s) => ({
+      title: s.title.trim().replace(/^./, (c) => c.toUpperCase()),
+      text: stripWikitext(s.body)
+        .replace(/^[#*:;]+\s*/gm, '')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim(),
+    }))
+    .filter((s) => s.text.length >= 60);
+}
+
 function parseTitlePage(
   kind: 'movie' | 'series',
   wikiTitle: string,
@@ -170,6 +189,7 @@ function parseTitlePage(
     summary: page.extract ? page.extract.trim() : leadFromWikitext(wikitext),
     plot: stripWikitext(plot ?? '') || undefined,
     reception: stripWikitext(reception ?? '') || undefined,
+    articleSections: extractArticleSections(wikitext),
     nativeName: cleanValue(box.native_name) || undefined,
     lastAired: cleanValue(box.last_aired) || undefined,
     relatedTitles: splitListField(box.related),
@@ -380,6 +400,25 @@ async function main() {
   }
   const posterCount = [...movies, ...series].filter((t) => t.poster).length;
   console.log(`  posters on titles: ${posterCount}/${movies.length + series.length}`);
+
+  // Inline links inside plot text → internal pages for people and titles
+  const lookup: LinkLookup = new Map();
+  for (const record of [...movies, ...series]) {
+    lookup.set(record.wikiTitle, { type: record.kind, slug: record.slug });
+  }
+  for (const [finalTitle, slug] of personSlugByFinal) {
+    lookup.set(finalTitle, { type: 'person', slug });
+  }
+  let plotLinkCount = 0;
+  for (const record of [...movies, ...series]) {
+    const wikitext = titlePages.get(record.wikiTitle)?.wikitext ?? '';
+    const rawPlot =
+      getSection(wikitext, 'Plot') ?? getSection(wikitext, 'Premise') ?? getSection(wikitext, 'Synopsis');
+    if (!rawPlot) continue;
+    record.plotHtml = renderLinkedHtml(rawPlot, lookup) || undefined;
+    if (record.plotHtml) plotLinkCount += (record.plotHtml.match(/<a /g) ?? []).length;
+  }
+  console.log(`→ Plot texts carry ${plotLinkCount} internal links to people/title pages`);
 
   // stats
   const languageMap = new Map<string, { movies: number; series: number }>();

@@ -26,7 +26,7 @@ const crew = item.crew.slice(0, 18);
 
 const facts: { label: string; value: string }[] = [
   { label: 'Original title', value: item.nativeName ?? '' },
-  { label: item.kind === 'movie' ? 'Directed by' : 'Directed by', value: item.directedBy.join(', ') },
+  { label: 'Directed by', value: item.directedBy.join(', ') },
   { label: 'Created by', value: item.createdBy.join(', ') },
   { label: 'Written by', value: item.writtenBy.join(', ') },
   { label: 'Starring', value: item.cast.slice(0, 6).map((c) => c.name).join(', ') },
@@ -53,6 +53,8 @@ const relatedRecords = (item.relatedTitles ?? [])
   .map((name) => titles.find((t) => t.title.toLowerCase() === name.toLowerCase() && t.slug !== item.slug))
   .filter((t): t is NonNullable<typeof t> => Boolean(t))
   .slice(0, 6);
+
+const plotParagraphs = (item.plotHtml ?? item.plot ?? '').split('\n').filter(Boolean);
 
 const description =
   (item.plot ?? item.summary ?? `${item.title} is a ${item.year} Indian ${item.language} ${kindWord.toLowerCase()}.`)
@@ -142,29 +144,13 @@ const jsonLd: Record<string, unknown>[] = [
           <p class="mt-5 max-w-3xl text-lg leading-relaxed text-ivory-300">{item.summary}</p>
         )}
 
-        <div class="mt-8 overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-850/60">
-          <table class="w-full text-sm">
-            <caption class="sr-only">Key facts about {item.title}</caption>
-            <tbody>
-              {facts.map((fact) => (
-                <tr class="border-b border-ink-700/40 last:border-0">
-                  <th scope="row" class="w-40 bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">{fact.label}</th>
-                  <td class="px-4 py-2.5 text-ivory-200">{fact.value}</td>
-                </tr>
-              ))}
-              <tr class="border-t border-ink-700/40">
-                <th scope="row" class="bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">Sources</th>
-                <td class="px-4 py-2.5 text-ivory-400">{item.referenceCount} cited references on Wikipedia</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {item.plot && (
+        {plotParagraphs.length > 0 && (
           <section class="mt-10" aria-labelledby="plot">
             <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
             <div class="prose-article mt-4 max-w-3xl">
-              {item.plot.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+              {plotParagraphs.map((para) =>
+                item.plotHtml ? <p set:html={para} /> : <p>{para}</p>,
+              )}
             </div>
           </section>
         )}
@@ -188,30 +174,6 @@ const jsonLd: Record<string, unknown>[] = [
             <div class="mt-4">
               <TrackList soundtrack={item.soundtrack} />
             </div>
-          </section>
-        )}
-
-        {item.reception && (
-          <section class="mt-10" aria-labelledby="reception">
-            <h2 id="reception" class="font-display text-2xl font-bold text-ivory-50">Reception</h2>
-            <div class="prose-article mt-4 max-w-3xl">
-              {item.reception.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
-            </div>
-          </section>
-        )}
-
-        {relatedRecords.length > 0 && (
-          <section class="mt-10" aria-labelledby="related">
-            <h2 id="related" class="font-display text-2xl font-bold text-ivory-50">Related titles</h2>
-            <ul class="mt-4 flex flex-wrap gap-2.5">
-              {relatedRecords.map((rel) => (
-                <li>
-                  <a href={rel.kind === 'movie' ? `/movies/${rel.slug}` : `/series/${rel.slug}`} class="focus-ring inline-block rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
-                    {rel.title} <span class="text-ivory-600">· {rel.kind === 'movie' ? 'Film' : 'Series'}</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
           </section>
         )}
 
@@ -265,10 +227,50 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
-        {item.sections.length > 0 && (
-          <section class="mt-10" aria-labelledby="article">
-            <h2 id="article" class="font-display text-2xl font-bold text-ivory-50">On the Wikipedia article</h2>
-            <p class="mt-3 text-sm text-ivory-500">The source article covers: {item.sections.join(' · ')}</p>
+        {facts.length > 0 && (
+          <section class="mt-10" aria-labelledby="facts">
+            <h2 id="facts" class="font-display text-2xl font-bold text-ivory-50">Key details</h2>
+            <div class="mt-4 overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-850/60">
+              <table class="w-full text-sm">
+                <caption class="sr-only">Key facts about {item.title}</caption>
+                <tbody>
+                  {facts.map((fact) => (
+                    <tr class="border-b border-ink-700/40 last:border-0">
+                      <th scope="row" class="w-40 bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">{fact.label}</th>
+                      <td class="px-4 py-2.5 text-ivory-200">{fact.value}</td>
+                    </tr>
+                  ))}
+                  <tr class="border-t border-ink-700/40">
+                    <th scope="row" class="bg-ink-800/50 px-4 py-2.5 text-left align-top font-medium text-ivory-500">Sources</th>
+                    <td class="px-4 py-2.5 text-ivory-400">{item.referenceCount} cited references on Wikipedia</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {item.articleSections.map((section) => (
+          <section class="mt-10" aria-labelledby={`sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+            <h2 id={`sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="font-display text-2xl font-bold text-ivory-50">{section.title}</h2>
+            <div class="prose-article mt-4 max-w-3xl">
+              {section.text.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+            </div>
+          </section>
+        ))}
+
+        {relatedRecords.length > 0 && (
+          <section class="mt-10" aria-labelledby="related">
+            <h2 id="related" class="font-display text-2xl font-bold text-ivory-50">Related titles</h2>
+            <ul class="mt-4 flex flex-wrap gap-2.5">
+              {relatedRecords.map((rel) => (
+                <li>
+                  <a href={rel.kind === 'movie' ? `/movies/${rel.slug}` : `/series/${rel.slug}`} class="focus-ring inline-block rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                    {rel.title} <span class="text-ivory-600">· {rel.kind === 'movie' ? 'Film' : 'Series'}</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

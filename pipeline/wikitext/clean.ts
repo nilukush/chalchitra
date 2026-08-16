@@ -84,9 +84,10 @@ export function stripWikitext(raw: string): string {
     text = text.replace(/'''([^']+|[^'].*?[^'])'''/g, '$1');
     text = text.replace(/''([^']+|[^'].*?[^'])''/g, '$1');
 
-    // Line breaks → space, remaining HTML tags removed, entities decoded
+    // Line breaks → space; only real HTML tags removed (letter after < or </),
+    // so raw comparisons like "gross < 500" survive; entities decoded
     text = text.replace(/<br\s*\/?>/gi, ' ');
-    text = text.replace(/<[^>]+>/g, '');
+    text = text.replace(/<\/?[a-zA-Z][^>]*>/g, '');
     for (const [ent, ch] of Object.entries(ENTITIES)) text = text.split(ent).join(ch);
 
     // Stray markup leftovers

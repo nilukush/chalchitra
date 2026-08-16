@@ -1,5 +1,37 @@
 # MEMORY.md — session state log
 
+## Session 5 — 2026-08-16 (six-part audit) — COMPLETE
+
+**Q1 Episode summaries**: 9/131 episodes have summaries on Wikipedia (ShortSummary is usually
+left empty; sometimes with "don't add copyrighted text" comments). Nothing further extractable
+from Wikipedia — reported honestly.
+
+**Q2 Hyperlinks → pages**: NEW `wikitext/linked-html.ts` (107 tests): plot wikitext now renders
+with **inline internal links** (`plotHtml`) — wikilinks to catalogue people/titles become
+`/people/…` `/movies/…` anchors (246 plots, 82 links), unknown links degrade to text, output
+fully escaped (safe set:html). Note stripWikitext tag-regex tightened to `</?[a-zA-Z]…>` so raw
+text like "gross < 500" survives.
+
+**Q3 Missing sections**: section census found Production 292 / Reception 284 / Release 272 /
+Box office 85 / Distribution 18 / Home media 74 / Casting 69 / Controversy… Now captured as
+`articleSections[]` (full text; skip-list = sections rendered specially) → **360/365 titles
+render their deep-dive sections** in article order (e.g. King: Development, Casting, Filming,
+Theatrical, Distribution).
+
+**Q4 Page redesign**: order now hero → summary → **Full plot (drop cap, inline links)** →
+episode guide → soundtrack → cast → crew → **Key details table (moved down)** → article
+sections → related → references → external links.
+
+**Q5 Live trending**: home trending grid now refreshes client-side — inline top-350 candidate
+JSON; script fetches Wikimedia top-viewed-per-day (≤3 days, ≤3 requests), re-renders grid,
+switches kicker to "● Live" with pulse dot; sessionStorage 30-min cache; static build list
+remains fallback. True real-time impossible upstream (pageview data publishes with 1-2 day lag).
+
+**Q6 Copy**: hero kicker no longer "class of 2026"; scope strip added under stats ("currently
+cataloguing the class of 2026 — earlier years and new industries on the roadmap").
+
+2,651 pages, 50,262 internal links, 0 missing. Committed.
+
 ## Session 4 — 2026-08-16 (external-links audit) — COMPLETE
 
 User audit (episodes/soundtracks/external links/Vadhandhi S2 image). Findings & fixes:

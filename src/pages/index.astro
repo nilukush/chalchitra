@@ -3,7 +3,7 @@ import Base from '../layouts/Base.astro';
 import PosterCard from '../components/PosterCard.astro';
 import PersonCard from '../components/PersonCard.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import { SITE, stats, recentTitles, upcomingTitles, spotlightPersons, languages, trendingTitles, trendingPersons } from '../lib/data';
+import { SITE, stats, recentTitles, upcomingTitles, spotlightPersons, languages, trendingTitles, trendingPersons, liveTrendingCandidates } from '../lib/data';
 
 const latestMovies = recentTitles('movie', 12);
 const latestSeries = recentTitles('series', 6);
@@ -13,6 +13,7 @@ const topLanguages = languages().slice(0, 10);
 const hotTitles = trendingTitles(12);
 const hotPeople = trendingPersons(8);
 const hasTrends = hotTitles.length > 0;
+const liveCandidates = liveTrendingCandidates(350);
 ---
 
 <Base title={SITE.name}>
@@ -20,7 +21,7 @@ const hasTrends = hotTitles.length > 0;
   <section class="relative grain overflow-hidden border-b border-ink-700/60">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_20%,rgba(244,167,44,0.14),transparent_60%),radial-gradient(40%_40%_at_20%_80%,rgba(227,93,135,0.08),transparent_60%)]"></div>
     <div class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
-      <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">The class of 2026</p>
+      <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">Indian cinema &amp; series · beautifully catalogued</p>
       <h1 class="max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-ivory-50 sm:text-6xl">
         Indian cinema,<br />
         <span class="italic text-saffron-400">beautifully catalogued.</span>
@@ -55,6 +56,9 @@ const hasTrends = hotTitles.length > 0;
           <dd class="font-display text-3xl font-bold text-ivory-50">{stats.persons}</dd>
         </div>
       </dl>
+      <p class="mt-6 text-sm text-ivory-600">
+        Currently cataloguing the class of 2026 — earlier years and new industries (Korea next) are on the roadmap.
+      </p>
     </div>
   </section>
 
@@ -65,12 +69,13 @@ const hasTrends = hotTitles.length > 0;
         <div class="mb-5 flex items-end justify-between gap-4">
           <div>
             <p class="mb-1 text-xs font-semibold uppercase tracking-[0.2em] text-saffron-500">
-              🔥 Trending this week · <span class="text-ivory-600">by Wikipedia readership, last 7 days</span>
+              🔥 <span id="trending-mode">Trending this week · <span class="text-ivory-600">by Wikipedia readership</span></span>
             </p>
             <h2 id="trending" class="font-display text-2xl font-bold tracking-tight text-ivory-50 sm:text-3xl">What India is watching</h2>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <script type="application/json" id="live-trending-data" set:html={JSON.stringify(liveCandidates)} />
+        <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" id="trending-grid">
           {hotTitles.map((item, i) => (
             <div class="relative">
               <span class="absolute -left-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-saffron-500 font-display text-sm font-bold text-ink-950 shadow-lg shadow-black/40" aria-label={`Rank ${i + 1}`}>
@@ -153,3 +158,105 @@ const hasTrends = hotTitles.length > 0;
     </section>
   )}
 </Base>
+
+<script>
+  // Near-real-time trending: intersect the freshest Wikipedia "top viewed per
+  // day" data with our catalogue and re-render the titles grid. Static build
+  // output stays as the fallback when the API is unreachable.
+  interface Candidate { a: string; u: string; t: string; p?: string; l?: string; k: string; y: number; }
+
+  const CACHE_KEY = 'chalachitra-live-trending';
+  const CACHE_TTL_MS = 30 * 60 * 1000;
+
+  function cardHtml(c: Candidate, rank: number): string {
+    const img = c.p
+      ? `<img src="${c.p}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">`
+      : '<span class="font-display text-3xl text-ivory-600">च</span>';
+    return `<div class="relative">
+      <span aria-label="Rank ${rank}" class="absolute -left-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-saffron-500 font-display text-sm font-bold text-ink-950 shadow-lg shadow-black/40">${rank}</span>
+      <a href="${c.u}" class="group block">
+        <div class="relative aspect-[2/3] overflow-hidden rounded-xl border border-ink-700/70 bg-ink-800 shadow-lg shadow-black/30 transition duration-300 group-hover:-translate-y-1 group-hover:border-saffron-500/40">
+          <div class="flex h-full w-full items-center justify-center">${img}</div>
+        </div>
+        <h3 class="mt-2.5 line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">${c.t}</h3>
+        <p class="text-xs text-ivory-600">${c.l ?? ''} · ${c.k === 'movie' ? 'Film' : 'Series'}</p>
+      </a>
+    </div>`;
+  }
+
+  function apply(candidates: Candidate[], views: Map<string, number>): void {
+    const grid = document.getElementById('trending-grid');
+    const mode = document.getElementById('trending-mode');
+    if (!grid) return;
+    const ranked = candidates
+      .map((c) => ({ c, v: views.get(c.a) ?? 0 }))
+      .filter((x) => x.v > 0)
+      .sort((x, y) => y.v - x.v)
+      .slice(0, 12);
+    if (ranked.length < 4) return;
+    grid.innerHTML = ranked.map((x, i) => cardHtml(x.c, i + 1)).join('');
+    if (mode) {
+      mode.innerHTML = 'Live · Wikipedia readership, latest days <span class="ml-1 inline-block h-2 w-2 animate-pulse rounded-full bg-saffron-400" aria-hidden="true"></span>';
+    }
+  }
+
+  async function fetchDay(back: number): Promise<Map<string, number> | null> {
+    const d = new Date(Date.now() - back * 24 * 3600 * 1000);
+    const ymd = `${d.getUTCFullYear()}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${String(d.getUTCDate()).padStart(2, '0')}`;
+    try {
+      const res = await fetch(
+        `https://wikimedia.org/api/rest_v1/metrics/pageviews/top/en.wikipedia/all-access/${ymd}`,
+        { headers: { Accept: 'application/json' } },
+      );
+      if (!res.ok) return null;
+      const json = await res.json();
+      const map = new Map<string, number>();
+      for (const a of json.items?.[0]?.articles ?? []) map.set(a.article, a.views);
+      return map.size > 0 ? map : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async function run(): Promise<void> {
+    const dataEl = document.getElementById('live-trending-data');
+    if (!dataEl) return;
+    let candidates: Candidate[] = [];
+    try {
+      candidates = JSON.parse(dataEl.textContent ?? '[]');
+    } catch {
+      return;
+    }
+    if (candidates.length === 0) return;
+
+    // cached render → instant, polite (≤1 fetch per visitor per half hour)
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(CACHE_KEY) ?? 'null');
+      if (cached && Date.now() - cached.at < CACHE_TTL_MS) {
+        apply(candidates, new Map(cached.views));
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+
+    const views = new Map<string, number>();
+    let got = 0;
+    for (const back of [1, 2, 3, 4, 5]) {
+      const day = await fetchDay(back);
+      if (!day) continue;
+      got++;
+      for (const [article, v] of day) views.set(article, (views.get(article) ?? 0) + v);
+      if (got >= 3) break;
+    }
+    if (got === 0) return; // keep static build-time list
+    apply(candidates, views);
+    try {
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), views: [...views.entries()].slice(0, 800) }));
+    } catch {
+      /* quota — ignore */
+    }
+  }
+
+  run();
+</script>

@@ -2,6 +2,11 @@ import type { EpisodeRow } from './wikitext/episodes.js';
 import type { Soundtrack } from './wikitext/soundtrack.js';
 import type { ReferenceEntry } from './wikitext/references.js';
 
+export interface ArticleSection {
+  title: string;
+  text: string;
+}
+
 export interface CastMember {
   name: string;
   /** site slug when the person has a page on Chalachitra, else null */
@@ -35,7 +40,12 @@ export interface TitleRecord {
   poster?: string;
   summary?: string;
   plot?: string;
+  /** plot with internal links to people/title pages (safe HTML) */
+  plotHtml?: string;
   reception?: string;
+  /** full text of article sections rendered neither as plot nor tables
+   *  (Production, Release, Box office, Critical response, Home media, …) */
+  articleSections: ArticleSection[];
   nativeName?: string;
   lastAired?: string;
   relatedTitles: string[];

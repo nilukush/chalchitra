@@ -28,6 +28,41 @@ export function trendingPersons(count: number): PersonRecord[] {
     .slice(0, count);
 }
 
+export interface LiveCandidate {
+  /** article title as the pageviews API sees it (underscores) */
+  a: string;
+  /** internal href */
+  u: string;
+  /** display title */
+  t: string;
+  p?: string;
+  l?: string;
+  k: 'movie' | 'series';
+  y: number;
+}
+
+/**
+ * Compact candidate list for the client-side live-trending refresh: the
+ * highest-traffic catalogue articles by last build's signal. The browser
+ * intersects them with fresh Wikipedia top-viewed data and re-renders the grid.
+ */
+export function liveTrendingCandidates(count: number): LiveCandidate[] {
+  const scored = titles.map((t) => ({
+    a: t.wikiTitle.replace(/ /g, '_'),
+    u: `/${t.kind === 'movie' ? 'movies' : 'series'}/${t.slug}`,
+    t: t.title,
+    p: t.poster,
+    l: t.language,
+    k: t.kind,
+    y: t.year,
+    s: trends.scores[t.slug] ?? 0,
+  }));
+  return scored
+    .sort((x, y) => y.s - x.s)
+    .slice(0, count)
+    .map(({ s: _s, ...rest }) => rest);
+}
+
 export const titles: TitleRecord[] = [...movies, ...series];
 
 export function getMovie(slug: string): TitleRecord | undefined {
