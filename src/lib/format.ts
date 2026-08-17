@@ -15,3 +15,16 @@ export function formatRuntime(raw: string | undefined): string | undefined {
   const rest = mins % 60;
   return rest ? `${h}h ${rest}m` : `${h}h`;
 }
+
+/** Split a wall-of-text paragraph into readable chunks of ≤ `maxSentences`.
+ *  Readability research consensus: 3–5 sentences per paragraph. */
+export function splitLongParagraphs(paragraph: string, maxSentences = 3): string[] {
+  if (!paragraph.trim()) return [];
+  const sentences = paragraph.split(/(?<=[.!?])\s+(?=[A-Z"'“(\[])/);
+  if (sentences.length <= maxSentences) return [paragraph];
+  const chunks: string[] = [];
+  for (let i = 0; i < sentences.length; i += maxSentences) {
+    chunks.push(sentences.slice(i, i + maxSentences).join(' '));
+  }
+  return chunks;
+}

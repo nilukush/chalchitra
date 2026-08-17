@@ -83,8 +83,8 @@ body {
 /* Long-form article prose (full plot/bio text) — optimised for sustained reading:
    brighter ivory, ~17px, 68ch measure, generous leading */
 .prose-article p {
-  font-size: 1.06rem;
-  line-height: 1.9;
+  font-size: 1.1rem;
+  line-height: 1.85;
   color: var(--color-ivory-100);
   text-wrap: pretty;
 }

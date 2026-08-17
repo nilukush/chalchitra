@@ -16,13 +16,16 @@ const hotTitles = trendingTitles(12);
 const hotPeople = trendingPersons(8);
 const hasTrends = hotTitles.length > 0;
 const liveCandidates = liveTrendingCandidates(350);
+const collage = (hotTitles.length > 2 ? hotTitles : latestMovies).filter((t) => t.poster).slice(0, 4);
+const buzzSlugs = new Set(anticipated.map((t) => t.slug));
 ---
 
 <Base title={SITE.name}>
   <!-- Hero -->
   <section class="relative grain overflow-hidden border-b border-ink-700/60">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_20%,rgba(244,167,44,0.14),transparent_60%),radial-gradient(40%_40%_at_20%_80%,rgba(227,93,135,0.08),transparent_60%)]"></div>
-    <div class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
+    <div class="relative mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_360px] lg:items-center">
+      <div>
       <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">चलचित्र · movies · series · people</p>
       <h1 class="max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-ivory-50 sm:text-6xl">
         Every Indian movie<br />
@@ -61,6 +64,25 @@ const liveCandidates = liveTrendingCandidates(350);
       <p class="mt-6 text-sm text-ivory-600">
         Currently cataloguing {stats.years.join(' · ')} — earlier years and new industries (Korea next) are on the roadmap.
       </p>
+      </div>
+
+      <!-- poster collage fills the right side of the hero -->
+      {collage.length > 2 && (
+        <div class="relative hidden h-[420px] lg:block" aria-hidden="true">
+          {collage.slice(0, 4).map((item, i) => (
+            <div
+              class="absolute w-[168px] overflow-hidden rounded-xl border border-ink-700/80 shadow-2xl shadow-black/60"
+              style={`top:${[8, 72, 40, 108][i]}px; left:${i * 20}%; transform:rotate(${[-6, 2, 8, -3][i]}deg); z-index:${[30, 20, 40, 10][i]};`}
+            >
+              {item.poster ? (
+                <img src={item.poster} alt="" width="168" height="252" loading={i < 2 ? 'eager' : 'lazy'} class="aspect-[2/3] w-full object-cover" />
+              ) : (
+                <div class="flex aspect-[2/3] items-center justify-center bg-ink-800"><span class="font-display text-4xl text-ivory-600">च</span></div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   </section>
 
@@ -139,33 +161,31 @@ const liveCandidates = liveTrendingCandidates(350);
       <SectionHeading title="Coming soon & most anticipated" kicker="On the horizon" href="/movies" linkLabel="Browse films" />
       {comingSoon.length > 0 && (
         <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {comingSoon.map((item, i) => <PosterCard item={item} eager={i < 6} />)}
+          {comingSoon.map((item, i) => (
+            <div class="relative">
+              {buzzSlugs.has(item.slug) && (
+                <span class="absolute -right-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-lotus-500 text-sm shadow-lg shadow-black/40" title="Trending on Wikipedia before release" aria-label="Buzzing before release">
+                  🔥
+                </span>
+              )}
+              <PosterCard item={item} eager={i < 6} />
+            </div>
+          ))}
         </div>
       )}
-      {anticipated.length > 0 && (
+      {soon.length > 0 && (
         <div class="mt-6">
-          <p class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-600">Buzzing before release · by Wikipedia readership</p>
+          <p class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-600">Announced · release dates TBA</p>
           <ul class="flex flex-wrap gap-2.5">
-            {anticipated.map((item) => (
+            {soon.map((item) => (
               <li>
-                <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-500 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/60 hover:text-saffron-300">
-                  {item.title} <span class="text-ivory-600">· {item.releaseDate ?? item.language}</span>
+                <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-600/60 px-4 py-1.5 text-xs text-ivory-500 transition hover:text-saffron-300">
+                  {item.title} <span class="text-ivory-700">· date TBA</span>
                 </a>
               </li>
             ))}
           </ul>
         </div>
-      )}
-      {soon.length > 0 && (
-        <ul class="mt-4 flex flex-wrap gap-2.5">
-          {soon.map((item) => (
-            <li>
-              <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-600/60 px-4 py-1.5 text-xs text-ivory-500 transition hover:text-saffron-300">
-                {item.title} <span class="text-ivory-700">· date TBA</span>
-              </a>
-            </li>
-          ))}
-        </ul>
       )}
     </section>
   )}
@@ -186,9 +206,9 @@ const liveCandidates = liveTrendingCandidates(350);
   // Near-real-time trending: intersect the freshest Wikipedia "top viewed per
   // day" data with our catalogue and re-render the titles grid. Static build
   // output stays as the fallback when the API is unreachable.
-  interface Candidate { a: string; u: string; t: string; p?: string; l?: string; k: string; y: number; }
+  interface Candidate { a: string; u: string; t: string; p?: string; l?: string; k: string; y: number; r?: string; }
 
-  const CACHE_KEY = 'chalachitra-live-trending';
+  const CACHE_KEY = 'chalchitra-live-trending';
   const CACHE_TTL_MS = 30 * 60 * 1000;
 
   function cardHtml(c: Candidate, rank: number): string {
@@ -212,6 +232,7 @@ const liveCandidates = liveTrendingCandidates(350);
     const mode = document.getElementById('trending-mode');
     if (!grid) return;
     const ranked = candidates
+      .filter((c) => c.r === '1') // released only — unreleased buzz lives in "Coming soon"
       .map((c) => ({ c, v: views.get(c.a) ?? 0 }))
       .filter((x) => x.v > 0)
       .sort((x, y) => y.v - x.v)

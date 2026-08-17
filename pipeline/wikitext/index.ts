@@ -8,3 +8,4 @@ export * from './persons.js';
 export * from './episodes.js';
 export * from './soundtrack.js';
 export * from './references.js';
+export * from './filmography.js';

@@ -48,12 +48,15 @@ export interface LiveCandidate {
   l?: string;
   k: 'movie' | 'series';
   y: number;
+  /** '1' = released at build time; a date = not yet released */
+  r?: string;
 }
 
 /**
  * Compact candidate list for the client-side live-trending refresh: the
  * highest-traffic catalogue articles by last build's signal. The browser
- * intersects them with fresh Wikipedia top-viewed data and re-renders the grid.
+ * intersects them with fresh Wikipedia top-viewed data and re-renders the grid
+ * (released titles only — unreleased buzz belongs to "Coming soon").
  */
 export function liveTrendingCandidates(count: number): LiveCandidate[] {
   const scored = titles.map((t) => ({
@@ -64,6 +67,7 @@ export function liveTrendingCandidates(count: number): LiveCandidate[] {
     l: t.language,
     k: t.kind,
     y: t.year,
+    r: isReleased(t) ? '1' : t.releaseDate,
     s: trends.scores[t.slug] ?? 0,
   }));
   return scored

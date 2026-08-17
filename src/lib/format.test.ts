@@ -1,5 +1,30 @@
 import { describe, expect, it } from 'vitest';
-import { formatRuntime } from './format.js';
+import { formatRuntime, splitLongParagraphs } from './format.js';
+
+describe('splitLongParagraphs', () => {
+  it('keeps short paragraphs intact', () => {
+    expect(splitLongParagraphs('One sentence. Two sentences.')).toEqual(['One sentence. Two sentences.']);
+  });
+
+  it('splits walls of text into 3-sentence chunks', () => {
+    const text = 'A one. B two. C three. D four. E five. F six. G seven.';
+    expect(splitLongParagraphs(text)).toEqual([
+      'A one. B two. C three.',
+      'D four. E five. F six.',
+      'G seven.',
+    ]);
+  });
+
+  it('does not split after abbreviations followed by lowercase', () => {
+    const text = 'He met A.R. Rahman and left. Then he went home. Then he slept. Then he woke.';
+    const chunks = splitLongParagraphs(text);
+    expect(chunks[0]).toContain('A.R. Rahman');
+  });
+
+  it('handles empty input', () => {
+    expect(splitLongParagraphs('')).toEqual([]);
+  });
+});
 
 describe('formatRuntime', () => {
   it('converts minutes beyond an hour to hours + minutes', () => {

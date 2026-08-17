@@ -118,7 +118,7 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
     const votes = details.vote_count ?? 0;
-    if (!record.rating && typeof details.vote_average === 'number' && votes >= 10) {
+    if (!record.rating && typeof details.vote_average === 'number' && votes >= 3) {
       record.rating = { source: 'tmdb', value: details.vote_average, votes };
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }

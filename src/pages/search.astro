@@ -48,6 +48,13 @@ import { SITE, stats } from '../lib/data';
   const status = document.getElementById('search-status')!;
   const results = document.getElementById('results')!;
 
+  // populate the query immediately so the box is never empty after a header search
+  const initialQuery = new URLSearchParams(location.search).get('q') ?? '';
+  if (initialQuery) {
+    input.value = initialQuery;
+    status.textContent = 'Loading search index…';
+  }
+
   const GROUPS: { kind: Doc['k']; label: string; href: (slug: string) => string }[] = [
     { kind: 'movie', label: 'Movies', href: (s) => `/movies/${s}` },
     { kind: 'series', label: 'Series', href: (s) => `/series/${s}` },
@@ -114,10 +121,8 @@ import { SITE, stats } from '../lib/data';
     .then((r) => r.json())
     .then((index: { docs: Doc[] }) => {
       miniSearch.addAll(index.docs);
-      const initial = new URLSearchParams(location.search).get('q') ?? '';
-      if (initial) input.value = initial;
       status.textContent = `Ready — ${index.docs.length} pages searchable.`;
-      render(initial, index.docs);
+      render(initialQuery, index.docs);
     })
     .catch(() => {
       status.textContent = 'Could not load the search index.';

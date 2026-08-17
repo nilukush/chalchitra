@@ -32,7 +32,7 @@ const subtitle = meta ?? (person.occupations.length > 0
     )}
     <span class="min-w-0">
       <span class="block truncate text-sm font-semibold text-ivory-100 group-hover:text-saffron-300">{person.name}</span>
-      <span class="block truncate text-xs text-ivory-500">{subtitle}</span>
+      <span class="block truncate text-xs text-ivory-500" title={subtitle}>{subtitle}</span>
     </span>
   </a>
 </article>

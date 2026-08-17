@@ -12,7 +12,7 @@ import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
 import { extractTimelineDates } from '../lib/dates';
-import { formatRuntime } from '../lib/format';
+import { formatRuntime, splitLongParagraphs } from '../lib/format';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -58,7 +58,16 @@ const relatedRecords = (item.relatedTitles ?? [])
   .filter((t): t is NonNullable<typeof t> => Boolean(t))
   .slice(0, 6);
 
-const plotParagraphs = (item.plotHtml ?? item.plot ?? '').split('\n').filter(Boolean);
+const plotParagraphs = (item.plotHtml ?? item.plot ?? '')
+  .split('\n')
+  .filter(Boolean)
+  .flatMap((para) => (item.plotHtml ? [para] : splitLongParagraphs(para)));
+
+const moodChips = (item.moods ?? []).filter(
+  (mood) => !item.genres.some((genre) => genre.toLowerCase() === mood.toLowerCase()),
+);
+
+const trailerId = item.trailer ? /(?:v=|youtu\.be\/)([\w-]{6,})/.exec(item.trailer)?.[1] : undefined;
 
 // facts as visual stat tiles — specs only; people live in "Cast & crew" (no duplication)
 const PEOPLE_FACTS = new Set([
@@ -172,10 +181,10 @@ const jsonLd: Record<string, unknown>[] = [
           </div>
 
           <div class="mt-4 grid grid-cols-2 gap-2">
-            {item.trailer && (
-              <a href={item.trailer} rel="noopener" class="focus-ring col-span-2 flex items-center justify-center gap-2 rounded-xl bg-saffron-500 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-lg shadow-saffron-500/20 transition hover:bg-saffron-400">
+            {trailerId && (
+              <button type="button" data-trailer-open class="focus-ring col-span-2 flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-saffron-500 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-lg shadow-saffron-500/20 transition hover:bg-saffron-400">
                 <Icon name="film" class="h-4 w-4" /> Watch trailer
-              </a>
+              </button>
             )}
             {item.external.imdbId && (
               <a href={imdbTitleUrl(item.external.imdbId)} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
@@ -202,7 +211,10 @@ const jsonLd: Record<string, unknown>[] = [
               <span class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-ivory-600">
                 <Icon name="star" class="h-4 w-4 text-saffron-400" /> TMDB score
               </span>
-              <span class="font-display text-2xl font-bold text-saffron-300">{item.rating.value.toFixed(1)}</span>
+              <span class="flex items-baseline gap-1.5">
+                <span class="font-display text-2xl font-bold text-saffron-300">{item.rating.value.toFixed(1)}</span>
+                <span class="text-xs text-ivory-600">{item.rating.votes} votes</span>
+              </span>
             </div>
           )}
 
@@ -252,20 +264,20 @@ const jsonLd: Record<string, unknown>[] = [
               <p class="mt-3 max-w-xl font-display text-lg italic leading-snug text-saffron-300/90">{item.tagline}</p>
             )}
 
-            {item.genres.length > 0 && (
-              <div class="mt-4 flex flex-wrap items-center gap-2">
-                {item.genres.map((genre) => (
-                  <span class={`rounded-full px-3.5 py-1.5 text-sm font-semibold ring-1 ring-inset ${genreChipClass(genre)}`}>
-                    {genre}
-                  </span>
-                ))}
-                {(item.moods ?? []).map((mood) => (
-                  <span class="rounded-full border border-dashed border-ink-500 px-3 py-1.5 text-sm italic text-ivory-400">
-                    {mood}
-                  </span>
-                ))}
-              </div>
-            )}
+                {(item.genres.length > 0 || moodChips.length > 0) && (
+                  <div class="mt-4 flex flex-wrap items-center gap-2">
+                    {item.genres.map((genre) => (
+                      <span class={`rounded-full px-3.5 py-1.5 text-sm font-semibold ring-1 ring-inset ${genreChipClass(genre)}`}>
+                        {genre}
+                      </span>
+                    ))}
+                    {moodChips.map((mood) => (
+                      <span class="rounded-full border border-dashed border-ink-500 px-3 py-1.5 text-sm italic text-ivory-400">
+                        {mood}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
             <p class="mt-3 text-sm text-ivory-500">
               {item.year} · {item.language} {kindWord.toLowerCase()}
@@ -372,7 +384,7 @@ const jsonLd: Record<string, unknown>[] = [
           <section class="mt-10" aria-labelledby="overview">
             <h2 id="overview" class="font-display text-2xl font-bold text-ivory-50">Overview</h2>
             <div class="prose-article mt-4 max-w-3xl">
-              {item.summary.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+              {item.summary.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
             </div>
           </section>
         )}
@@ -424,7 +436,7 @@ const jsonLd: Record<string, unknown>[] = [
                 </ul>
               )}
               <div class="prose-article mt-4 max-w-[68ch] border-l-2 border-ink-700 pl-5">
-                {section.text.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+                {section.text.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
               </div>
             </section>
           );
@@ -481,4 +493,51 @@ const jsonLd: Record<string, unknown>[] = [
       </div>
     </div>
   </article>
+
+  {trailerId && (
+    <dialog
+      id="trailer-dialog"
+      class="w-[min(92vw,960px)] rounded-2xl border border-ink-700 bg-ink-900 p-0 shadow-2xl backdrop:bg-ink-950/90 backdrop:backdrop-blur-sm"
+      aria-label={`${item.title} trailer`}
+    >
+      <div class="flex items-center justify-between gap-4 border-b border-ink-700 px-5 py-3">
+        <p class="font-display text-lg font-bold text-ivory-50">{item.title} · Trailer</p>
+        <div class="flex items-center gap-3 text-sm">
+          <a href={item.trailer} rel="noopener" class="text-ivory-500 underline decoration-ink-500 hover:text-saffron-300">Open on YouTube ↗</a>
+          <button type="button" data-trailer-close class="focus-ring rounded-full border border-ink-600 px-3 py-1 text-ivory-300 hover:border-saffron-500/50 hover:text-saffron-300">✕ Close</button>
+        </div>
+      </div>
+      <div class="aspect-video w-full">
+        <iframe
+          data-trailer-frame
+          data-embed={trailerId}
+          class="h-full w-full"
+          src=""
+          title={`${item.title} trailer`}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
+      </div>
+    </dialog>
+  )}
 </Base>
+
+<script>
+  const dialog = document.getElementById('trailer-dialog') as HTMLDialogElement | null;
+  const frame = dialog?.querySelector<HTMLIFrameElement>('[data-trailer-frame]') ?? null;
+  const embed = frame?.dataset.embed ?? '';
+
+  document.querySelectorAll('[data-trailer-open]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!dialog || !frame) return;
+      frame.src = `https://www.youtube-nocookie.com/embed/${embed}?autoplay=1&rel=0`;
+      dialog.showModal();
+    });
+  });
+  const stop = () => {
+    if (frame) frame.src = '';
+  };
+  document.querySelectorAll('[data-trailer-close]').forEach((b) => b.addEventListener('click', () => dialog?.close()));
+  dialog?.addEventListener('close', stop);
+</script>

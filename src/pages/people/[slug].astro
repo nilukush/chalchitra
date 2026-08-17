@@ -5,8 +5,9 @@ import ExternalLinks from '../../components/ExternalLinks.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
 import ReferenceList from '../../components/ReferenceList.astro';
-import { SITE, persons, personInitials, getTitleBySlug } from '../../lib/data';
+import { SITE, persons, personInitials, getTitleBySlug, titles, imdbNameUrl } from '../../lib/data';
 import { computeAgeFromFacts } from '../../lib/dates';
+import { splitLongParagraphs } from '../../lib/format';
 
 export function getStaticPaths() {
   return persons.map((person) => ({ params: { slug: person.slug }, props: { person } }));
@@ -14,6 +15,10 @@ export function getStaticPaths() {
 
 const { person } = Astro.props;
 const canonical = new URL(`/people/${person.slug}`, SITE.url).href;
+const filmographyInCatalogue = (person.filmography ?? [])
+  .map((work) => ({ work, title: titles.find((t) => t.wikiTitle === work.wikiTitle) }))
+  .filter((e) => e.title !== undefined) as { work: { title: string; wikiTitle: string }; title: NonNullable<ReturnType<typeof getTitleBySlug>> }[];
+
 const description =
   (person.summary ?? `${person.name} — credits and facts on ${SITE.name}.`).slice(0, 300).trim() + '…';
 
@@ -74,6 +79,28 @@ const creditTitleRecords = person.credits
           </div>
         )}
 
+        <!-- quick actions: profiles first, not buried at the bottom -->
+        <div class="mt-4 grid grid-cols-2 gap-2">
+          {person.external.imdbId && (
+            <a href={imdbNameUrl(person.external.imdbId)} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+              IMDb ↗
+            </a>
+          )}
+          {person.tmdbId && (
+            <a href={`https://www.themoviedb.org/person/${person.tmdbId}`} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+              TMDB ↗
+            </a>
+          )}
+          <a href={person.wikiUrl} rel="noopener" class="focus-ring flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+            Wikipedia ↗
+          </a>
+          {person.external.links.filter((l) =>/instagram|facebook|twitter|x\.com|youtube|spotify|bollywood/i.test(l.url + l.label)).slice(0, 1).map((l) => (
+            <a href={l.url} rel="noopener" class="focus-ring col-span-2 flex items-center justify-center gap-1.5 rounded-xl border border-ink-600 bg-ink-800 px-3 py-2 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+              {l.label} ↗
+            </a>
+          ))}
+        </div>
+
         <!-- quick stats -->
         <div class={`grid gap-2 text-center ${age !== null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
@@ -110,7 +137,7 @@ const creditTitleRecords = person.credits
 
         {person.summary && (
           <div class="prose-article mt-6 max-w-3xl">
-            {person.summary.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
+            {person.summary.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
           </div>
         )}
 
@@ -159,6 +186,34 @@ const creditTitleRecords = person.credits
             ))}
           </ul>
         </section>
+
+        {(person.filmography?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="filmography">
+            <h2 id="filmography" class="font-display text-2xl font-bold text-ivory-50">
+              From the Wikipedia filmography <span class="text-lg text-ivory-600">({person.filmography!.length} works)</span>
+            </h2>
+            {filmographyInCatalogue.length > 0 ? (
+              <>
+                <p class="mt-2 text-sm text-ivory-500">
+                  {filmographyInCatalogue.length} of these works are in our catalogue — jump straight in:
+                </p>
+                <ul class="mt-4 flex flex-wrap gap-2">
+                  {filmographyInCatalogue.slice(0, 24).map(({ work, title }) => (
+                    <li>
+                      <a href={title!.kind === 'movie' ? `/movies/${title!.slug}` : `/series/${title!.slug}`} class="focus-ring inline-block rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+                        {work.title} {title!.year ? <span class="text-ivory-600">· {title!.year}</span> : ''}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p class="mt-2 text-sm text-ivory-500">
+                {person.filmography!.length} linked works across film, television and music — browse the full list on Wikipedia.
+              </p>
+            )}
+          </section>
+        )}
 
         {person.references.length > 0 && (
           <section class="mt-10" aria-labelledby="references">

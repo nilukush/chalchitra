@@ -1,6 +1,7 @@
 import type { EpisodeRow } from './wikitext/episodes.js';
 import type { Soundtrack } from './wikitext/soundtrack.js';
 import type { ReferenceEntry } from './wikitext/references.js';
+import type { FilmographyWork } from './wikitext/filmography.js';
 
 export interface ArticleSection {
   title: string;
@@ -128,6 +129,8 @@ export interface PersonRecord {
   references: ReferenceEntry[];
   sections: string[];
   /** pre/other-catalogue notable works from TMDB */
+  /** linked works named in the person's Wikipedia filmography/discography sections */
+  filmography?: FilmographyWork[];
   knownFor?: KnownForWork[];
   tmdbId?: number;
 }

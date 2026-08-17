@@ -11,6 +11,7 @@ import {
   extractCast,
   extractEpisodes,
   extractExternalLinks,
+  extractFilmography,
   extractReferences,
   extractSections,
   extractSoundtrack,
@@ -367,6 +368,7 @@ async function main() {
       credits,
       external: { imdbId: external.imdbId, official: external.official, links: dedupeLinks(external.links).slice(0, 12) },
       references: extractReferences(page.wikitext ?? ''),
+      filmography: extractFilmography(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });
   }

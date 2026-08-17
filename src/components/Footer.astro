@@ -12,8 +12,8 @@ const year = new Date().getFullYear();
     <nav aria-label="Footer" class="text-sm">
       <p class="mb-3 font-semibold uppercase tracking-widest text-ivory-600">Explore</p>
       <ul class="space-y-2 text-ivory-300">
-        <li><a class="hover:text-saffron-400" href="/movies">Movies of 2026</a></li>
-        <li><a class="hover:text-saffron-400" href="/series">Series debuts of 2026</a></li>
+        <li><a class="hover:text-saffron-400" href="/movies">Movies{stats.years.length > 0 ? ` of ${stats.years.join(' & ')}` : ''}</a></li>
+        <li><a class="hover:text-saffron-400" href="/series">Series debuts{stats.years.length > 0 ? ` of ${stats.years.join(' & ')}` : ''}</a></li>
         <li><a class="hover:text-saffron-400" href="/people">Cast &amp; crew</a></li>
         <li><a class="hover:text-saffron-400" href="/search">Search</a></li>
         <li><a class="hover:text-saffron-400" href="/about">About &amp; data sources</a></li>
