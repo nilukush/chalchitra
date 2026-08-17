@@ -1,5 +1,32 @@
 # MEMORY.md — session state log
 
+## Session 8 — 2026-08-17 (ten-point audit) — COMPLETE
+
+1. **AI key location**: `.env` (gitignored) — `AI_API_KEY` (+ optional `AI_BASE_URL`,
+   `AI_MODEL`); documented in `.env.example`. NEVER put keys in .env.example (committed).
+2. **Sticky hero band**: title band + section nav now stick (lg+) under the header —
+   identity + genres + nav always visible while reading. Poster sidebar sticky as before.
+3. **Toggle bug ROOT CAUSE**: the show-all script lived only in TitleDetail — person pages
+   never had it (movie pages were fine). Scripts moved INTO ReferenceList.astro and
+   EpisodesTable.astro so they ship with the components everywhere. **DOM-verified with
+   jsdom** (`scripts/verify-toggles.mjs`, jsdom now a devDep): collapse → click → expand →
+   click → restore, on movie + person pages.
+4. **Person sidebar redesign**: quick-stats row (2026 credits | computed age | known-as) via
+   `src/lib/dates.ts` `computeAgeFromFacts` (tested; 1,278/1,341 parseable; year-only dates
+   render no age rather than an approximate one); "Active years" moved to the kicker line.
+5. **Cast roles**: shown INSIDE PersonCards now (`meta` prop → "as Role").
+6. **Crew images**: crew members with pages render as PersonCards (photo + role meta);
+   unlinked crew stay as text rows.
+7. **Readability**: prose bumped to ivory-100 @1.06rem (plot 1.12rem), measure narrowed to
+   68ch, text-wrap: pretty.
+8. **Section order** (user's stated priority): Plot → Episodes → Cast & crew → Overview →
+   Details at a glance → Soundtrack → article chapters. Nav mirrors this.
+9. **TMDB link chip** in sidebar (tmdbId now persisted; themoviedb.org/movie|tv/{id}).
+10. **Episodes redesigned** as numbered card rows (badge, title+airdate, summary, director/
+    writer line), collapse after 12.
+
+120 tests green; 2,651 pages; 50,262 links / 0 missing.
+
 ## Session 7 — 2026-08-16 (graphical redesign + live TMDB) — COMPLETE
 
 **User's critique**: site was "extremely textual — if I wanted only text I'd send users to

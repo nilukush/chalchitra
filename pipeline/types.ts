@@ -70,6 +70,8 @@ export interface TitleRecord {
   tagline?: string;
   /** thematic mood tags (AI enrichment, future) */
   moods?: string[];
+  /** TMDB id (persisted even when nothing was merged, for source links) */
+  tmdbId?: number;
   /** TMDB backdrop (image.tmdb.org) used as the hero band background */
   backdrop?: string;
   /** community rating (TMDB) shown in the hero chips */

@@ -38,3 +38,18 @@ const collapsed = references.length > COLLAPSE_AFTER;
     </button>
   )}
 </div>
+
+<script>
+  // shipped with every instance of this component (person pages too)
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="ref-overflow"]').forEach((btn) => {
+    const target = btn.dataset.target ?? '';
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

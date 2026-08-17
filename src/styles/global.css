@@ -78,20 +78,23 @@ body {
   background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.04), transparent 45%);
 }
 
-/* Long-form article prose (full plot/bio text) with a film-magazine drop cap */
+/* Long-form article prose (full plot/bio text) — optimised for sustained reading:
+   brighter ivory, ~17px, 68ch measure, generous leading */
 .prose-article p {
-  line-height: 1.85;
-  color: var(--color-ivory-200);
+  font-size: 1.06rem;
+  line-height: 1.9;
+  color: var(--color-ivory-100);
+  text-wrap: pretty;
 }
 
 .prose-article p + p {
-  margin-top: 1.1rem;
+  margin-top: 1.15rem;
 }
 
 /* The plot is the hero content — slightly larger, more generous */
 .prose-hero p {
-  font-size: 1.08rem;
-  line-height: 1.9;
+  font-size: 1.12rem;
+  line-height: 1.95;
 }
 
 .prose-article > p:first-child::first-letter,

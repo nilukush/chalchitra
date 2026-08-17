@@ -5,41 +5,40 @@ interface Props {
   episodes: EpisodeRow[];
 }
 const { episodes } = Astro.props;
-const COLLAPSE_AFTER = 20;
+const COLLAPSE_AFTER = 12;
 const collapsed = episodes.length > COLLAPSE_AFTER;
 ---
 
-<div class="overflow-hidden rounded-2xl border border-ink-700/70">
-  <table class="w-full text-sm">
-    <caption class="sr-only">Episode guide</caption>
-    <thead>
-      <tr class="border-b border-ink-700/70 bg-ink-800/60 text-left text-[11px] uppercase tracking-widest text-ivory-600">
-        <th scope="col" class="w-12 px-4 py-2.5">Ep</th>
-        <th scope="col" class="px-4 py-2.5">Title</th>
-        <th scope="col" class="hidden px-4 py-2.5 md:table-cell">Director</th>
-        <th scope="col" class="hidden px-4 py-2.5 lg:table-cell">Writer</th>
-        <th scope="col" class="px-4 py-2.5 text-right">Air date</th>
-      </tr>
-    </thead>
-    <tbody>
-      {episodes.map((ep, i) => (
-        <tr class={`border-b border-ink-700/40 last:border-0 hover:bg-ink-800/40 ${collapsed && i >= COLLAPSE_AFTER ? 'ep-overflow hidden' : ''}`}>
-          <td class="px-4 py-3 align-top font-display text-base font-bold text-saffron-400">{ep.number}</td>
-          <td class="px-4 py-3 align-top">
-            <span class="font-semibold text-ivory-100">{ep.title || 'Untitled'}</span>
-            {ep.summary && <span class="mt-1 block max-w-xl text-xs leading-relaxed text-ivory-500">{ep.summary}</span>}
-          </td>
-          <td class="hidden px-4 py-3 align-top text-ivory-300 md:table-cell">{ep.director ?? '—'}</td>
-          <td class="hidden px-4 py-3 align-top text-ivory-300 lg:table-cell">{ep.writer ?? '—'}</td>
-          <td class="whitespace-nowrap px-4 py-3 text-right align-top text-ivory-500">{ep.airDate ?? '—'}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
+<div class="space-y-2.5">
+  {episodes.map((ep, i) => (
+    <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && i >= COLLAPSE_AFTER && 'ep-overflow hidden']}>
+      <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-saffron-500/30 bg-saffron-500/10">
+        <span class="font-display text-lg font-bold leading-none text-saffron-400">{ep.number}</span>
+        <span class="mt-0.5 text-[9px] uppercase tracking-wider text-ivory-600">ep</span>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 class="text-[15px] font-semibold text-ivory-100">{ep.title || 'Untitled'}</h3>
+          {ep.airDate && <time class="text-xs text-ivory-600">{ep.airDate}</time>}
+        </div>
+        {ep.summary && (
+          <p class="mt-1.5 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
+        )}
+        {(ep.director || ep.writer) && (
+          <p class="mt-2 text-xs text-ivory-600">
+            {ep.director && <>Directed by <span class="text-ivory-400">{ep.director}</span></>}
+            {ep.director && ep.writer && ' · '}
+            {ep.writer && <>Written by <span class="text-ivory-400">{ep.writer}</span></>}
+          </p>
+        )}
+      </div>
+    </article>
+  ))}
+
   {collapsed && (
     <button
       type="button"
-      class="toggle-btn w-full bg-ink-800/60 px-4 py-3 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+      class="toggle-btn w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-3 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
       data-target="ep-overflow"
       data-label-show={`Show all ${episodes.length} episodes`}
       data-label-hide="Show fewer episodes"
@@ -48,3 +47,17 @@ const collapsed = episodes.length > COLLAPSE_AFTER;
     </button>
   )}
 </div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="ep-overflow"]').forEach((btn) => {
+    const target = btn.dataset.target ?? '';
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

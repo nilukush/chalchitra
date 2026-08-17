@@ -74,6 +74,7 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
     const hit = pickTmdbMatch((search?.results ?? []) as TmdbSearchResult[], record.title, record.year);
     if (!hit?.id) continue;
     matched++;
+    record.tmdbId = hit.id;
 
     const sources: string[] = record.enrichedFrom ?? [];
 

@@ -6,6 +6,7 @@ import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
 import ReferenceList from '../../components/ReferenceList.astro';
 import { SITE, persons, personInitials, getTitleBySlug } from '../../lib/data';
+import { computeAgeFromFacts } from '../../lib/dates';
 
 export function getStaticPaths() {
   return persons.map((person) => ({ params: { slug: person.slug }, props: { person } }));
@@ -42,6 +43,10 @@ const jsonLd: Record<string, unknown>[] = [
   },
 ];
 
+const age = computeAgeFromFacts(person.facts);
+const diedFact = person.facts.find((f) => f.label === 'Died');
+const yearsActive = person.facts.find((f) => f.label === 'Years active')?.value;
+
 const creditTitleRecords = person.credits
   .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug, credit.kind) }))
   .filter((entry) => entry.title !== undefined);
@@ -69,12 +74,32 @@ const creditTitleRecords = person.credits
           </div>
         )}
 
-        {person.facts.length > 0 && (
-          <dl class="mt-6 space-y-2.5 text-sm">
-            {person.facts.map((fact) => (
+        <!-- quick stats -->
+        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+          <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
+            <p class="font-display text-2xl font-bold text-saffron-400">{person.credits.length}</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">2026 credits</p>
+          </div>
+          {age !== null && (
+            <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
+              <p class="font-display text-2xl font-bold text-saffron-400">{age}</p>
+              <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">{diedFact ? 'age at death' : 'years old'}</p>
+            </div>
+          )}
+          {person.occupations.length > 0 && (
+            <div class="flex flex-col justify-center rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
+              <p class="text-xs font-semibold leading-tight text-ivory-200">{person.occupations[0]}</p>
+              <p class="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-ivory-600">Known as</p>
+            </div>
+          )}
+        </div>
+
+        {person.facts.filter((f) => f.label !== 'Years active').length > 0 && (
+          <dl class="mt-5 space-y-2.5 text-sm">
+            {person.facts.filter((f) => f.label !== 'Years active').map((fact) => (
               <div class="border-b border-ink-700/40 pb-2.5">
                 <dt class="text-[10px] font-semibold uppercase tracking-[0.18em] text-ivory-600">{fact.label}</dt>
-                <dd class="mt-1 leading-snug text-ivory-200">{fact.value}</dd>
+                <dd class="mt-1 leading-snug text-ivory-100">{fact.value}</dd>
               </div>
             ))}
           </dl>
@@ -84,7 +109,7 @@ const creditTitleRecords = person.credits
       <div>
         {person.occupations.length > 0 && (
           <p class="text-sm font-semibold uppercase tracking-[0.2em] text-saffron-500">
-            {person.occupations.slice(0, 3).join(' · ')}
+            {person.occupations.slice(0, 3).join(' · ')}{yearsActive && <span class="ml-2 font-normal normal-case tracking-normal text-ivory-500">Active {yearsActive}</span>}
           </p>
         )}
         <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50 sm:text-5xl">{person.name}</h1>

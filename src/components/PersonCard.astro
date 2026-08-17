@@ -4,8 +4,13 @@ import { personInitials } from '../lib/data';
 
 interface Props {
   person: PersonRecord;
+  /** overrides the occupations line (e.g. the role played in a title) */
+  meta?: string;
 }
-const { person } = Astro.props;
+const { person, meta } = Astro.props;
+const subtitle = meta ?? (person.occupations.length > 0
+  ? person.occupations.slice(0, 2).join(', ')
+  : `Credits: ${person.credits.length}`);
 ---
 
 <article>
@@ -27,9 +32,7 @@ const { person } = Astro.props;
     )}
     <span class="min-w-0">
       <span class="block truncate text-sm font-semibold text-ivory-100 group-hover:text-saffron-300">{person.name}</span>
-      <span class="block truncate text-xs text-ivory-600">
-        {person.occupations.length > 0 ? person.occupations.slice(0, 2).join(', ') : `Credits: ${person.credits.length}`}
-      </span>
+      <span class="block truncate text-xs text-ivory-500">{subtitle}</span>
     </span>
   </a>
 </article>
