@@ -11,6 +11,7 @@ import StatTiles from './StatTiles.astro';
 import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
+import { extractTimelineDates } from '../lib/dates';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -257,6 +258,11 @@ const jsonLd: Record<string, unknown>[] = [
                     {genre}
                   </span>
                 ))}
+                {(item.moods ?? []).map((mood) => (
+                  <span class="rounded-full border border-dashed border-ink-500 px-3 py-1.5 text-sm italic text-ivory-400">
+                    {mood}
+                  </span>
+                ))}
               </div>
             )}
 
@@ -388,13 +394,16 @@ const jsonLd: Record<string, unknown>[] = [
               Soundtrack <span class="text-lg text-ivory-600">({item.soundtrack.tracks.length} tracks)</span>
             </h2>
             <div class="mt-4">
-              <TrackList soundtrack={item.soundtrack} />
+              <TrackList soundtrack={item.soundtrack} query={`${item.title} ${item.musicBy[0] ?? ''}`} />
             </div>
           </section>
         )}
 
         {item.articleSections.map((section, si) => {
           const secId = `sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+          const timeline = /release|production|development|filming|history|background|marketing|box office|certification/i.test(section.title)
+            ? extractTimelineDates(section.text, 6)
+            : [];
           return (
             <section class="mt-10" aria-labelledby={secId}>
               <div class="flex items-center gap-3">
@@ -403,7 +412,17 @@ const jsonLd: Record<string, unknown>[] = [
                 </span>
                 <h2 id={secId} class="font-display text-2xl font-bold tracking-tight text-ivory-50">{section.title}</h2>
               </div>
-              <div class="prose-article mt-4 max-w-3xl border-l-2 border-ink-700 pl-5">
+              {timeline.length > 0 && (
+                <ul class="mt-3 flex flex-wrap gap-2" aria-label="Key dates">
+                  {timeline.map((date) => (
+                    <li class="flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300">
+                      <Icon name="calendar" class="h-3.5 w-3.5 text-saffron-400" />
+                      {date}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <div class="prose-article mt-4 max-w-[68ch] border-l-2 border-ink-700 pl-5">
                 {section.text.split('\n').filter(Boolean).map((para) => <p>{para}</p>)}
               </div>
             </section>

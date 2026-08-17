@@ -14,7 +14,10 @@ export interface EpisodeRow {
   director?: string;
   writer?: string;
   airDate?: string;
+  runtime?: string;
   summary?: string;
+  /** TMDB season number when the row was synthesized (wiki tables have none) */
+  season?: number;
 }
 
 function clean(text: string | undefined): string | undefined {

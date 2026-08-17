@@ -1,8 +1,11 @@
 {
-  "generatedAt": "2026-08-17T07:12:27.819Z",
+  "generatedAt": "2026-08-17T08:13:54.570Z",
   "movies": 365,
   "series": 60,
   "persons": 2219,
+  "years": [
+    2026
+  ],
   "languages": [
     {
       "language": "Hindi",

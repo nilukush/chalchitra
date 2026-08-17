@@ -44,6 +44,8 @@
 html {
   scroll-behavior: smooth;
   color-scheme: dark;
+  /* scale the whole rem-based type system up a notch (16 → 17px) */
+  font-size: 106.25%;
 }
 
 body {
@@ -88,7 +90,7 @@ body {
 }
 
 .prose-article p + p {
-  margin-top: 1.15rem;
+  margin-top: 1.35rem;
 }
 
 /* The plot is the hero content — slightly larger, more generous */
@@ -111,6 +113,13 @@ body {
 
 section[id] {
   scroll-margin-top: 5.5rem;
+}
+
+/* Collapsed rows for show-all toggles. Dedicated class with !important so it
+   always wins over display utilities (flex, list-item, block…) regardless of
+   Tailwind's internal ordering. */
+.toggle-hidden {
+  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

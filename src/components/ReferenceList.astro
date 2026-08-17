@@ -12,7 +12,7 @@ const collapsed = references.length > COLLAPSE_AFTER;
 <div>
   <ol class={`grid gap-x-8 gap-y-1.5 text-sm ${references.length > 12 ? 'lg:columns-2' : ''}`}>
     {references.map((ref, i) => (
-      <li class={`break-inside-avoid list-item pl-1 ${collapsed && i >= COLLAPSE_AFTER ? 'ref-overflow hidden' : ''}`} style="counter-increment: ref-item;">
+      <li class={`break-inside-avoid pl-1 ${collapsed && i >= COLLAPSE_AFTER ? 'ref-overflow toggle-hidden' : ''}`} style="counter-increment: ref-item;">
         <span class="mr-1.5 text-xs text-ivory-600">{i + 1}.</span>
         {ref.url ? (
           <a href={ref.url} rel="noopener nofollow" class="text-ivory-200 underline decoration-ink-500 underline-offset-2 transition hover:text-saffron-300 hover:decoration-saffron-500/60">
@@ -48,7 +48,7 @@ const collapsed = references.length > COLLAPSE_AFTER;
     let open = false;
     btn.addEventListener('click', () => {
       open = !open;
-      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('hidden', !open));
+      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('toggle-hidden', !open));
       btn.textContent = open ? hide : show;
     });
   });

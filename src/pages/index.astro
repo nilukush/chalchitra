@@ -21,15 +21,15 @@ const liveCandidates = liveTrendingCandidates(350);
   <section class="relative grain overflow-hidden border-b border-ink-700/60">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_20%,rgba(244,167,44,0.14),transparent_60%),radial-gradient(40%_40%_at_20%_80%,rgba(227,93,135,0.08),transparent_60%)]"></div>
     <div class="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28">
-      <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">Indian cinema &amp; series · beautifully catalogued</p>
+      <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">चलचित्र · movies · series · people</p>
       <h1 class="max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-ivory-50 sm:text-6xl">
-        Indian cinema,<br />
-        <span class="italic text-saffron-400">beautifully catalogued.</span>
+        Every Indian movie<br />
+        <span class="italic text-saffron-400">&amp; series has a home.</span>
       </h1>
       <p class="mt-6 max-w-xl text-lg leading-relaxed text-ivory-300">
-        {SITE.name} is a graphical discovery destination for Indian movies and series — posters,
-        plots, cast, crew and credits, built from open knowledge. Not an afterthought of a global
-        database; the whole point of one.
+        {SITE.name} is the destination for Indian screen — films, series and the people who
+        make them, with posters, plots, episode guides, music, reviews and sources. Not an
+        afterthought of a global database; the whole point of one.
       </p>
       <div class="mt-8 flex flex-wrap items-center gap-3">
         <a href="/movies" class="focus-ring rounded-full bg-saffron-500 px-6 py-3 text-sm font-semibold text-ink-950 shadow-lg shadow-saffron-500/20 transition hover:bg-saffron-400">
@@ -57,7 +57,7 @@ const liveCandidates = liveTrendingCandidates(350);
         </div>
       </dl>
       <p class="mt-6 text-sm text-ivory-600">
-        Currently cataloguing the class of 2026 — earlier years and new industries (Korea next) are on the roadmap.
+        Currently cataloguing {stats.years.join(' · ')} — earlier years and new industries (Korea next) are on the roadmap.
       </p>
     </div>
   </section>

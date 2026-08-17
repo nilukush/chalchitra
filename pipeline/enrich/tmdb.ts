@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { TitleRecord } from '../types.js';
-import { mergeEpisodeSummaries, pickTmdbMatch, type TmdbSearchResult } from './tmdb-lib.js';
+import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, type TmdbSearchResult } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -54,21 +54,24 @@ export function tmdbEnabled(): boolean {
 /**
  * Enrich title records in place. Returns stats. No-op without TMDB_API_KEY.
  */
-export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: number; episodesFilled: number; backdrops: number }> {
+export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: number; episodesFilled: number; episodesSynthesized: number; backdrops: number }> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.log('→ TMDB enrichment: TMDB_API_KEY not set — skipping (set it to enable episode summaries, backdrops, ratings, trailers)');
-    return { matched: 0, episodesFilled: 0, backdrops: 0 };
+    return { matched: 0, episodesFilled: 0, episodesSynthesized: 0, backdrops: 0 };
   }
 
   let matched = 0;
   let episodesFilled = 0;
+  let episodesSynthesized = 0;
   let backdrops = 0;
 
   for (const record of titles) {
     const kind = record.kind === 'movie' ? 'movie' : 'tv';
+    // year filter is what prevents "Toxic" (Kannada 2026) matching some other "Toxic"
+    const yearParam = kind === 'movie' ? `&year=${record.year}` : `&first_air_date_year=${record.year}`;
     const search = await tmdbGet(
-      `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false`,
+      `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false${yearParam}`,
       apiKey,
     );
     const hit = pickTmdbMatch((search?.results ?? []) as TmdbSearchResult[], record.title, record.year);
@@ -108,25 +111,34 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
 
-    // episode summaries for series that lack them
-    if (record.kind === 'series' && record.episodesList.some((e) => !e.summary)) {
-      const seasons: number[] = [1];
-      for (const season of seasons) {
-        const payload = await tmdbGet(`/tv/${hit.id}/season/${season}?language=en-US`, apiKey);
-        if (!payload?.episodes) continue;
+    // episode summaries/runtimes for series with a wiki table
+    if (record.kind === 'series' && record.episodesList.some((e) => !e.summary || !e.runtime)) {
+      const payload = await tmdbGet(`/tv/${hit.id}/season/1?language=en-US`, apiKey);
+      if (payload?.episodes) {
         const before = record.episodesList.filter((e) => e.summary).length;
         record.episodesList = mergeEpisodeSummaries(record.episodesList, payload);
         const after = record.episodesList.filter((e) => e.summary).length;
-        if (after > before) {
-          episodesFilled += after - before;
-          if (!sources.includes('tmdb')) sources.push('tmdb');
+        if (after > before) episodesFilled += after - before;
+        if (!record.enrichedFrom?.includes('tmdb') && after > before) {
+          record.enrichedFrom = [...(record.enrichedFrom ?? []), 'tmdb'];
         }
+      }
+    }
+
+    // series with NO wiki episode table → synthesize the guide from TMDB
+    if (record.kind === 'series' && record.episodesList.length === 0) {
+      const payload = await tmdbGet(`/tv/${hit.id}/season/1?language=en-US`, apiKey);
+      const rows = payload ? episodesFromTmdbSeason(payload) : [];
+      if (rows.length > 0) {
+        record.episodesList = rows;
+        episodesSynthesized += rows.length;
+        record.enrichedFrom = [...new Set([...(record.enrichedFrom ?? []), 'tmdb'])];
       }
     }
 
     if (sources.length > 0) record.enrichedFrom = sources;
   }
 
-  console.log(`→ TMDB enrichment: ${matched}/${titles.length} matched, ${episodesFilled} episode summaries filled, ${backdrops} backdrops added`);
-  return { matched, episodesFilled, backdrops };
+  console.log(`→ TMDB enrichment: ${matched}/${titles.length} matched, ${episodesFilled} episode summaries filled, ${episodesSynthesized} episodes synthesized for table-less series, ${backdrops} backdrops`);
+  return { matched, episodesFilled, episodesSynthesized, backdrops };
 }

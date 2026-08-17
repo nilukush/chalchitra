@@ -11,7 +11,7 @@ const collapsed = episodes.length > COLLAPSE_AFTER;
 
 <div class="space-y-2.5">
   {episodes.map((ep, i) => (
-    <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && i >= COLLAPSE_AFTER && 'ep-overflow hidden']}>
+    <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && i >= COLLAPSE_AFTER && 'ep-overflow toggle-hidden']}>
       <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-saffron-500/30 bg-saffron-500/10">
         <span class="font-display text-lg font-bold leading-none text-saffron-400">{ep.number}</span>
         <span class="mt-0.5 text-[9px] uppercase tracking-wider text-ivory-600">ep</span>
@@ -19,7 +19,10 @@ const collapsed = episodes.length > COLLAPSE_AFTER;
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h3 class="text-[15px] font-semibold text-ivory-100">{ep.title || 'Untitled'}</h3>
-          {ep.airDate && <time class="text-xs text-ivory-600">{ep.airDate}</time>}
+          <span class="flex items-center gap-3 text-xs text-ivory-600">
+            {ep.runtime && <span>{ep.runtime}</span>}
+            {ep.airDate && <time>{ep.airDate}</time>}
+          </span>
         </div>
         {ep.summary && (
           <p class="mt-1.5 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
@@ -56,7 +59,7 @@ const collapsed = episodes.length > COLLAPSE_AFTER;
     let open = false;
     btn.addEventListener('click', () => {
       open = !open;
-      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('hidden', !open));
+      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('toggle-hidden', !open));
       btn.textContent = open ? hide : show;
     });
   });

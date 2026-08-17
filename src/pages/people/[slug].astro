@@ -75,21 +75,15 @@ const creditTitleRecords = person.credits
         )}
 
         <!-- quick stats -->
-        <div class="mt-4 grid grid-cols-3 gap-2 text-center">
+        <div class={`grid gap-2 text-center ${age !== null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
             <p class="font-display text-2xl font-bold text-saffron-400">{person.credits.length}</p>
-            <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">2026 credits</p>
+            <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">Credits</p>
           </div>
           {age !== null && (
             <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
               <p class="font-display text-2xl font-bold text-saffron-400">{age}</p>
               <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">{diedFact ? 'age at death' : 'years old'}</p>
-            </div>
-          )}
-          {person.occupations.length > 0 && (
-            <div class="flex flex-col justify-center rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
-              <p class="text-xs font-semibold leading-tight text-ivory-200">{person.occupations[0]}</p>
-              <p class="mt-0.5 text-[10px] font-semibold uppercase tracking-widest text-ivory-600">Known as</p>
             </div>
           )}
         </div>
@@ -133,11 +127,12 @@ const creditTitleRecords = person.credits
           )}
           <ul class="mt-6 space-y-1.5 text-sm text-ivory-500">
             {person.credits.slice(0, 30).map((credit) => (
-              <li>
+              <li class="flex items-baseline gap-2">
+                <span class="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] font-semibold text-ivory-400">{credit.year}</span>
                 <a href={credit.kind === 'movie' ? `/movies/${credit.titleSlug}` : `/series/${credit.titleSlug}`} class="text-ivory-300 hover:text-saffron-300">
                   {credit.title}
                 </a>
-                <span class="text-ivory-600"> — {credit.role}</span>
+                <span class="text-ivory-600">— {credit.role}</span>
               </li>
             ))}
           </ul>

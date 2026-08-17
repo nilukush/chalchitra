@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest';
-import { computeAgeFromFacts } from './dates.js';
+import { computeAgeFromFacts, extractTimelineDates } from './dates.js';
+
+describe('extractTimelineDates', () => {
+  it('collects full and month-year dates in order of appearance', () => {
+    const dates = extractTimelineDates(
+      'In April 2023 it was reported. Filming began 5 March 2024 and ended in April 2024.',
+    );
+    expect(dates).toEqual(['April 2023', '5 March 2024', 'April 2024']);
+  });
+
+  it('deduplicates and caps at the limit', () => {
+    const dates = extractTimelineDates('May 2021 May 2021 June 2021 July 2021 August 2021 September 2021 October 2021', 4);
+    expect(dates).toEqual(['May 2021', 'June 2021', 'July 2021', 'August 2021']);
+  });
+
+  it('returns [] when no dates exist', () => {
+    expect(extractTimelineDates('No dates here.')).toEqual([]);
+  });
+});
 
 describe('computeAgeFromFacts', () => {
   it('computes current age from a Born fact', () => {

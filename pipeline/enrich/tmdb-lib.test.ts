@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mergeEpisodeSummaries, pickTmdbMatch } from './tmdb-lib.js';
+import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch } from './tmdb-lib.js';
 
 describe('pickTmdbMatch', () => {
   it('prefers an exact-name match with the right year', () => {
@@ -33,7 +33,7 @@ describe('mergeEpisodeSummaries', () => {
   const tmdbSeason = {
     episodes: [
       { episode_number: 1, overview: 'tmdb one' },
-      { episode_number: 2, overview: 'tmdb two' },
+      { episode_number: 2, overview: 'tmdb two', runtime: 44 },
       // episode 3 missing on TMDB
       { episode_number: 4, overview: 'tmdb four (extra)' },
     ],
@@ -45,6 +45,12 @@ describe('mergeEpisodeSummaries', () => {
     expect(merged[1].summary).toBe('tmdb two');
   });
 
+  it('fills episode runtimes when missing', () => {
+    const merged = mergeEpisodeSummaries(wiki, tmdbSeason);
+    expect(merged[1].runtime).toBe('44 min');
+    expect(merged[0].runtime).toBeUndefined();
+  });
+
   it('leaves episodes absent from TMDB untouched', () => {
     const merged = mergeEpisodeSummaries(wiki, tmdbSeason);
     expect(merged[2].summary).toBeUndefined();
@@ -53,5 +59,23 @@ describe('mergeEpisodeSummaries', () => {
 
   it('returns the original array when TMDB has no episodes', () => {
     expect(mergeEpisodeSummaries(wiki, { episodes: [] })).toBe(wiki);
+  });
+});
+
+describe('episodesFromTmdbSeason', () => {
+  it('synthesizes a full episode list from TMDB', () => {
+    const rows = episodesFromTmdbSeason({
+      episodes: [
+        { episode_number: 1, name: 'Pilot', overview: 'It begins.', air_date: '2026-01-05', runtime: 41 },
+        { episode_number: 2 }, // no name/overview
+      ],
+    });
+    expect(rows).toHaveLength(2);
+    expect(rows[0]).toMatchObject({ number: '1', title: 'Pilot', airDate: '2026-01-05', runtime: '41 min', summary: 'It begins.', season: 1 });
+    expect(rows[1].title).toBe('Episode 2');
+  });
+
+  it('returns [] for an empty season', () => {
+    expect(episodesFromTmdbSeason({})).toEqual([]);
   });
 });

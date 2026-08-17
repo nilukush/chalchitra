@@ -1,5 +1,34 @@
 # MEMORY.md — session state log
 
+## Session 9 — 2026-08-17 (fourteen-point audit) — COMPLETE
+
+1. **AI key** confirmed in .env → **AI enrichment LIVE: 425/425 hooks + mood tags** (cached in
+   data/cache/ai). Moods render as dashed italic chips beside genres; tagline hook in hero.
+2. **Toggle ROOT CAUSE found** (why rows stayed visible while text swapped): `.hidden` lost the
+   CSS-order battle against display utilities (`list-item` on ref rows, `flex` on episode cards).
+   Fix: dedicated `.toggle-hidden{display:none!important}` in global.css; components/scripts
+   use it. `scripts/verify-toggles.mjs` now asserts the CSS RULE exists + DOM behavior.
+3. **Cast dual roles**: `**` sub-bullets now append to the parent entry's role;
+   "in a dual role as" → "Dual role: A / B" (Toxic's Yash fixed).
+4. **TMDB wrong-movie fix**: search now passes `year=`/`first_air_date_year=` (Toxic:
+   1315091→1723460, correct). Match count 384→363 (bad matches dropped).
+5. **Episode coverage explosion**: TMDB season synthesis for series without wiki tables →
+   **46/60 series with guides (was 12), 1,368 episodes, 1,297 with runtimes** (runtime shows
+   on episode cards).
+6. **Listen links**: soundtrack header chips → YT Music / Spotify / JioSaavn search
+   (query = title + composer).
+7. **Type scale**: root font 17px (whole rem system up), paragraph gap 1.35rem.
+8. **"Known as" tile removed** (occupations live in the kicker at readable size).
+9. **Year future-proofing**: `stats.years` (from data) drives home scope copy; person stat
+   label just "Credits"; credit rows show per-credit year chips. Index pages remain
+   year-scoped catalogues (by design).
+10. **Timeline chips**: extractTimelineDates (tested) surfaces key dates from
+    Release/Production/etc. chapters as calendar chips above the prose.
+11. **Home hero**: content-first copy ("Every Indian movie & series has a home."),
+    kicker चलचित्र · movies · series · people.
+
+127 tests green; 2,651 pages; 50,262 links / 0 missing. jsdom + scripts/ committed.
+
 ## Session 8 — 2026-08-17 (ten-point audit) — COMPLETE
 
 1. **AI key location**: `.env` (gitignored) — `AI_API_KEY` (+ optional `AI_BASE_URL`,

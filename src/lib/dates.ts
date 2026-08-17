@@ -29,3 +29,21 @@ export function computeAgeFromFacts(
   if (beforeBirthday) age--;
   return age >= 0 && age < 130 ? age : null;
 }
+
+/** Distinct dates mentioned in prose ("5 March 1990", "April 2023"), in order. */
+export function extractTimelineDates(text: string, limit = 6): string[] {
+  const pattern = /\b(?:(\d{1,2})\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/gi;
+  const found: string[] = [];
+  const seen = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(text)) !== null) {
+    const date = `${m[1] ? m[1] + ' ' : ''}${m[2]} ${m[3]}`;
+    const key = date.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      found.push(date);
+    }
+    if (found.length >= limit) break;
+  }
+  return found;
+}

@@ -125,5 +125,7 @@ export interface SiteStats {
   movies: number;
   series: number;
   persons: number;
+  /** catalogue years, newest first — drives all "of YYYY" copy */
+  years: number[];
   languages: { language: string; movies: number; series: number }[];
 }

@@ -38,9 +38,13 @@ describe('extractCast', () => {
     expect(cast[4]?.role).toBe('Sub Inspector Eknath Tumbade');
   });
 
-  it('handles entries with no role', () => {
+  it('handles entries with no role, appending ** continuations', () => {
     const cast = extractCast(castSection);
-    expect(cast[5]).toEqual({ name: 'Ishtiyak Khan', wikiTitle: 'Ishtiyak Khan', role: '' });
+    expect(cast[5]).toEqual({
+      name: 'Ishtiyak Khan',
+      wikiTitle: 'Ishtiyak Khan',
+      role: 'some nested note that should be ignored',
+    });
   });
 
   it('ignores nested and indented lines', () => {
@@ -56,5 +60,19 @@ describe('extractCast', () => {
   it('matches alternative headings like "Cast and characters"', () => {
     const alt = extractCast('== Cast and characters ==\n* [[A]] as B');
     expect(alt).toHaveLength(1);
+  });
+
+  it('appends ** sub-bullets to the previous entry (dual roles)', () => {
+    const dual = extractCast(
+      [
+        '== Cast ==',
+        '* [[Yash (actor)|Yash]] in a [[dual role]] as',
+        '** Raya, Rumi\'s biological father',
+        '** Rumi / Ticket, Raya\'s son',
+        '* [[Kiara Advani]] as Nadia',
+      ].join('\n'),
+    );
+    expect(dual[0].role).toBe("Dual role: Raya, Rumi's biological father Rumi / Ticket, Raya's son");
+    expect(dual[1].role).toBe('Nadia');
   });
 });

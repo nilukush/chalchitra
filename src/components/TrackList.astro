@@ -1,14 +1,36 @@
 ---
 import type { Soundtrack } from '../../pipeline/wikitext/soundtrack.js';
+import Icon from './Icon.astro';
 
 interface Props {
   soundtrack: Soundtrack;
+  /** base query for listen links, e.g. film title + composer */
+  query: string;
 }
-const { soundtrack } = Astro.props;
+const { soundtrack, query } = Astro.props;
 const hasAnyMeta = soundtrack.tracks.some((t) => t.singers || t.lyrics || t.length);
+const listen = (platform: string, extra = '') =>
+  `${platform}${encodeURIComponent((query + ' ' + extra).trim())}`;
 ---
 
-<div class="overflow-hidden rounded-2xl border border-ink-700/70">
+<div>
+  <div class="mb-3 flex flex-wrap items-center gap-2">
+    {soundtrack.title && (
+      <p class="mr-auto text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
+        {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
+      </p>
+    )}
+    <a href={listen('https://music.youtube.com/search?q=', soundtrack.composer ?? '')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      <Icon name="music" class="h-3.5 w-3.5" /> YouTube Music
+    </a>
+    <a href={listen('https://open.spotify.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      Spotify
+    </a>
+    <a href={listen('https://www.jiosaavn.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      JioSaavn
+    </a>
+  </div>
+  <div class="overflow-hidden rounded-2xl border border-ink-700/70">
   {soundtrack.title && (
     <p class="border-b border-ink-700/70 bg-ink-800/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
       {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
@@ -34,4 +56,5 @@ const hasAnyMeta = soundtrack.tracks.some((t) => t.singers || t.lyrics || t.leng
       ))}
     </tbody>
   </table>
+  </div>
 </div>

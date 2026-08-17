@@ -451,6 +451,7 @@ async function main() {
     movies: movies.length,
     series: series.length,
     persons: persons.length,
+    years: [...new Set([...movies, ...series].map((t) => t.year))].sort((a, b) => b - a),
     languages: [...languageMap.entries()]
       .map(([language, counts]) => ({ language, ...counts }))
       .sort((a, b) => b.movies + b.series - (a.movies + a.series)),
