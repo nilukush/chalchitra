@@ -206,18 +206,6 @@ const jsonLd: Record<string, unknown>[] = [
             )}
           </div>
 
-          {item.rating && (
-            <div class="mt-3 flex items-center justify-between rounded-xl border border-ink-700/70 bg-ink-850/70 px-4 py-3">
-              <span class="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-ivory-600">
-                <Icon name="star" class="h-4 w-4 text-saffron-400" /> TMDB score
-              </span>
-              <span class="flex items-baseline gap-1.5">
-                <span class="font-display text-2xl font-bold text-saffron-300">{item.rating.value.toFixed(1)}</span>
-                <span class="text-xs text-ivory-600">{item.rating.votes} votes</span>
-              </span>
-            </div>
-          )}
-
           {item.external.links.length > 0 && (
             <div class="mt-4 space-y-1.5 text-sm">
               <p class="text-xs font-semibold uppercase tracking-widest text-ivory-600">Elsewhere</p>
@@ -264,20 +252,27 @@ const jsonLd: Record<string, unknown>[] = [
               <p class="mt-3 max-w-xl font-display text-lg italic leading-snug text-saffron-300/90">{item.tagline}</p>
             )}
 
-                {(item.genres.length > 0 || moodChips.length > 0) && (
-                  <div class="mt-4 flex flex-wrap items-center gap-2">
-                    {item.genres.map((genre) => (
-                      <span class={`rounded-full px-3.5 py-1.5 text-sm font-semibold ring-1 ring-inset ${genreChipClass(genre)}`}>
-                        {genre}
-                      </span>
-                    ))}
-                    {moodChips.map((mood) => (
-                      <span class="rounded-full border border-dashed border-ink-500 px-3 py-1.5 text-sm italic text-ivory-400">
-                        {mood}
-                      </span>
-                    ))}
-                  </div>
-                )}
+            <div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">
+              {item.rating && (
+                <span class="flex items-baseline gap-1.5">
+                  <Icon name="star" class="h-5 w-5 self-center text-saffron-400" />
+                  <span class="font-display text-3xl font-bold text-saffron-300">{item.rating.value.toFixed(1)}</span>
+                  <span class="text-xs text-ivory-600">/ 10 · {item.rating.votes} votes</span>
+                </span>
+              )}
+              <span class="flex flex-wrap items-center gap-2">
+                {item.genres.map((genre) => (
+                  <span class={`rounded-full px-3.5 py-1.5 text-sm font-semibold ring-1 ring-inset ${genreChipClass(genre)}`}>
+                    {genre}
+                  </span>
+                ))}
+                {moodChips.map((mood) => (
+                  <span class="rounded-full border border-dashed border-ink-500 px-3 py-1.5 text-sm italic text-ivory-400">
+                    {mood}
+                  </span>
+                ))}
+              </span>
+            </div>
 
             <p class="mt-3 text-sm text-ivory-500">
               {item.year} · {item.language} {kindWord.toLowerCase()}
@@ -329,22 +324,30 @@ const jsonLd: Record<string, unknown>[] = [
           <section class="mt-10" aria-labelledby="cast">
             <h2 id="cast" class="font-display text-2xl font-bold text-ivory-50">Cast &amp; crew</h2>
             {castPeople.length > 0 && (
-              <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {castPeople.map(({ member, person }) =>
-                  person ? (
-                    <PersonCard person={person} meta={member.role ? (/^(dual role|special appearance|cameo|voice)/i.test(member.role) ? member.role : `as ${member.role}`) : undefined} />
-                  ) : (
-                    <div class="flex items-center gap-3 rounded-xl border border-ink-700/50 bg-ink-850/40 p-3">
-                      <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-600">
-                        {member.name.slice(0, 1)}
-                      </span>
-                      <span class="min-w-0">
-                        <span class="block truncate text-sm font-semibold text-ivory-200">{member.name}</span>
-                        {member.role && <span class="block truncate text-xs text-ivory-600">{member.role}</span>}
-                      </span>
+              <div class="mt-4 flex gap-4 overflow-x-auto pb-3 [scrollbar-width:thin]">
+                {castPeople.map(({ member, person }) => {
+                  const role = member.role
+                    ? (/^(dual role|special appearance|cameo|voice)/i.test(member.role) ? member.role : `as ${member.role}`)
+                    : undefined;
+                  const href = person ? `/people/${person.slug}` : undefined;
+                  return (
+                    <div class="w-28 shrink-0">
+                      <a href={href ?? '#'} class:list={['group block', !href && 'pointer-events-none']}>
+                        <div class="aspect-[2/3] overflow-hidden rounded-xl border border-ink-700/70 bg-ink-800 shadow-lg shadow-black/30 transition group-hover:border-saffron-500/40">
+                          {person?.image ? (
+                            <img src={person.image} alt={member.name} loading="lazy" width="185" height="278" class="h-full w-full object-cover" />
+                          ) : (
+                            <div class="flex h-full items-center justify-center grain">
+                              <span class="font-display text-3xl text-ivory-600">{member.name.slice(0, 1)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <p class="mt-2 line-clamp-1 text-sm font-semibold text-ivory-100 group-hover:text-saffron-300">{member.name}</p>
+                        {role && <p class="line-clamp-2 text-xs leading-snug text-ivory-600">{role}</p>}
+                      </a>
                     </div>
-                  ),
-                )}
+                  );
+                })}
               </div>
             )}
 
@@ -412,35 +415,49 @@ const jsonLd: Record<string, unknown>[] = [
           </section>
         )}
 
-        {item.articleSections.map((section, si) => {
-          const secId = `sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-          const timeline = /release|production|development|filming|history|background|marketing|box office|certification/i.test(section.title)
-            ? extractTimelineDates(section.text, 6)
-            : [];
-          return (
-            <section class="mt-10" aria-labelledby={secId}>
-              <div class="flex items-center gap-3">
-                <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
-                  {String(si + 1).padStart(2, '0')}
-                </span>
-                <h2 id={secId} class="font-display text-2xl font-bold tracking-tight text-ivory-50">{section.title}</h2>
-              </div>
-              {timeline.length > 0 && (
-                <ul class="mt-3 flex flex-wrap gap-2" aria-label="Key dates">
-                  {timeline.map((date) => (
-                    <li class="flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300">
-                      <Icon name="calendar" class="h-3.5 w-3.5 text-saffron-400" />
-                      {date}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <div class="prose-article mt-4 max-w-[68ch] border-l-2 border-ink-700 pl-5">
-                {section.text.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
-              </div>
-            </section>
-          );
-        })}
+        {item.articleSections.length > 0 && (
+          <section class="mt-10" aria-label="Deep dive chapters">
+            <h2 class="font-display text-2xl font-bold text-ivory-50">The full story</h2>
+            <p class="mt-1 text-sm text-ivory-600">Production, release, reception and more — open any chapter.</p>
+            <div class="mt-4 space-y-2.5">
+              {item.articleSections.map((section, si) => {
+                const secId = `sec-${section.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                const timeline = /release|production|development|filming|history|background|marketing|box office|certification/i.test(section.title)
+                  ? extractTimelineDates(section.text, 6)
+                  : [];
+                return (
+                  <details class="card-sheen group rounded-2xl border border-ink-700/70 bg-ink-850/50" open={si === 0}>
+                    <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+                      <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
+                        {String(si + 1).padStart(2, '0')}
+                      </span>
+                      <span class="min-w-0 flex-1">
+                        <span class="block font-display text-xl font-bold tracking-tight text-ivory-50">{section.title}</span>
+                        <span class="block text-xs text-ivory-600">{section.text.split(/\s+/).length} words · from Wikipedia</span>
+                      </span>
+                      <span class="shrink-0 text-ivory-500 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                    </summary>
+                    <div class="px-4 pb-4">
+                      {timeline.length > 0 && (
+                        <ul class="mb-4 flex flex-wrap gap-2" aria-label="Key dates">
+                          {timeline.map((date) => (
+                            <li class="flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300">
+                              <Icon name="calendar" class="h-3.5 w-3.5 text-saffron-400" />
+                              {date}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <div class="prose-article max-w-[68ch] border-l-2 border-ink-700 pl-5">
+                        {section.text.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
+                      </div>
+                    </div>
+                  </details>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {relatedRecords.length > 0 && (
           <section class="mt-10" aria-labelledby="related">

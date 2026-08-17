@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   extractCast,
+  extractAwards,
   extractEpisodes,
   extractExternalLinks,
   extractFilmography,
@@ -368,6 +369,7 @@ async function main() {
       credits,
       external: { imdbId: external.imdbId, official: external.official, links: dedupeLinks(external.links).slice(0, 12) },
       references: extractReferences(page.wikitext ?? ''),
+      awards: extractAwards(page.wikitext ?? ''),
       filmography: extractFilmography(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });

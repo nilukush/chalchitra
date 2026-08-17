@@ -5,9 +5,12 @@ import { languageBadgeClass } from '../lib/data';
 interface Props {
   item: TitleRecord;
   eager?: boolean;
+  /** rank number (trending rails): oversized numeral behind the poster, IMDb/Netflix style */
+  rank?: number;
 }
-const { item, eager = false } = Astro.props;
+const { item, eager = false, rank } = Astro.props;
 const href = item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.slug}`;
+const hasHoverInfo = Boolean(item.year || item.rating);
 ---
 
 <article>
@@ -27,15 +30,35 @@ const href = item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.sl
           <span class="line-clamp-3 text-sm font-medium text-ivory-500">{item.title}</span>
         </div>
       )}
-      <span class={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset backdrop-blur-sm ${languageBadgeClass(item.language)}`}>
+      <span class={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset backdrop-blur-sm ${languageBadgeClass(item.language)}`}>
         {item.language}
       </span>
+      {hasHoverInfo && (
+        <span class="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent px-2.5 pb-2 pt-8 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+          <span class="text-[11px] text-ivory-300">{item.year}</span>
+          {item.rating && <span class="text-[11px] font-semibold text-saffron-300">★ {item.rating.value.toFixed(1)}</span>}
+        </span>
+      )}
     </div>
-    <h3 class="mt-2.5 line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">
-      {item.title}
-    </h3>
-    <p class="text-xs text-ivory-600">
-      {item.releaseDate ?? 'Upcoming'} · {item.kind === 'movie' ? 'Film' : 'Series'}
-    </p>
+    {rank ? (
+      <div class="mt-2 flex items-start gap-2">
+        <span class="font-display text-3xl font-black leading-none text-transparent [-webkit-text-stroke:1.5px_#f4a72c]" aria-label={`Rank ${rank}`}>
+          {rank}
+        </span>
+        <span class="min-w-0">
+          <span class="block line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">{item.title}</span>
+          <span class="block text-xs text-ivory-600">{item.releaseDate ?? 'Upcoming'} · {item.kind === 'movie' ? 'Film' : 'Series'}</span>
+        </span>
+      </div>
+    ) : (
+      <>
+        <h3 class="mt-2.5 line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">
+          {item.title}
+        </h3>
+        <p class="text-xs text-ivory-600">
+          {item.releaseDate ?? 'Upcoming'} · {item.kind === 'movie' ? 'Film' : 'Series'}
+        </p>
+      </>
+    )}
   </a>
 </article>

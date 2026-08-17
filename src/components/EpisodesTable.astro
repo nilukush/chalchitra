@@ -5,50 +5,65 @@ interface Props {
   episodes: EpisodeRow[];
 }
 const { episodes } = Astro.props;
-const COLLAPSE_AFTER = 12;
+const COLLAPSE_AFTER = 8;
 const collapsed = episodes.length > COLLAPSE_AFTER;
 const seasonNumbers = [...new Set(episodes.map((e) => e.season ?? 1))];
 const multiSeason = seasonNumbers.length > 1;
-const groups: { season?: number; rows: { ep: EpisodeRow; overflow: boolean }[] }[] = multiSeason
-  ? seasonNumbers.map((season) => ({
-      season,
-      rows: episodes
-        .filter((e) => (e.season ?? 1) === season)
-        .map((ep, i) => ({ ep, overflow: i >= COLLAPSE_AFTER })),
-    }))
-  : [
-      {
-        season: undefined,
-        rows: episodes.map((ep, i) => ({ ep, overflow: i >= COLLAPSE_AFTER })),
-      },
-    ];
+const groups = (multiSeason ? seasonNumbers : [1]).map((season) => ({
+  season,
+  rows: (multiSeason ? episodes.filter((e) => (e.season ?? 1) === season) : episodes).map((ep, i) => ({
+    ep,
+    overflow: i >= COLLAPSE_AFTER,
+  })),
+}));
 ---
 
-<div class="space-y-2.5">
-  {groups.map((group) => (
-    <div class="space-y-2.5">
-      {multiSeason && (
-        <h3 class="pt-3 font-display text-lg font-bold text-saffron-400">Season {group.season}</h3>
-      )}
+<div data-episodes class="space-y-3">
+  {multiSeason && (
+    <div role="tablist" aria-label="Seasons" class="flex flex-wrap gap-2">
+      {groups.map((group, gi) => (
+        <button
+          type="button"
+          role="tab"
+          class={`season-tab focus-ring rounded-full border px-4 py-1.5 text-sm font-medium transition ${gi === 0 ? 'border-saffron-500/60 bg-saffron-500/10 text-saffron-300' : 'border-ink-600 bg-ink-800 text-ivory-300 hover:border-saffron-500/40'}`}
+          data-season={group.season}
+          aria-selected={gi === 0 ? 'true' : 'false'}
+        >
+          Season {group.season} <span class="text-xs opacity-70">{group.rows.length}</span>
+        </button>
+      ))}
+    </div>
+  )}
+
+  {groups.map((group, gi) => (
+    <div
+      class:list={['space-y-2.5', 'episodes-group', multiSeason && `episodes-season-${group.season}`, multiSeason && gi > 0 && 'toggle-hidden']}
+      data-season={group.season}
+    >
       {group.rows.map(({ ep, overflow }) => (
-        <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && overflow && 'ep-overflow toggle-hidden']}>
-          <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-saffron-500/30 bg-saffron-500/10">
-            <span class="font-display text-lg font-bold leading-none text-saffron-400">{ep.number}</span>
-            <span class="mt-0.5 text-[9px] uppercase tracking-wider text-ivory-600">ep</span>
-          </div>
+        <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-3.5 transition hover:border-saffron-500/30', collapsed && overflow && 'ep-overflow toggle-hidden']}>
+          {ep.still ? (
+            <img src={ep.still} alt="" loading="lazy" width="300" height="169" class="hidden h-[68px] w-[120px] shrink-0 rounded-lg border border-ink-700/60 object-cover sm:block" />
+          ) : (
+            <div class="hidden h-[68px] w-[120px] shrink-0 items-center justify-center rounded-lg border border-ink-700/60 bg-ink-800 sm:flex">
+              <span class="font-display text-xl font-bold text-saffron-400">{ep.number}</span>
+            </div>
+          )}
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <h3 class="text-[15px] font-semibold text-ivory-100">{ep.title || 'Untitled'}</h3>
+              <h3 class="text-[15px] font-semibold text-ivory-100">
+                <span class="mr-1.5 font-display font-bold text-saffron-400">{ep.number}.</span>{ep.title || 'Untitled'}
+              </h3>
               <span class="flex items-center gap-3 text-xs text-ivory-600">
                 {ep.runtime && <span>{ep.runtime}</span>}
                 {ep.airDate && <time>{ep.airDate}</time>}
               </span>
             </div>
             {ep.summary && (
-              <p class="mt-1.5 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
+              <p class="mt-1 line-clamp-3 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
             )}
             {(ep.director || ep.writer) && (
-              <p class="mt-2 text-xs text-ivory-600">
+              <p class="mt-1.5 text-xs text-ivory-600">
                 {ep.director && <>Directed by <span class="text-ivory-400">{ep.director}</span></>}
                 {ep.director && ep.writer && ' · '}
                 {ep.writer && <>Written by <span class="text-ivory-400">{ep.writer}</span></>}
@@ -57,31 +72,54 @@ const groups: { season?: number; rows: { ep: EpisodeRow; overflow: boolean }[] }
           </div>
         </article>
       ))}
+
+      {collapsed && (
+        <button
+          type="button"
+          class="toggle-btn w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-2.5 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+          data-target="ep-overflow"
+          data-label-show={`Show all ${group.rows.length} episodes`}
+          data-label-hide="Show fewer episodes"
+        >
+          Show all {group.rows.length} episodes
+        </button>
+      )}
     </div>
   ))}
-
-  {collapsed && (
-    <button
-      type="button"
-      class="toggle-btn w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-3 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
-      data-target="ep-overflow"
-      data-label-show={`Show all ${episodes.length} episodes`}
-      data-label-hide="Show fewer episodes"
-    >
-      Show all {episodes.length} episodes
-    </button>
-  )}
 </div>
 
 <script>
+  // season tabs: one season visible at a time
+  document.querySelectorAll<HTMLElement>('[data-episodes]').forEach((root) => {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('.season-tab')];
+    const groups = [...root.querySelectorAll<HTMLElement>('.episodes-group')];
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const season = tab.dataset.season;
+        tabs.forEach((t) => {
+          const active = t.dataset.season === season;
+          t.setAttribute('aria-selected', String(active));
+          t.classList.toggle('border-saffron-500/60', active);
+          t.classList.toggle('bg-saffron-500/10', active);
+          t.classList.toggle('text-saffron-300', active);
+          t.classList.toggle('border-ink-600', !active);
+          t.classList.toggle('bg-ink-800', !active);
+          t.classList.toggle('text-ivory-300', !active);
+        });
+        groups.forEach((g) => g.classList.toggle('toggle-hidden', g.dataset.season !== season));
+      });
+    });
+  });
+
+  // episode overflow toggles — scoped to their own group
   document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="ep-overflow"]').forEach((btn) => {
-    const target = btn.dataset.target ?? '';
+    const scope = btn.closest('.episodes-group') ?? document;
     const show = btn.dataset.labelShow ?? 'Show all';
     const hide = btn.dataset.labelHide ?? 'Show fewer';
     let open = false;
     btn.addEventListener('click', () => {
       open = !open;
-      document.querySelectorAll('.' + target).forEach((row) => row.classList.toggle('toggle-hidden', !open));
+      scope.querySelectorAll('.' + (btn.dataset.target ?? '')).forEach((row) => row.classList.toggle('toggle-hidden', !open));
       btn.textContent = open ? hide : show;
     });
   });

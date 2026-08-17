@@ -18,6 +18,7 @@ export interface TmdbEpisode {
   overview?: string;
   air_date?: string;
   runtime?: number;
+  still_path?: string;
 }
 
 export function pickTmdbMatch(
@@ -61,6 +62,7 @@ export function scoreNameOverlap(credits: TmdbCredits | undefined, wikiNames: st
 export function episodesFromTmdbSeason(
   season: { episodes?: TmdbEpisode[] },
   seasonNumber = 1,
+  imageUrl = 'https://image.tmdb.org/t/p',
 ): EpisodeRow[] {
   return (season.episodes ?? [])
     .filter((ep) => ep.episode_number > 0)
@@ -71,9 +73,9 @@ export function episodesFromTmdbSeason(
       runtime: ep.runtime ? `${ep.runtime} min` : undefined,
       summary: ep.overview?.trim() || undefined,
       season: seasonNumber,
+      still: ep.still_path ? `${imageUrl}/w300${ep.still_path}` : undefined,
     }));
 }
-
 /** Fill empty episode summaries AND runtimes from a TMDB season; wiki wins. */
 export function mergeEpisodeSummaries(
   wikiEpisodes: EpisodeRow[],

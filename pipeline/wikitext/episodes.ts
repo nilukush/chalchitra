@@ -16,6 +16,8 @@ export interface EpisodeRow {
   airDate?: string;
   runtime?: string;
   summary?: string;
+  /** episode still (TMDB image URL) */
+  still?: string;
   /** TMDB season number when the row was synthesized (wiki tables have none) */
   season?: number;
 }

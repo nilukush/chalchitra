@@ -16,7 +16,7 @@ const hotTitles = trendingTitles(12);
 const hotPeople = trendingPersons(8);
 const hasTrends = hotTitles.length > 0;
 const liveCandidates = liveTrendingCandidates(350);
-const collage = (hotTitles.length > 2 ? hotTitles : latestMovies).filter((t) => t.poster).slice(0, 4);
+const collage = (hotTitles.length > 2 ? hotTitles : latestMovies).filter((t) => t.poster).slice(0, 5);
 const buzzSlugs = new Set(anticipated.map((t) => t.slug));
 ---
 
@@ -24,7 +24,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   <!-- Hero -->
   <section class="relative grain overflow-hidden border-b border-ink-700/60">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_20%,rgba(244,167,44,0.14),transparent_60%),radial-gradient(40%_40%_at_20%_80%,rgba(227,93,135,0.08),transparent_60%)]"></div>
-    <div class="relative mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_360px] lg:items-center">
+    <div class="relative mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_auto] lg:items-center">
       <div>
       <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">चलचित्र · movies · series · people</p>
       <h1 class="max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-ivory-50 sm:text-6xl">
@@ -66,20 +66,23 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
       </p>
       </div>
 
-      <!-- poster collage fills the right side of the hero -->
+      <!-- poster deck: right-anchored, two-thirds overlap, explorable on hover -->
       {collage.length > 2 && (
-        <div class="relative hidden h-[420px] lg:block" aria-hidden="true">
-          {collage.slice(0, 4).map((item, i) => (
-            <div
-              class="absolute w-[168px] overflow-hidden rounded-xl border border-ink-700/80 shadow-2xl shadow-black/60"
-              style={`top:${[8, 72, 40, 108][i]}px; left:${i * 20}%; transform:rotate(${[-6, 2, 8, -3][i]}deg); z-index:${[30, 20, 40, 10][i]};`}
+        <div class="relative hidden h-[300px] w-[430px] shrink-0 md:block" aria-hidden="true">
+          <div class="absolute inset-0 rounded-3xl border border-ink-700/60 bg-ink-900/40" style="transform:rotate(-2deg)"></div>
+          {collage.slice(0, 5).map((item, i) => (
+            <a
+              href={item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.slug}`}
+              tabindex="-1"
+              class="absolute top-1/2 w-[150px] -translate-y-1/2 overflow-hidden rounded-xl border border-ink-700/80 bg-ink-800 shadow-2xl shadow-black/60 transition duration-300 hover:z-50 hover:-translate-y-[calc(50%+14px)] hover:scale-105"
+              style={`right:${i * 58}px; transform:translateY(-50%) rotate(${[5, -4, 2, -7, 9][i]}deg); z-index:${i === 4 ? 50 : 10 + i};`}
             >
               {item.poster ? (
-                <img src={item.poster} alt="" width="168" height="252" loading={i < 2 ? 'eager' : 'lazy'} class="aspect-[2/3] w-full object-cover" />
+                <img src={item.poster} alt="" width="150" height="225" loading={i < 2 ? 'eager' : 'lazy'} class="aspect-[2/3] w-full object-cover" />
               ) : (
-                <div class="flex aspect-[2/3] items-center justify-center bg-ink-800"><span class="font-display text-4xl text-ivory-600">च</span></div>
+                <div class="flex aspect-[2/3] items-center justify-center"><span class="font-display text-4xl text-ivory-600">च</span></div>
               )}
-            </div>
+            </a>
           ))}
         </div>
       )}
@@ -98,13 +101,10 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
           </div>
         </div>
         <script type="application/json" id="live-trending-data" set:html={JSON.stringify(liveCandidates)} />
-        <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" id="trending-grid">
+        <div class="mt-4 flex gap-5 overflow-x-auto pb-4 [scrollbar-width:thin] snap-x snap-mandatory" id="trending-grid">
           {hotTitles.map((item, i) => (
-            <div class="relative">
-              <span class="absolute -left-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-saffron-500 font-display text-sm font-bold text-ink-950 shadow-lg shadow-black/40" aria-label={`Rank ${i + 1}`}>
-                {i + 1}
-              </span>
-              <PosterCard item={item} eager={i < 6} />
+            <div class="w-[172px] shrink-0 snap-start">
+              <PosterCard item={item} rank={i + 1} eager={i < 6} />
             </div>
           ))}
         </div>
@@ -123,7 +123,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
 
   <!-- Latest movies -->
   <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="latest-movies">
-    <SectionHeading title="Fresh in theatres" kicker="2026 films" href="/movies" linkLabel="All films" />
+    <SectionHeading title="Fresh in theatres" kicker={`${stats.years[0]} films`} href="/movies" linkLabel="All films" />
     <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
       {latestMovies.map((item, i) => <PosterCard item={item} eager={i < 6} />)}
     </div>
@@ -132,7 +132,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   <!-- Latest series -->
   <section class="border-y border-ink-700/50 bg-ink-900/60" aria-labelledby="latest-series">
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-      <SectionHeading title="New on the small screen" kicker="2026 series debuts" href="/series" linkLabel="All series" />
+      <SectionHeading title="New on the small screen" kicker={`${stats.years[0]} series debuts`} href="/series" linkLabel="All series" />
       <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {latestSeries.map((item) => <PosterCard item={item} />)}
       </div>
@@ -193,7 +193,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   <!-- Spotlight people -->
   <section class="border-t border-ink-700/50 bg-ink-900/60" aria-labelledby="spotlight">
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-      <SectionHeading title="The busiest people of 2026" kicker="Spotlight" href="/people" linkLabel="All people" />
+      <SectionHeading title="The busiest people of {stats.years[0]}" kicker="Spotlight" href="/people" linkLabel="All people" />
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {people.map((person) => <PersonCard person={person} />)}
       </div>
@@ -215,16 +215,22 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
     const img = c.p
       ? `<img src="${c.p}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">`
       : '<span class="font-display text-3xl text-ivory-600">च</span>';
-    return `<div class="relative">
-      <span aria-label="Rank ${rank}" class="absolute -left-1.5 -top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-saffron-500 font-display text-sm font-bold text-ink-950 shadow-lg shadow-black/40">${rank}</span>
-      <a href="${c.u}" class="group block">
+    // mirrors PosterCard's rank variant: outline numeral + title, language pill top-right
+    return `<article class="w-[172px] shrink-0 snap-start">
+      <a href="${c.u}" class="focus-ring group block">
         <div class="relative aspect-[2/3] overflow-hidden rounded-xl border border-ink-700/70 bg-ink-800 shadow-lg shadow-black/30 transition duration-300 group-hover:-translate-y-1 group-hover:border-saffron-500/40">
           <div class="flex h-full w-full items-center justify-center">${img}</div>
+          <span class="absolute right-2 top-2 rounded-full bg-ink-700 px-2 py-0.5 text-[11px] font-medium text-ivory-300 ring-1 ring-inset ring-ink-600 backdrop-blur-sm">${c.l ?? ''}</span>
         </div>
-        <h3 class="mt-2.5 line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">${c.t}</h3>
-        <p class="text-xs text-ivory-600">${c.l ?? ''} · ${c.k === 'movie' ? 'Film' : 'Series'}</p>
+        <div class="mt-2 flex items-start gap-2">
+          <span aria-label="Rank ${rank}" class="font-display text-3xl font-black leading-none text-transparent" style="-webkit-text-stroke:1.5px #f4a72c">${rank}</span>
+          <span class="min-w-0">
+            <span class="block line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">${c.t}</span>
+            <span class="block text-xs text-ivory-600">${c.k === 'movie' ? 'Film' : 'Series'}</span>
+          </span>
+        </div>
       </a>
-    </div>`;
+    </article>`;
   }
 
   function apply(candidates: Candidate[], views: Map<string, number>): void {

@@ -81,7 +81,7 @@ body {
 }
 
 /* Long-form article prose (full plot/bio text) — optimised for sustained reading:
-   brighter ivory, ~17px, 68ch measure, generous leading */
+   brighter ivory, ~19px, 68ch measure, generous leading */
 .prose-article p {
   font-size: 1.1rem;
   line-height: 1.85;
@@ -97,18 +97,6 @@ body {
 .prose-hero p {
   font-size: 1.12rem;
   line-height: 1.95;
-}
-
-.prose-article > p:first-child::first-letter,
-.prose-hero > p:first-child::first-letter {
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 3.1em;
-  line-height: 0.82;
-  float: left;
-  padding-right: 0.14em;
-  padding-top: 0.08em;
-  color: var(--color-saffron-400);
 }
 
 section[id] {

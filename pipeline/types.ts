@@ -129,6 +129,8 @@ export interface PersonRecord {
   references: ReferenceEntry[];
   sections: string[];
   /** pre/other-catalogue notable works from TMDB */
+  /** rows from the Wikipedia Accolades/Awards section (cleaned strings) */
+  awards?: string[];
   /** linked works named in the person's Wikipedia filmography/discography sections */
   filmography?: FilmographyWork[];
   knownFor?: KnownForWork[];

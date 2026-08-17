@@ -165,27 +165,40 @@ const creditTitleRecords = person.credits
 
         <section class="mt-10" aria-labelledby="credits">
           <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
-            2026 credits <span class="text-lg text-ivory-600">({person.credits.length})</span>
+            Credits <span class="text-lg text-ivory-600">({person.credits.length})</span>
           </h2>
           {person.credits.length > 0 ? (
             <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {creditTitleRecords.map(({ title }) => <PosterCard item={title} />)}
+              {creditTitleRecords.map(({ credit, title }) => (
+                <div class="relative">
+                  {credit.role && (
+                    <p class="mb-1.5 line-clamp-1 text-xs text-ivory-500">{credit.role.replace(/^as /i, '')}</p>
+                  )}
+                  <PosterCard item={title} />
+                </div>
+              ))}
             </div>
           ) : (
-            <p class="mt-4 text-ivory-500">No 2026 titles recorded yet.</p>
+            <p class="mt-4 text-ivory-500">No titles recorded yet.</p>
           )}
-          <ul class="mt-6 space-y-1.5 text-sm text-ivory-500">
-            {person.credits.slice(0, 30).map((credit) => (
-              <li class="flex items-baseline gap-2">
-                <span class="shrink-0 rounded bg-ink-800 px-1.5 py-0.5 text-[10px] font-semibold text-ivory-400">{credit.year}</span>
-                <a href={credit.kind === 'movie' ? `/movies/${credit.titleSlug}` : `/series/${credit.titleSlug}`} class="text-ivory-300 hover:text-saffron-300">
-                  {credit.title}
-                </a>
-                <span class="text-ivory-600">— {credit.role}</span>
-              </li>
-            ))}
-          </ul>
         </section>
+
+        {(person.awards?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="awards">
+            <h2 id="awards" class="font-display text-2xl font-bold text-ivory-50">
+              Awards &amp; accolades <span class="text-lg text-ivory-600">({person.awards!.length})</span>
+            </h2>
+            <ul class="mt-4 grid gap-2 lg:columns-2">
+              {person.awards!.slice(0, 40).map((award) => (
+                <li class="break-inside-avoid rounded-xl border border-ink-700/60 bg-ink-850/50 px-4 py-2.5 text-sm text-ivory-300">
+                  {/won/i.test(award) && <span class="mr-1.5" aria-hidden="true">🏆</span>}
+                  {award}
+                </li>
+              ))}
+            </ul>
+            <p class="mt-3 text-xs text-ivory-600">From the Wikipedia accolades section (CC BY-SA 4.0).</p>
+          </section>
+        )}
 
         {(person.filmography?.length ?? 0) > 0 && (
           <section class="mt-10" aria-labelledby="filmography">
@@ -226,15 +239,6 @@ const creditTitleRecords = person.credits
             <div class="mt-4">
               <ReferenceList references={person.references} />
             </div>
-          </section>
-        )}
-
-        {person.sections.length > 0 && (
-          <section class="mt-10" aria-labelledby="article">
-            <h2 id="article" class="font-display text-2xl font-bold text-ivory-50">On the Wikipedia article</h2>
-            <p class="mt-3 text-sm text-ivory-500">
-              The biographical article covers: {person.sections.join(' · ')}
-            </p>
           </section>
         )}
 

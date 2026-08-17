@@ -1,5 +1,38 @@
 # MEMORY.md — session state log
 
+## Session 11 — 2026-08-17 (3-agent consensus round) — COMPLETE
+
+Ran the requested Analyzer/Debugger/Verifier agent team; consensus implemented:
+
+**Debugger verdicts**: search-index failure + trailer-opening-YouTube were BOTH stale
+browser pages (preview server serves across rebuilds; trailer became a modal in 3f59e42;
+jsdom-verified current build correct on movie+series samples). Hardened search fetch with
+one retry. **User action when odd behavior appears: hard-refresh first.**
+
+**Analyzer root causes fixed**:
+1. Hero collage geometry (72px slivers) → right-anchored 5-poster DECK (w150, 58px overlap,
+   hover pop-out, md+, backdrop card behind).
+2. Rank/language badge collision + cardHtml drift → PosterCard gained `rank` prop (outline
+   numeral, Netflix style), language pill moved top-RIGHT everywhere, live cardHtml mirrors
+   the same anatomy; trending grid → horizontal snap RAIL.
+3. Seasons stacked vertically → season TAB bar (role=tablist), one season visible, scoped
+   per-group overflow toggles; compact rows + **TMDB episode stills** (w300) — Ab Hoga
+   Hisaab: 20/20 stills, 2 tabs.
+4. Encyclopedia weight: drop cap REMOVED (newspaper device, not database); rating promoted
+   into the sticky band (★ 8.7 / 10 · votes); CAST → TMDB-style portrait rail with "as Role";
+   article chapters → collapsible "The full story" <details> outline (first open, word
+   counts); person page dedup (credit poster grid w/ role captions replaces the 30-line
+   duplicate text list; "On the Wikipedia article" TOC section removed).
+
+**Verifier F1**: year regressions fixed (home kickers + person credits heading now
+data-driven).
+
+**Awards from Wikipedia** (user ask): `wikitext/awards.ts` (tested) — 658 persons, 4,922
+award rows, rendered as cards (🏆 for Won).
+
+144 tests; 2,651 pages; links 47,634 / 0 missing (count down — duplicate credit links
+removed by design).
+
 ## Session 10 — 2026-08-17 (fifteen-point audit) — COMPLETE
 
 1. **AI uses** (answered): current = hooks+moods; roadmap = reception verdicts, 3-beat plot

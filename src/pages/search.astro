@@ -117,15 +117,32 @@ import { SITE, stats } from '../lib/data';
     }
   }
 
-  fetch('/search-index.json')
-    .then((r) => r.json())
-    .then((index: { docs: Doc[] }) => {
+  // one retry: the index can 404 transiently while a rebuild swaps dist/
+  async function loadIndex(): Promise<{ docs: Doc[] } | null> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const res = await fetch('/search-index.json');
+        if (res.ok) return await res.json();
+      } catch {
+        /* retry */
+      }
+      if (attempt === 0) {
+        status.textContent = 'Loading search index… retrying';
+        await new Promise((r) => setTimeout(r, 800));
+      }
+    }
+    return null;
+  }
+
+  loadIndex()
+    .then((index) => {
+      if (!index) {
+        status.textContent = 'Could not load the search index — refresh the page to retry.';
+        return;
+      }
       miniSearch.addAll(index.docs);
       status.textContent = `Ready — ${index.docs.length} pages searchable.`;
       render(initialQuery, index.docs);
-    })
-    .catch(() => {
-      status.textContent = 'Could not load the search index.';
     });
 
   let timer: ReturnType<typeof setTimeout> | undefined;
