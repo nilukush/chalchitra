@@ -13,6 +13,10 @@ const AWARD_SECTIONS = /^(accolades?|awards?|awards and nominations|honours|hono
 const AWARD_NAME_HINT =
   /(award|awardshistory|honou?r|prize|medal|padam|national film|filmfare|siima|iifa|screen|stardust|zee cine|nandi|karnataka state|kerala state|tamil nadu state|national)/i;
 
+// MediaWiki cell format: `| attr="…" attr2=… | content` — the attributes
+// before the closing pipe must not leak into the cleaned row text.
+const CELL_ATTRS = /^((?:[\w-]+\s*=\s*("[^"]*"|'[^']*'|[^\s|]+)\s*)+\|\s*)+/;
+
 export function extractAwards(pageWikitext: string, limit = 40): string[] {
   const rows: string[] = [];
 
@@ -25,7 +29,7 @@ export function extractAwards(pageWikitext: string, limit = 40): string[] {
         const cells = row
           .split('\n')
           .filter((line) => /^\s*[!|]/.test(line))
-          .map((line) => line.replace(/^\s*[!|]+\s*/, ''))
+          .map((line) => line.replace(/^\s*[!|]+\s*/, '').replace(CELL_ATTRS, ''))
           .join(' · ')
           .replace(/\s*!!\s*/g, ' · ');
         const cleaned = stripWikitext(cells).replace(/\s+/g, ' ').trim();

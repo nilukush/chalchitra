@@ -5,7 +5,7 @@ import ExternalLinks from '../../components/ExternalLinks.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
 import ReferenceList from '../../components/ReferenceList.astro';
-import { SITE, persons, personInitials, getTitleBySlug, titles, imdbNameUrl } from '../../lib/data';
+import { SITE, stats, persons, personInitials, getTitleBySlug, titles, imdbNameUrl } from '../../lib/data';
 import { computeAgeFromFacts } from '../../lib/dates';
 import { splitLongParagraphs } from '../../lib/format';
 
@@ -63,7 +63,7 @@ const creditTitleRecords = person.credits
   <article class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
     <Breadcrumbs crumbs={[{ label: 'People', href: '/people' }, { label: person.name }]} />
 
-    <div class="grid gap-10 lg:grid-cols-[280px_1fr]">
+    <div class="grid grid-cols-1 gap-10 md:grid-cols-[240px_minmax(0,1fr)]">
       <div class="lg:sticky lg:top-20 lg:self-start">
         {person.image ? (
           <img
@@ -141,23 +141,17 @@ const creditTitleRecords = person.credits
           </div>
         )}
 
-        {person.knownFor && person.knownFor.length > 0 && (
+        {filmographyInCatalogue.length > 0 && (
           <section class="mt-10" aria-labelledby="known-for">
             <h2 id="known-for" class="font-display text-2xl font-bold text-ivory-50">Known for</h2>
-            <p class="mt-1 text-xs text-ivory-600">Notable works beyond our current catalogue · via TMDB</p>
+            <p class="mt-1 text-xs text-ivory-600">
+              {filmographyInCatalogue.length} filmography works are in our {stats.years.join(' & ')} catalogue · from the Wikipedia filmography
+            </p>
             <div class="mt-4 flex gap-4 overflow-x-auto pb-3 [scrollbar-width:thin]">
-              {person.knownFor.map((work) => (
-                <a href={work.url} rel="noopener" class="focus-ring group w-32 shrink-0">
-                  <div class="aspect-[2/3] overflow-hidden rounded-xl border border-ink-700/70 bg-ink-800 shadow-lg shadow-black/30 transition group-hover:border-saffron-500/40">
-                    {work.poster ? (
-                      <img src={work.poster} alt={work.title} loading="lazy" width="185" height="278" class="h-full w-full object-cover" />
-                    ) : (
-                      <div class="flex h-full items-center justify-center grain"><span class="font-display text-2xl text-ivory-600">च</span></div>
-                    )}
-                  </div>
-                  <p class="mt-2 line-clamp-2 text-sm font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">{work.title}</p>
-                  <p class="text-xs text-ivory-600">{work.year ?? ''} · {work.kind === 'movie' ? 'Film' : 'Series'}</p>
-                </a>
+              {filmographyInCatalogue.slice(-14).reverse().map(({ title }) => (
+                <div class="w-32 shrink-0">
+                  <PosterCard item={title} />
+                </div>
               ))}
             </div>
           </section>
@@ -203,28 +197,29 @@ const creditTitleRecords = person.credits
         {(person.filmography?.length ?? 0) > 0 && (
           <section class="mt-10" aria-labelledby="filmography">
             <h2 id="filmography" class="font-display text-2xl font-bold text-ivory-50">
-              From the Wikipedia filmography <span class="text-lg text-ivory-600">({person.filmography!.length} works)</span>
+              Full filmography <span class="text-lg text-ivory-600">({person.filmography!.length} works · Wikipedia)</span>
             </h2>
-            {filmographyInCatalogue.length > 0 ? (
-              <>
-                <p class="mt-2 text-sm text-ivory-500">
-                  {filmographyInCatalogue.length} of these works are in our catalogue — jump straight in:
-                </p>
-                <ul class="mt-4 flex flex-wrap gap-2">
-                  {filmographyInCatalogue.slice(0, 24).map(({ work, title }) => (
-                    <li>
-                      <a href={title!.kind === 'movie' ? `/movies/${title!.slug}` : `/series/${title!.slug}`} class="focus-ring inline-block rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
-                        {work.title} {title!.year ? <span class="text-ivory-600">· {title!.year}</span> : ''}
+            <p class="mt-2 text-sm text-ivory-500">
+              Every linked work from the filmography, discography and television sections. {filmographyInCatalogue.length > 0 ? `${filmographyInCatalogue.length} are in our catalogue — they link to full pages.` : 'None are in our current catalogue yet.'}
+            </p>
+            <ul class="mt-4 flex flex-wrap gap-2">
+              {person.filmography!.map((work) => {
+                const inCatalogue = filmographyInCatalogue.find((e) => e.work.wikiTitle === work.wikiTitle);
+                const href = inCatalogue ? (inCatalogue.title.kind === 'movie' ? `/movies/${inCatalogue.title.slug}` : `/series/${inCatalogue.title.slug}`) : null;
+                const year = inCatalogue?.title.year;
+                return (
+                  <li>
+                    {href ? (
+                      <a href={href} class="focus-ring inline-block rounded-full border border-saffron-500/30 bg-saffron-500/5 px-3.5 py-1.5 text-sm text-ivory-200 transition hover:border-saffron-500/60 hover:text-saffron-300">
+                        {work.title} {year ? <span class="text-ivory-600">· {year}</span> : ''}
                       </a>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <p class="mt-2 text-sm text-ivory-500">
-                {person.filmography!.length} linked works across film, television and music — browse the full list on Wikipedia.
-              </p>
-            )}
+                    ) : (
+                      <span class="inline-block rounded-full border border-ink-700 bg-ink-850/60 px-3.5 py-1.5 text-sm text-ivory-400">{work.title}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           </section>
         )}
 

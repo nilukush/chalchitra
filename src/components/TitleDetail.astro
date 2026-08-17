@@ -12,7 +12,7 @@ import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
 import { extractTimelineDates } from '../lib/dates';
-import { formatRuntime, splitLongParagraphs } from '../lib/format';
+import { formatRuntime, splitLongParagraphs, splitLeadSentence } from '../lib/format';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -166,7 +166,7 @@ const jsonLd: Record<string, unknown>[] = [
   <article class="mx-auto max-w-7xl px-4 py-8 sm:px-6">
     <Breadcrumbs crumbs={[{ label: indexLabel, href: indexHref }, { label: item.title }]} />
 
-    <div class="grid gap-8 lg:grid-cols-[300px_1fr]">
+    <div class="grid grid-cols-1 gap-8 md:grid-cols-[260px_minmax(0,1fr)]">
       <!-- Poster column: sticky, with quick actions so the pane is never dead space -->
       <div>
         <div class="lg:sticky lg:top-20 lg:self-start">
@@ -342,8 +342,8 @@ const jsonLd: Record<string, unknown>[] = [
                             </div>
                           )}
                         </div>
-                        <p class="mt-2 line-clamp-1 text-sm font-semibold text-ivory-100 group-hover:text-saffron-300">{member.name}</p>
-                        {role && <p class="line-clamp-2 text-xs leading-snug text-ivory-600">{role}</p>}
+                        <p class="mt-2 line-clamp-1 text-sm font-semibold text-ivory-100 group-hover:text-saffron-300" title={member.name}>{member.name}</p>
+                        {role && <p class="line-clamp-2 text-xs leading-snug text-ivory-600" title={role}>{role}</p>}
                       </a>
                     </div>
                   );
@@ -449,7 +449,14 @@ const jsonLd: Record<string, unknown>[] = [
                         </ul>
                       )}
                       <div class="prose-article max-w-[68ch] border-l-2 border-ink-700 pl-5">
-                        {section.text.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
+                        {section.text.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para, pi) => {
+                          const { lead, rest } = pi === 0 ? splitLeadSentence(para) : { lead: '', rest: para };
+                          return (
+                            <p>
+                              {lead && <span class="font-semibold text-ivory-100">{lead}</span>} {rest}
+                            </p>
+                          );
+                        })}
                       </div>
                     </div>
                   </details>

@@ -24,7 +24,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   <!-- Hero -->
   <section class="relative grain overflow-hidden border-b border-ink-700/60">
     <div class="pointer-events-none absolute inset-0 bg-[radial-gradient(60%_50%_at_70%_20%,rgba(244,167,44,0.14),transparent_60%),radial-gradient(40%_40%_at_20%_80%,rgba(227,93,135,0.08),transparent_60%)]"></div>
-    <div class="relative mx-auto grid max-w-7xl gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[1fr_auto] lg:items-center">
+    <div class="relative mx-auto grid max-w-7xl grid-cols-1 gap-10 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
       <div>
       <p class="mb-4 text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">चलचित्र · movies · series · people</p>
       <h1 class="max-w-3xl font-display text-4xl font-bold leading-[1.05] tracking-tight text-ivory-50 sm:text-6xl">
@@ -62,23 +62,24 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
         </div>
       </dl>
       <p class="mt-6 text-sm text-ivory-600">
-        Currently cataloguing {stats.years.join(' · ')} — earlier years and new industries (Korea next) are on the roadmap.
+        Currently cataloguing {stats.years.join(' · ')} — building backward season by season toward the 1950s.
+        Sister editions for other countries (Korea first) will share this same home.
       </p>
       </div>
 
-      <!-- poster deck: right-anchored, two-thirds overlap, explorable on hover -->
+      <!-- poster deck: right-anchored, overlapping fan, lifts and straightens on hover -->
       {collage.length > 2 && (
-        <div class="relative hidden h-[300px] w-[430px] shrink-0 md:block" aria-hidden="true">
+        <div class="relative hidden h-[400px] w-[560px] shrink-0 md:block" aria-hidden="true">
           <div class="absolute inset-0 rounded-3xl border border-ink-700/60 bg-ink-900/40" style="transform:rotate(-2deg)"></div>
           {collage.slice(0, 5).map((item, i) => (
             <a
               href={item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.slug}`}
               tabindex="-1"
-              class="absolute top-1/2 w-[150px] -translate-y-1/2 overflow-hidden rounded-xl border border-ink-700/80 bg-ink-800 shadow-2xl shadow-black/60 transition duration-300 hover:z-50 hover:-translate-y-[calc(50%+14px)] hover:scale-105"
-              style={`right:${i * 58}px; transform:translateY(-50%) rotate(${[5, -4, 2, -7, 9][i]}deg); z-index:${i === 4 ? 50 : 10 + i};`}
+              class="absolute top-1/2 w-[200px] overflow-hidden rounded-2xl border border-ink-700/80 bg-ink-800 shadow-2xl shadow-black/60 transition duration-300 [transform:translateY(-50%)_rotate(var(--rot))] hover:z-50 hover:[transform:translateY(calc(-50%_-_20px))_rotate(0deg)_scale(1.06)] hover:shadow-saffron-500/10"
+              style={`--rot:${[5, -4, 2, -7, 9][i]}deg; right:${i * 70}px;`}
             >
               {item.poster ? (
-                <img src={item.poster} alt="" width="150" height="225" loading={i < 2 ? 'eager' : 'lazy'} class="aspect-[2/3] w-full object-cover" />
+                <img src={item.poster} alt="" width="200" height="300" loading={i < 2 ? 'eager' : 'lazy'} class="aspect-[2/3] w-full object-cover" />
               ) : (
                 <div class="flex aspect-[2/3] items-center justify-center"><span class="font-display text-4xl text-ivory-600">च</span></div>
               )}
@@ -193,7 +194,7 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   <!-- Spotlight people -->
   <section class="border-t border-ink-700/50 bg-ink-900/60" aria-labelledby="spotlight">
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
-      <SectionHeading title="The busiest people of {stats.years[0]}" kicker="Spotlight" href="/people" linkLabel="All people" />
+      <SectionHeading title={`The busiest people of ${stats.years[0]}`} kicker="Spotlight" href="/people" linkLabel="All people" />
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {people.map((person) => <PersonCard person={person} />)}
       </div>

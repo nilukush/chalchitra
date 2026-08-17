@@ -64,6 +64,8 @@ Wikimedia servers.
 
 ## Extending
 
-- **More years**: add category roots in `pipeline/extract-titles.ts` (the schema already has `year`).
-- **More origins** (Korea is on the roadmap): the data model is origin-agnostic (`origin` field);
-  add the relevant categories and a language badge mapping.
+- **More years**: add category roots in `pipeline/extract-titles.ts` (the schema already has `year`);
+  the archive builds backward toward the 1950s.
+- **More countries** (a Korean edition is next): each country ships as its own site with the same
+  architecture and design — fork this repo, swap the category roots and language badge map
+  (the data model is origin-agnostic via the `origin` field).

@@ -13,7 +13,7 @@ const seriesLanguages = languages().filter((l) => l.series > 0);
 >
   <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-lotus-400">Television &amp; streaming</p>
-    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Indian series debuts of {stats.years.join(" & ")}</h1>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50" data-years={yearsLabel}>Indian series debuts of {yearsLabel}</h1>
     <p class="mt-3 max-w-2xl text-ivory-500">
       {series.length} shows that first aired in {stats.years.join(" or ")} — weekday dramas, OTT originals and reality
       formats across India's languages. Filter by language, or open any series for its full picture.
@@ -71,6 +71,7 @@ const seriesLanguages = languages().filter((l) => l.series > 0);
     });
     const heading = document.querySelector('h1');
     if (heading) {
+      const yearsLabel = heading.dataset.years ?? '';
       heading.textContent = lang ? `${lang} series debuts of ${yearsLabel}` : `Indian series debuts of ${yearsLabel}`;
     }
   }

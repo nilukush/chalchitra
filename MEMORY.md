@@ -325,3 +325,39 @@ name/stack/design decided autonomously per user instruction.
 - Parameterise `YEAR` (pipeline/build-dataset.ts) to add 2025, 2024… datasets.
 - Korean origin: add categories + language badge map; `origin` field already exists.
 - Deploy: set `SITE_URL`, host dist/ on any static host.
+
+## Session 11 — disorientation root-caused; filmography depth (153 tests)
+
+**Root cause of "disoriented" title pages** (user's 986px window): grids defined columns only at
+`lg` (`lg:grid-cols-[300px_1fr]`); below 1024px the implicit `auto` track sizes to the genre-chip
+row's max-content (every chip on one line ≈ 2400px) → whole page shears horizontally. Plain `fr`
+tracks also keep an `auto` minimum. Fix: `grid-cols-1` base + `md:grid-cols-[260px_minmax(0,1fr)]`
+in TitleDetail + people page; `minmax(0,1fr)` in home hero. Verified at 986px: scrollWidth ==
+clientWidth on /, /movies, /series, both reported title pages, Wamiqa. NOT stale cache — a hard
+refresh could never fix it; the user's report was fully reproducible.
+
+**Other fixes this round:**
+- Literal `{stats.years[0]}` in home spotlight (string attr → template literal).
+- movies/series filter scripts crashed: frontmatter `yearsLabel` undefined client-side → now read
+  from `data-years` on the h1 (click-verified: "Kannada movies of 2026 · Showing 41 films").
+- Awards parser leaked `rowspan="3"` etc. → CELL_ATTRS stripper (TDD, 5/5).
+- Filmography walker now hierarchical: nested ===Film===/===As actor=== captured; Wamiqa 7 → 32
+  works; 77,867 works total (was 33,636). Language/outlet/award-link noise filtered (TDD).
+- Person page: Known-for now Wikipedia-filmography-derived poster rail (TMDB knownFor dropped from
+  UI); "Full filmography" renders every work (chips, in-catalogue = linked + year).
+- Chapters: bold lead sentence via splitLeadSentence (TDD; also fixed A.R.-initialism split bug
+  shared with splitLongParagraphs).
+- Season synthesis cap 5 → 50 (data-driven). Cast rail title attrs for hover. Poster deck: 200px
+  cards, working hover lift (inline transform was silently overriding hover classes), fan offsets.
+- Copy: 1950s archive roadmap; Korea = separate sister edition (home, about, README, llms.txt).
+  llms.txt moved dist → public (was wiped on rebuild).
+- Preview server on 4730 was started a day before the last build; restart preview after rebuilds
+  (its file tree goes stale).
+
+**Verification.** 153/153 tests; toggles jsdom pass; build 2,651 pages; browser: widths clean,
+trailer modal opens on-site (youtube-nocookie embed), filter click verified.
+
+**Next steps for future sessions.**
+- Parameterise `YEAR` (pipeline/build-dataset.ts) to add 2025, 2024… datasets (1950s goal).
+- Sister editions: fork repo per country (Korea first) — origin-agnostic data model already.
+- Deploy: set `SITE_URL`, host dist/ on any static host.

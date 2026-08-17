@@ -1,8 +1,9 @@
-node_modules/
-dist/
 .astro/
-data/cache/
+.DS_Store
 .env
 .env.*
+.playwright-cli/
 *.log
-.DS_Store
+data/cache/
+dist/
+node_modules/

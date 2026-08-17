@@ -145,9 +145,9 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
     }
 
     // series with NO wiki episode table → synthesize the guide from TMDB
-    // (all seasons, bounded, with season numbers for grouped display)
+    // (every season the record claims, with a safety ceiling against bad data)
     if (record.kind === 'series' && record.episodesList.length === 0) {
-      const maxSeasons = Math.min(Math.max(Number(record.seasons) || 1, 1), 5);
+      const maxSeasons = Math.min(Math.max(Number(record.seasons) || 1, 1), 50);
       const all: ReturnType<typeof episodesFromTmdbSeason> = [];
       for (let season = 1; season <= maxSeasons; season++) {
         const payload = await tmdbGet(`/tv/${hit.id}/season/${season}?language=en-US`, apiKey);

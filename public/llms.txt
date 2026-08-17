@@ -1,0 +1,21 @@
+# Chalchitra
+
+> Every Indian movie & series has a home. A structured catalogue of Indian movies and television series,
+> launched with the class of 2026 (365 films, 60 series debuts,
+> 2219 cast & crew profiles). Data derived from Wikipedia (CC BY-SA 4.0).
+
+Catalogue sections:
+- /movies — all 2026 Indian feature films, filterable by language
+- /series — all 2026 Indian television & streaming series debuts
+- /people — cast & crew profiles with credits, awards and full Wikipedia filmographies
+- /search — full-text search over titles and people
+
+Detail pages carry structured metadata as schema.org JSON-LD (Movie, TVSeries, Person)
+plus canonical URLs. Content excerpts are attributed to their Wikipedia source articles
+linked from every page.
+
+The archive builds backward toward the 1950s, season by season. Each country gets its
+own edition of this catalogue — a Korean edition is next — sharing the same
+architecture, design and depth.
+
+Site: https://chalachitra.example

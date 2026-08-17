@@ -19,6 +19,20 @@ The actor also received the [[Karnataka State Film Award for Best Actor]] twice.
 |}
 `;
 
+const rowspanPage = `
+== Accolades ==
+{| class="wikitable"
+|-
+! rowspan="2" | Year !! Award !! Result
+|-
+| rowspan="3" style="text-align:center;" | 2024 || [[Filmfare Awards South|Filmfare Award]] || Won
+|-
+| '''Nominated''' || Referrer
+|-
+| colspan="2" | 2023 || Won
+|}
+`;
+
 describe('extractAwards', () => {
   it('parses award table rows into cleaned strings', () => {
     const awards = extractAwards(page);
@@ -27,6 +41,17 @@ describe('extractAwards', () => {
     expect(awards[0]).toContain('Toxic');
     expect(awards[0]).toContain('Won');
     expect(awards[1]).toContain('Nominated');
+  });
+
+  it('strips rowspan/colspan/style attributes from cells', () => {
+    const awards = extractAwards(rowspanPage);
+    expect(awards.length).toBeGreaterThanOrEqual(3);
+    for (const row of awards) {
+      expect(row).not.toMatch(/rowspan|colspan|text-align|style=|scope=/i);
+    }
+    expect(awards[0]).toContain('2024');
+    expect(awards[0]).toContain('Filmfare Award');
+    expect(awards[0]).toContain('Won');
   });
 
   it('captures award mentions in prose after the tables', () => {

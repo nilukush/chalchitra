@@ -1,5 +1,28 @@
 import { describe, expect, it } from 'vitest';
-import { formatRuntime, splitLongParagraphs } from './format.js';
+import { formatRuntime, splitLongParagraphs, splitLeadSentence } from './format.js';
+
+describe('splitLeadSentence', () => {
+  it('separates the first sentence from the rest', () => {
+    expect(splitLeadSentence('Rudra returns to Mumbai. What follows is blood.'))
+      .toEqual({ lead: 'Rudra returns to Mumbai.', rest: 'What follows is blood.' });
+  });
+
+  it('returns the whole string as lead when there is only one sentence', () => {
+    expect(splitLeadSentence('A single sentence stands alone.')).toEqual({
+      lead: 'A single sentence stands alone.',
+      rest: '',
+    });
+  });
+
+  it('does not split after abbreviations followed by lowercase', () => {
+    const { lead } = splitLeadSentence('He met A.R. Rahman and left. Then he went home.');
+    expect(lead).toBe('He met A.R. Rahman and left.');
+  });
+
+  it('handles empty input', () => {
+    expect(splitLeadSentence('')).toEqual({ lead: '', rest: '' });
+  });
+});
 
 describe('splitLongParagraphs', () => {
   it('keeps short paragraphs intact', () => {
