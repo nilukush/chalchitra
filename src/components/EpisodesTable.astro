@@ -7,35 +7,57 @@ interface Props {
 const { episodes } = Astro.props;
 const COLLAPSE_AFTER = 12;
 const collapsed = episodes.length > COLLAPSE_AFTER;
+const seasonNumbers = [...new Set(episodes.map((e) => e.season ?? 1))];
+const multiSeason = seasonNumbers.length > 1;
+const groups: { season?: number; rows: { ep: EpisodeRow; overflow: boolean }[] }[] = multiSeason
+  ? seasonNumbers.map((season) => ({
+      season,
+      rows: episodes
+        .filter((e) => (e.season ?? 1) === season)
+        .map((ep, i) => ({ ep, overflow: i >= COLLAPSE_AFTER })),
+    }))
+  : [
+      {
+        season: undefined,
+        rows: episodes.map((ep, i) => ({ ep, overflow: i >= COLLAPSE_AFTER })),
+      },
+    ];
 ---
 
 <div class="space-y-2.5">
-  {episodes.map((ep, i) => (
-    <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && i >= COLLAPSE_AFTER && 'ep-overflow toggle-hidden']}>
-      <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-saffron-500/30 bg-saffron-500/10">
-        <span class="font-display text-lg font-bold leading-none text-saffron-400">{ep.number}</span>
-        <span class="mt-0.5 text-[9px] uppercase tracking-wider text-ivory-600">ep</span>
-      </div>
-      <div class="min-w-0 flex-1">
-        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h3 class="text-[15px] font-semibold text-ivory-100">{ep.title || 'Untitled'}</h3>
-          <span class="flex items-center gap-3 text-xs text-ivory-600">
-            {ep.runtime && <span>{ep.runtime}</span>}
-            {ep.airDate && <time>{ep.airDate}</time>}
-          </span>
-        </div>
-        {ep.summary && (
-          <p class="mt-1.5 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
-        )}
-        {(ep.director || ep.writer) && (
-          <p class="mt-2 text-xs text-ivory-600">
-            {ep.director && <>Directed by <span class="text-ivory-400">{ep.director}</span></>}
-            {ep.director && ep.writer && ' · '}
-            {ep.writer && <>Written by <span class="text-ivory-400">{ep.writer}</span></>}
-          </p>
-        )}
-      </div>
-    </article>
+  {groups.map((group) => (
+    <div class="space-y-2.5">
+      {multiSeason && (
+        <h3 class="pt-3 font-display text-lg font-bold text-saffron-400">Season {group.season}</h3>
+      )}
+      {group.rows.map(({ ep, overflow }) => (
+        <article class:list={['card-sheen flex gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 p-4 transition hover:border-saffron-500/30', collapsed && overflow && 'ep-overflow toggle-hidden']}>
+          <div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border border-saffron-500/30 bg-saffron-500/10">
+            <span class="font-display text-lg font-bold leading-none text-saffron-400">{ep.number}</span>
+            <span class="mt-0.5 text-[9px] uppercase tracking-wider text-ivory-600">ep</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 class="text-[15px] font-semibold text-ivory-100">{ep.title || 'Untitled'}</h3>
+              <span class="flex items-center gap-3 text-xs text-ivory-600">
+                {ep.runtime && <span>{ep.runtime}</span>}
+                {ep.airDate && <time>{ep.airDate}</time>}
+              </span>
+            </div>
+            {ep.summary && (
+              <p class="mt-1.5 text-sm leading-relaxed text-ivory-300">{ep.summary}</p>
+            )}
+            {(ep.director || ep.writer) && (
+              <p class="mt-2 text-xs text-ivory-600">
+                {ep.director && <>Directed by <span class="text-ivory-400">{ep.director}</span></>}
+                {ep.director && ep.writer && ' · '}
+                {ep.writer && <>Written by <span class="text-ivory-400">{ep.writer}</span></>}
+              </p>
+            )}
+          </div>
+        </article>
+      ))}
+    </div>
   ))}
 
   {collapsed && (

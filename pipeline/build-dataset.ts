@@ -23,7 +23,7 @@ import {
   parseStartDate,
 } from './wikitext/index.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
-import { enrichTitles } from './enrich/tmdb.js';
+import { enrichPersons, enrichTitles } from './enrich/tmdb.js';
 import { enrichWithAi } from './enrich/ai.js';
 import { loadEnv } from './env.js';
 
@@ -427,6 +427,7 @@ async function main() {
 
   // multi-source enrichment (TMDB) — fills gaps Wikipedia leaves; no-op without key
   await enrichTitles([...movies, ...series]);
+  await enrichPersons(persons);
   // AI hooks/moods — key-gated; falls back to tagline/first-sentence below
   await enrichWithAi([...movies, ...series]);
 

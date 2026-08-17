@@ -1,4 +1,4 @@
-# Chalachitra — High-Level Analysis (Part 1)
+# Chalchitra — High-Level Analysis (Part 1)
 
 Date: 2026-08-16 · Status: Approved (autonomous mode, per user instruction to decide stack/architecture/design/name)
 
@@ -36,7 +36,7 @@ Date: 2026-08-16 · Status: Approved (autonomous mode, per user instruction to d
 
 **Decision: Approach A.** Astro 5 static generation; TypeScript everywhere; Tailwind CSS v4 design system; MiniSearch client-side search over a prebuilt JSON index; Vitest TDD for the wikitext-parsing core (pure functions). Pipeline: staged Node scripts (`titles → fetch → dataset`) with a disk cache of raw wikitext so re-runs are incremental and Wikipedia is hit politely (batched queries, 50 titles/request for metadata, 10 for wikitext, serialized with delays, custom User-Agent).
 
-**Name & brand.** **Chalachitra** (चलचित्र, "motion picture"). Data model is origin-agnostic (`origin: 'in' | 'kr' | …`), so Korean content is an additive dataset, not a migration.
+**Name & brand.** **Chalchitra** (चलचित्र, "motion picture"). Data model is origin-agnostic (`origin: 'in' | 'kr' | …`), so Korean content is an additive dataset, not a migration.
 
 ## 4. Context & Constraints
 

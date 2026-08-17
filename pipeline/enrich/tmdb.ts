@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { TitleRecord } from '../types.js';
-import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, type TmdbSearchResult } from './tmdb-lib.js';
+import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -74,7 +74,26 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false${yearParam}`,
       apiKey,
     );
-    const hit = pickTmdbMatch((search?.results ?? []) as TmdbSearchResult[], record.title, record.year);
+
+    // validate candidates against our Wikipedia names (directors + cast) so a
+    // same-year namesake ("A Toxic Love Story" vs "Toxic: A Fairy Tale…") can't win
+    const wikiNames = [...record.directedBy, ...record.createdBy, ...record.cast.slice(0, 6).map((c) => c.name)];
+    let hit: TmdbSearchResult | null = null;
+    let bestScore = -1;
+    for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, 3)) {
+      const det = await tmdbGet(`/${kind}/${candidate.id}?append_to_response=credits`, apiKey);
+      const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
+      const score = scoreNameOverlap(credits, wikiNames);
+      if (score > bestScore) {
+        bestScore = score;
+        hit = candidate;
+      }
+      if (score >= 3) break; // a director match is decisive
+    }
+    if (!hit || bestScore <= 0) {
+      // no cast/crew evidence — fall back to the plain title+year pick
+      hit = pickTmdbMatch((search?.results ?? []) as TmdbSearchResult[], record.title, record.year);
+    }
     if (!hit?.id) continue;
     matched++;
     record.tmdbId = hit.id;
@@ -126,12 +145,19 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
     }
 
     // series with NO wiki episode table → synthesize the guide from TMDB
+    // (all seasons, bounded, with season numbers for grouped display)
     if (record.kind === 'series' && record.episodesList.length === 0) {
-      const payload = await tmdbGet(`/tv/${hit.id}/season/1?language=en-US`, apiKey);
-      const rows = payload ? episodesFromTmdbSeason(payload) : [];
-      if (rows.length > 0) {
-        record.episodesList = rows;
-        episodesSynthesized += rows.length;
+      const maxSeasons = Math.min(Math.max(Number(record.seasons) || 1, 1), 5);
+      const all: ReturnType<typeof episodesFromTmdbSeason> = [];
+      for (let season = 1; season <= maxSeasons; season++) {
+        const payload = await tmdbGet(`/tv/${hit.id}/season/${season}?language=en-US`, apiKey);
+        const rows = payload ? episodesFromTmdbSeason(payload, season) : [];
+        if (rows.length === 0) break;
+        all.push(...rows);
+      }
+      if (all.length > 0) {
+        record.episodesList = all;
+        episodesSynthesized += all.length;
         record.enrichedFrom = [...new Set([...(record.enrichedFrom ?? []), 'tmdb'])];
       }
     }
@@ -141,4 +167,56 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
 
   console.log(`→ TMDB enrichment: ${matched}/${titles.length} matched, ${episodesFilled} episode summaries filled, ${episodesSynthesized} episodes synthesized for table-less series, ${backdrops} backdrops`);
   return { matched, episodesFilled, episodesSynthesized, backdrops };
+}
+
+/** Person enrichment: TMDB profile (portrait fallback, known-for works, id).
+ *  Exact-name matching only — precision over recall. */
+export async function enrichPersons(
+  persons: { slug: string; name: string; image?: string; knownFor?: unknown[]; tmdbId?: number; enrichedFrom?: string[] }[],
+): Promise<{ matched: number; knownForWorks: number; portraits: number }> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey) return { matched: 0, knownForWorks: 0, portraits: 0 };
+
+  let matched = 0;
+  let knownForWorks = 0;
+  let portraits = 0;
+
+  for (const person of persons) {
+    const search = await tmdbGet(`/search/person?query=${encodeURIComponent(person.name)}&include_adult=false`, apiKey);
+    const hit = (search?.results ?? []).find(
+      (r: any) => (r.name ?? '').toLowerCase().trim() === person.name.toLowerCase().trim(),
+    );
+    if (!hit?.id) continue;
+    matched++;
+    person.tmdbId = hit.id;
+    const sources = new Set(person.enrichedFrom ?? []);
+
+    const works = (hit.known_for ?? []) as any[];
+    person.knownFor = works
+      .filter((w) => w.media_type === 'movie' || w.media_type === 'tv')
+      .slice(0, 8)
+      .map((w) => ({
+        title: (w.title ?? w.name ?? '').trim(),
+        year: (w.release_date ?? w.first_air_date ?? '').slice(0, 4) || undefined,
+        kind: (w.media_type === 'tv' ? 'series' : 'movie') as 'movie' | 'series',
+        poster: w.poster_path ? `${IMG}/w185${w.poster_path}` : undefined,
+        url: `https://www.themoviedb.org/${w.media_type}/${w.id}`,
+      }))
+      .filter((w) => w.title.length > 0);
+    if (person.knownFor.length > 0) {
+      knownForWorks += person.knownFor.length;
+      sources.add('tmdb');
+    }
+
+    if (!person.image && hit.profile_path) {
+      person.image = `${IMG}/w300${hit.profile_path}`;
+      portraits++;
+      sources.add('tmdb');
+    }
+
+    if (sources.size > 0) person.enrichedFrom = [...sources];
+  }
+
+  console.log(`→ TMDB persons: ${matched}/${persons.length} matched, ${knownForWorks} known-for works, ${portraits} portraits added`);
+  return { matched, knownForWorks, portraits };
 }

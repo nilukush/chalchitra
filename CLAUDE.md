@@ -1,8 +1,8 @@
-# CLAUDE.md — Chalachitra
+# CLAUDE.md — Chalchitra
 
 ## What this is
 Static website + data pipeline cataloguing **2026 Indian movies and television series debuts**
-from Wikipedia. Product name: **Chalachitra** (चलचित्र). Data model is origin-agnostic —
+from Wikipedia. Product name: **Chalchitra** (चलचित्र). Data model is origin-agnostic —
 Korean cinema is the planned next dataset.
 
 ## Commands

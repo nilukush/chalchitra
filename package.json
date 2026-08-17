@@ -1,7 +1,7 @@
 {
   "name": "chalachitra",
   "version": "0.1.0",
-  "description": "Chalachitra — a graphical discovery destination for Indian cinema & series (extensible to other origins), built from Wikipedia data",
+  "description": "Chalchitra — a graphical discovery destination for Indian cinema & series (extensible to other origins), built from Wikipedia data",
   "type": "module",
   "private": true,
   "scripts": {

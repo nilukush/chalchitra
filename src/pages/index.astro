@@ -3,11 +3,13 @@ import Base from '../layouts/Base.astro';
 import PosterCard from '../components/PosterCard.astro';
 import PersonCard from '../components/PersonCard.astro';
 import SectionHeading from '../components/SectionHeading.astro';
-import { SITE, stats, recentTitles, upcomingTitles, spotlightPersons, languages, trendingTitles, trendingPersons, liveTrendingCandidates } from '../lib/data';
+import { SITE, stats, recentTitles, comingSoonTitles, undatedTitles, spotlightPersons, languages, trendingTitles, trendingPersons, anticipatedTrending, liveTrendingCandidates } from '../lib/data';
 
 const latestMovies = recentTitles('movie', 12);
 const latestSeries = recentTitles('series', 6);
-const soon = upcomingTitles('movie', 5);
+const comingSoon = comingSoonTitles('movie', 8);
+const soon = undatedTitles('movie', 5);
+const anticipated = anticipatedTrending(6);
 const people = spotlightPersons(12);
 const topLanguages = languages().slice(0, 10);
 const hotTitles = trendingTitles(12);
@@ -63,8 +65,7 @@ const liveCandidates = liveTrendingCandidates(350);
   </section>
 
   <!-- Trending -->
-  {hasTrends && (
-    <section class="border-b border-ink-700/60 bg-gradient-to-b from-saffron-500/[0.06] to-transparent" aria-labelledby="trending">
+  {hasTrends && (    <section class="border-b border-ink-700/60 bg-gradient-to-b from-saffron-500/[0.06] to-transparent" aria-labelledby="trending">
       <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
         <div class="mb-5 flex items-end justify-between gap-4">
           <div>
@@ -132,6 +133,43 @@ const liveCandidates = liveTrendingCandidates(350);
     </div>
   </section>
 
+  <!-- Coming soon / most anticipated -->
+  {(comingSoon.length > 0 || anticipated.length > 0) && (
+    <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="upcoming">
+      <SectionHeading title="Coming soon & most anticipated" kicker="On the horizon" href="/movies" linkLabel="Browse films" />
+      {comingSoon.length > 0 && (
+        <div class="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {comingSoon.map((item, i) => <PosterCard item={item} eager={i < 6} />)}
+        </div>
+      )}
+      {anticipated.length > 0 && (
+        <div class="mt-6">
+          <p class="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-ivory-600">Buzzing before release · by Wikipedia readership</p>
+          <ul class="flex flex-wrap gap-2.5">
+            {anticipated.map((item) => (
+              <li>
+                <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-500 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/60 hover:text-saffron-300">
+                  {item.title} <span class="text-ivory-600">· {item.releaseDate ?? item.language}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {soon.length > 0 && (
+        <ul class="mt-4 flex flex-wrap gap-2.5">
+          {soon.map((item) => (
+            <li>
+              <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-600/60 px-4 py-1.5 text-xs text-ivory-500 transition hover:text-saffron-300">
+                {item.title} <span class="text-ivory-700">· date TBA</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  )}
+
   <!-- Spotlight people -->
   <section class="border-t border-ink-700/50 bg-ink-900/60" aria-labelledby="spotlight">
     <div class="mx-auto max-w-7xl px-4 py-14 sm:px-6">
@@ -142,21 +180,6 @@ const liveCandidates = liveTrendingCandidates(350);
     </div>
   </section>
 
-  <!-- Coming soon teaser -->
-  {soon.length > 0 && (
-    <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6" aria-labelledby="upcoming">
-      <SectionHeading title="On the horizon" kicker="Upcoming · no dates yet" href="/movies" linkLabel="Browse films" />
-      <ul class="flex flex-wrap gap-2.5">
-        {soon.map((item) => (
-          <li>
-            <a href={`/movies/${item.slug}`} class="focus-ring inline-block rounded-full border border-dashed border-ink-500 px-4 py-2 text-sm text-ivory-300 transition hover:border-saffron-500/60 hover:text-saffron-300">
-              {item.title} <span class="text-ivory-600">· {item.language}</span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )}
 </Base>
 
 <script>

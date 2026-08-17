@@ -12,11 +12,20 @@ export const persons = personsJson as PersonRecord[];
 export const stats = statsJson as SiteStats;
 export const trends = trendsJson as TrendsPayload;
 
-/** Top trending titles joined to their full records (ready for PosterCard). */
+/** Top trending titles joined to their full records (ready for PosterCard).
+ *  Released only — unreleased buzz surfaces via anticipatedTrending(). */
 export function trendingTitles(count: number): TitleRecord[] {
   return trends.topTitles
     .map((entry) => getTitleBySlug(entry.slug, entry.kind))
-    .filter((t): t is TitleRecord => Boolean(t))
+    .filter((t): t is TitleRecord => Boolean(t) && isReleased(t as TitleRecord))
+    .slice(0, count);
+}
+
+/** Unreleased titles that are generating significant Wikipedia readership. */
+export function anticipatedTrending(count: number): TitleRecord[] {
+  return trends.topTitles
+    .map((entry) => getTitleBySlug(entry.slug, entry.kind))
+    .filter((t): t is TitleRecord => Boolean(t) && !isReleased(t as TitleRecord))
     .slice(0, count);
 }
 
@@ -65,6 +74,12 @@ export function liveTrendingCandidates(count: number): LiveCandidate[] {
 
 export const titles: TitleRecord[] = [...movies, ...series];
 
+const TODAY = new Date().toISOString().slice(0, 10);
+
+export function isReleased(item: TitleRecord): boolean {
+  return Boolean(item.releaseDate && item.releaseDate <= TODAY);
+}
+
 export function getMovie(slug: string): TitleRecord | undefined {
   return movies.find((m) => m.slug === slug);
 }
@@ -87,15 +102,23 @@ export function getTitleBySlug(slug: string, kind?: 'movie' | 'series'): TitleRe
   return pool.find((t) => t.slug === slug);
 }
 
-/** Most recently released titles that actually have a date. */
+/** Already-released titles, newest first — "Fresh in theatres" & friends. */
 export function recentTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
   return titles
-    .filter((t) => t.kind === kind && t.releaseDate)
+    .filter((t) => t.kind === kind && isReleased(t))
     .slice(0, count);
 }
 
-/** Titles without a date yet — upcoming works, sorted alphabetically. */
-export function upcomingTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
+/** Future-dated titles, soonest first — "Coming soon". */
+export function comingSoonTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
+  return titles
+    .filter((t) => t.kind === kind && t.releaseDate && t.releaseDate > TODAY)
+    .sort((a, b) => (a.releaseDate ?? '').localeCompare(b.releaseDate ?? ''))
+    .slice(0, count);
+}
+
+/** Titles without a date yet — undated announcements. */
+export function undatedTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
   return titles.filter((t) => t.kind === kind && !t.releaseDate).slice(0, count);
 }
 
@@ -110,11 +133,11 @@ export function languages(): { language: string; movies: number; series: number 
 }
 
 export const SITE = {
-  name: 'Chalachitra',
+  name: 'Chalchitra',
   devanagari: 'चलचित्र',
-  tagline: 'The definitive guide to Indian cinema & series',
+  tagline: 'Every Indian movie & series has a home',
   description:
-    'Chalachitra is a graphical discovery destination for Indian movies and television series — posters, plots, cast, crew, credits and facts, curated from open knowledge. Launching with the class of 2026.',
+    'Chalchitra is a graphical discovery destination for Indian movies and television series — posters, plots, cast, crew, credits and facts, curated from open knowledge. Launching with the class of 2026.',
   url: (import.meta.env.SITE as string | undefined)?.replace(/\/$/, '') ?? 'https://chalachitra.example',
 } as const;
 

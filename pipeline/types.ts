@@ -9,7 +9,7 @@ export interface ArticleSection {
 
 export interface CastMember {
   name: string;
-  /** site slug when the person has a page on Chalachitra, else null */
+  /** site slug when the person has a page on Chalchitra, else null */
   slug: string | null;
   role: string;
 }
@@ -104,6 +104,15 @@ export interface PersonFact {
   value: string;
 }
 
+export interface KnownForWork {
+  title: string;
+  year?: string;
+  kind: 'movie' | 'series';
+  poster?: string;
+  /** TMDB page link (work not in our catalogue yet) */
+  url: string;
+}
+
 export interface PersonRecord {
   slug: string;
   name: string;
@@ -118,6 +127,9 @@ export interface PersonRecord {
   external: ExternalRefs;
   references: ReferenceEntry[];
   sections: string[];
+  /** pre/other-catalogue notable works from TMDB */
+  knownFor?: KnownForWork[];
+  tmdbId?: number;
 }
 
 export interface SiteStats {

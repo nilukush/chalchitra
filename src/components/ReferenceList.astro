@@ -10,19 +10,21 @@ const collapsed = references.length > COLLAPSE_AFTER;
 ---
 
 <div>
-  <ol class={`grid gap-x-8 gap-y-1.5 text-sm ${references.length > 12 ? 'lg:columns-2' : ''}`}>
+  <ol class={`grid gap-x-8 gap-y-3 text-sm ${references.length > 12 ? 'lg:columns-2' : ''}`}>
     {references.map((ref, i) => (
-      <li class={`break-inside-avoid pl-1 ${collapsed && i >= COLLAPSE_AFTER ? 'ref-overflow toggle-hidden' : ''}`} style="counter-increment: ref-item;">
-        <span class="mr-1.5 text-xs text-ivory-600">{i + 1}.</span>
-        {ref.url ? (
-          <a href={ref.url} rel="noopener nofollow" class="text-ivory-200 underline decoration-ink-500 underline-offset-2 transition hover:text-saffron-300 hover:decoration-saffron-500/60">
-            {ref.label}
-          </a>
-        ) : (
-          <span class="text-ivory-200">{ref.label}</span>
-        )}
-        {ref.source && <span class="text-ivory-600"> — {ref.source}</span>}
-        {ref.date && <span class="text-ivory-600"> · {ref.date}</span>}
+      <li class={`flex gap-2.5 break-inside-avoid ${collapsed && i >= COLLAPSE_AFTER ? 'ref-overflow toggle-hidden' : ''}`}>
+        <span class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-ink-700 font-display text-[11px] font-bold text-ivory-400">{i + 1}</span>
+        <span class="min-w-0 leading-relaxed">
+          {ref.url ? (
+            <a href={ref.url} rel="noopener nofollow" class="text-ivory-100 underline decoration-ink-500 underline-offset-2 transition hover:text-saffron-300 hover:decoration-saffron-500/60">
+              {ref.label}
+            </a>
+          ) : (
+            <span class="text-ivory-100">{ref.label}</span>
+          )}
+          {ref.source && <span class="italic text-ivory-500"> — {ref.source}</span>}
+          {ref.date && <span class="text-ivory-600"> · {ref.date}</span>}
+        </span>
       </li>
     ))}
   </ol>

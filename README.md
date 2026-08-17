@@ -1,4 +1,4 @@
-# Chalachitra · चलचित्र
+# Chalchitra · चलचित्र
 
 **A graphical discovery destination for Indian cinema & series.** Not an afterthought of a
 global database — the whole point of one. Launching with the **class of 2026**: every Indian

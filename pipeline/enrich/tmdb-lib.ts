@@ -33,6 +33,29 @@ export function pickTmdbMatch(
   return inYear(exact) ?? exact[0] ?? inYear(results) ?? results[0];
 }
 
+export interface TmdbCredits {
+  crew?: { name?: string; job?: string }[];
+  cast?: { name?: string }[];
+}
+
+const normalizeName = (n: string) => n.toLowerCase().replace(/[^a-z]/g, '');
+
+/** How strongly a TMDB candidate's credits match our Wikipedia names.
+ *  Directors count 3 (strong signal), cast 1 each. 0 = no evidence. */
+export function scoreNameOverlap(credits: TmdbCredits | undefined, wikiNames: string[]): number {
+  if (!credits || wikiNames.length === 0) return 0;
+  const wiki = new Set(wikiNames.map(normalizeName).filter((n) => n.length > 0));
+  if (wiki.size === 0) return 0;
+  let score = 0;
+  for (const member of credits.crew ?? []) {
+    if (member.name && member.job !== undefined && /director/i.test(member.job ?? '') && wiki.has(normalizeName(member.name))) score += 3;
+  }
+  for (const member of credits.cast ?? []) {
+    if (member.name && wiki.has(normalizeName(member.name))) score += 1;
+  }
+  return score;
+}
+
 /** Build an episode list purely from a TMDB season payload (for series whose
  *  Wikipedia article has no episode table). */
 export function episodesFromTmdbSeason(

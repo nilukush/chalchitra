@@ -20,14 +20,14 @@ const listen = (platform: string, extra = '') =>
         {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
       </p>
     )}
-    <a href={listen('https://music.youtube.com/search?q=', soundtrack.composer ?? '')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+    <a href={listen('https://music.youtube.com/search?q=', soundtrack.composer ?? '')} rel="noopener" class="focus-ring flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3.5 py-1.5 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
       <Icon name="music" class="h-3.5 w-3.5" /> YouTube Music
     </a>
-    <a href={listen('https://open.spotify.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
+    <a href={listen('https://open.spotify.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3.5 py-1.5 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
       Spotify
     </a>
-    <a href={listen('https://www.jiosaavn.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1 rounded-full border border-ink-600 bg-ink-800 px-3 py-1 text-xs font-medium text-ivory-300 transition hover:border-saffron-500/50 hover:text-saffron-300">
-      JioSaavn
+    <a href={listen('https://gaana.com/search/')} rel="noopener" class="focus-ring flex items-center gap-1.5 rounded-full border border-ink-600 bg-ink-800 px-3.5 py-1.5 text-xs font-semibold text-ivory-200 transition hover:border-saffron-500/50 hover:text-saffron-300">
+      Gaana
     </a>
   </div>
   <div class="overflow-hidden rounded-2xl border border-ink-700/70">

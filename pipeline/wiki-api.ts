@@ -15,7 +15,7 @@ export const CACHE_PAGES_DIR = path.join(ROOT, 'data', 'cache', 'pages');
 
 const API_URL = 'https://en.wikipedia.org/w/api.php';
 const USER_AGENT =
-  'ChalachitraBot/0.1 (building chalachitra.example from Wikipedia data; node fetch)';
+  'ChalchitraBot/0.1 (building chalachitra.example from Wikipedia data; node fetch)';
 const REQUEST_GAP_MS = 1100;
 const MAX_ATTEMPTS = 6;
 

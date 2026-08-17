@@ -16,7 +16,7 @@ import { buildTrendsPayload } from './trends-lib.js';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'pageviews');
-const USER_AGENT = 'ChalachitraBot/0.1 (trending signal for chalachitra.example)';
+const USER_AGENT = 'ChalchitraBot/0.1 (trending signal for chalachitra.example)';
 const WINDOW_DAYS = 7;
 
 const ymd = (utcMs: number) => {

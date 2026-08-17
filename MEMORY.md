@@ -1,5 +1,34 @@
 # MEMORY.md — session state log
 
+## Session 10 — 2026-08-17 (fifteen-point audit) — COMPLETE
+
+1. **AI uses** (answered): current = hooks+moods; roadmap = reception verdicts, 3-beat plot
+   summaries, similar-title recs, FAQPage schema for GEO, messy-string cleanup.
+2. **Music links**: JioSaavn 302'd → replaced with **Gaana** (200) alongside YT Music/Spotify;
+   chips restyled (semibold, larger). Links are platform SEARCH deep-links (no licensed embeds).
+3. **Toxic TMDB FIXED PROPERLY**: year filter wasn't enough (wrong "A Toxic Love Story" also
+   2026). New `scoreNameOverlap` (tested; director=3, cast=1) validates top-3 candidates
+   against wiki directors+cast → Toxic now **1213243 (Toxic: A Fairy Tale For Grown-ups)** ✓.
+4. **References UI polished**: numbered badge chips (ink tile + display font), flex rows,
+   italic source, roomier rhythm; still two-column + collapse > 25.
+5. **Dual role**: was rendering (user had stale page); "as" prefix now skipped for
+   Dual role/Special appearance/Cameo/Voice.
+6. **Released vs upcoming split**: `isReleased()` (build date); "Fresh in theatres" released-
+   only; NEW "Coming soon & most anticipated" section (future dates soonest-first + trending
+   unreleased "Buzzing before release" + date-TBA chips); "What India is watching" released-only.
+7. **Runtime**: `formatRuntime` (tested) → "3h 14m", ranges "2h 10m – 2h 50m", sub-hour "45 min";
+   applied in hero chip + Details tile.
+8. **Multi-season**: synthesis now pulls seasons 1..min(seasons,5) (1,255 synthesized eps);
+   EpisodesTable groups by season headers (Ab Hoga Hisaab: 2 seasons ✓).
+9. **Person TMDB enrichment LIVE**: 1,690/2,219 exact-name matched; **4,887 known-for works**
+   (poster row "Known for" on person pages, links to TMDB); +420 portraits (1,829 total, 83%).
+   Full Wikipedia filmography tables/discography remain unparsed (documented gap); TMDB has no
+   awards API.
+10. **Rename: Chalachitra → Chalchitra** (user's call — colloquial transliteration; agreed).
+    Brand strings, package, docs, UAs all renamed; Devanagari चलचित्र unchanged.
+
+133 tests green; 2,651 pages; 50,272 links / 0 missing; toggles DOM-verified + CSS-rule-verified.
+
 ## Session 9 — 2026-08-17 (fourteen-point audit) — COMPLETE
 
 1. **AI key** confirmed in .env → **AI enrichment LIVE: 425/425 hooks + mood tags** (cached in

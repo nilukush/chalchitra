@@ -1,5 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch } from './tmdb-lib.js';
+import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap } from './tmdb-lib.js';
+
+describe('scoreNameOverlap', () => {
+  const credits = {
+    crew: [{ name: 'Geetu Mohandas', job: 'Director' }],
+    cast: [{ name: 'Yash' }, { name: 'Kiara Advani' }, { name: 'Someone Else' }],
+  };
+
+  it('weights director matches above cast matches', () => {
+    expect(scoreNameOverlap(credits, ['Geetu Mohandas'])).toBe(3);
+    expect(scoreNameOverlap(credits, ['Yash'])).toBe(1);
+    expect(scoreNameOverlap(credits, ['Yash', 'Kiara Advani', 'Geetu Mohandas'])).toBe(5);
+  });
+
+  it('normalizes punctuation and case', () => {
+    expect(scoreNameOverlap({ cast: [{ name: 'Nagraj Manjule' }] }, ['Nagraj Popatrao Manjule'])).toBe(0);
+    expect(scoreNameOverlap({ cast: [{ name: 'Kiara Advani' }] }, ['KIARA advani.'])).toBe(1);
+  });
+
+  it('returns 0 without credits or names', () => {
+    expect(scoreNameOverlap(undefined, ['Yash'])).toBe(0);
+    expect(scoreNameOverlap(credits, [])).toBe(0);
+    expect(scoreNameOverlap({ cast: [{ name: 'X' }] }, ['Yash'])).toBe(0);
+  });
+});
 
 describe('pickTmdbMatch', () => {
   it('prefers an exact-name match with the right year', () => {

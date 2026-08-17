@@ -1,4 +1,4 @@
-# Chalachitra — Implementation Plan (Part 2)
+# Chalchitra — Implementation Plan (Part 2)
 
 Binding execution contract. Steps are atomic; every pure-logic step is test-first (Red → Green → Refactor). Max 3 attempts per step before stopping for human guidance.
 

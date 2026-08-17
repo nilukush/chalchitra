@@ -12,6 +12,7 @@ import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
 import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
 import { extractTimelineDates } from '../lib/dates';
+import { formatRuntime } from '../lib/format';
 
 const { item }: { item: TitleRecord } = Astro.props;
 
@@ -44,7 +45,7 @@ const facts: { label: string; value: string }[] = [
   { label: 'Last aired', value: item.lastAired ?? '' },
   { label: 'Seasons', value: item.seasons ?? '' },
   { label: 'Episodes', value: item.episodes ?? '' },
-  { label: 'Runtime', value: item.runtime ?? '' },
+  { label: 'Runtime', value: formatRuntime(item.runtime) ?? item.runtime ?? '' },
   { label: 'Language', value: item.language },
   { label: 'Budget', value: item.budget ?? '' },
   { label: 'Box office', value: item.gross ?? '' },
@@ -237,7 +238,7 @@ const jsonLd: Record<string, unknown>[] = [
                 <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.releaseDate}</span>
               )}
               {item.runtime && (
-                <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.runtime}</span>
+                <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{formatRuntime(item.runtime)}</span>
               )}
               {item.kind === 'series' && item.episodes && (
                 <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.episodes} episodes</span>
@@ -319,7 +320,7 @@ const jsonLd: Record<string, unknown>[] = [
               <div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {castPeople.map(({ member, person }) =>
                   person ? (
-                    <PersonCard person={person} meta={member.role ? `as ${member.role}` : undefined} />
+                    <PersonCard person={person} meta={member.role ? (/^(dual role|special appearance|cameo|voice)/i.test(member.role) ? member.role : `as ${member.role}`) : undefined} />
                   ) : (
                     <div class="flex items-center gap-3 rounded-xl border border-ink-700/50 bg-ink-850/40 p-3">
                       <span class="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-ink-600 bg-ink-700 font-display text-lg text-ivory-600">
