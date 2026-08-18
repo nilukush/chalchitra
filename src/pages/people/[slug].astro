@@ -141,7 +141,84 @@ const creditTitleRecords = person.credits
         {person.summary && (
           <div class="prose-article mt-6 max-w-3xl">
             {person.summary.split('\n').filter(Boolean).flatMap((para) => splitLongParagraphs(para)).map((para) => <p>{para}</p>)}
+            {(person.bio?.length ?? 0) > 0 && (
+              <p class="mt-3 text-sm">
+                <a href="#life-story" class="text-saffron-300 underline decoration-ink-500 transition hover:decoration-saffron-400">Read the life story ↓</a>
+              </p>
+            )}
           </div>
+        )}
+
+        {(person.knownFor?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="known-for">
+            <h2 id="known-for" class="font-display text-2xl font-bold text-ivory-50">Known for</h2>
+            <p class="mt-1 text-xs text-ivory-600">
+              Ranked by public ratings, votes, awards and cross-links — not editorially chosen.
+              <details class="inline">
+                <summary class="ml-1 cursor-pointer list-none text-saffron-300/80 underline decoration-ink-500 hover:text-saffron-300">How we pick these</summary>
+                <span class="block max-w-lg pt-1 text-ivory-500">
+                  Each linked work scores: popularity votes (2·log₁₀), rating quality above 5 (×1.5),
+                  recency, +2 for awards this person won for it, catalogue presence and poster
+                  availability. Top six make the rail; the full filmography below keeps every work.
+                </span>
+              </details>
+            </p>
+            <div class="mt-4 flex gap-4 overflow-x-auto pb-3 [scrollbar-width:thin]">
+              {person.knownFor!.map((work) => {
+                const record = getTitleBySlug(work.slug ?? '', work.kind);
+                return record ? (
+                  <div class="w-32 shrink-0">
+                    <PosterCard item={record} />
+                  </div>
+                ) : null;
+              })}
+            </div>
+          </section>
+        )}
+
+        <section class="mt-10" aria-labelledby="credits">
+          <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
+            Credits in our {stats.years.join(' & ')} catalogue <span class="text-lg text-ivory-600">({person.credits.length})</span>
+          </h2>
+          {person.credits.length > 0 ? (
+            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {creditTitleRecords.map(({ credit, title }) => (
+                <div class="relative">
+                  {credit.role && (
+                    <p class="mb-1.5 line-clamp-1 text-xs text-ivory-500">{credit.role.replace(/^as /i, '')}</p>
+                  )}
+                  <PosterCard item={title} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p class="mt-4 text-ivory-500">No titles recorded yet.</p>
+          )}
+        </section>
+
+        {(person.filmography?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="filmography">
+            <h2 id="filmography" class="font-display text-2xl font-bold text-ivory-50">
+              Filmography <span class="text-lg text-ivory-600">({filmographyRows.length} works)</span>
+            </h2>
+            <p class="mt-2 text-sm text-ivory-500">
+              Structured from the Wikipedia filmography tables — year, role and notes for every work. {filmographyInCatalogue.length > 0 ? `${filmographyInCatalogue.length} are in our catalogue.` : ''}
+            </p>
+            <div class="mt-4">
+              <FilmographyTable sections={person.filmography!} />
+            </div>
+          </section>
+        )}
+
+        {(person.awards?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="awards">
+            <h2 id="awards" class="font-display text-2xl font-bold text-ivory-50">
+              Awards &amp; accolades <span class="text-lg text-ivory-600">({person.awards!.length})</span>
+            </h2>
+            <div class="mt-4">
+              <AwardsTable awards={person.awards!} />
+            </div>
+          </section>
         )}
 
         {(person.bio?.length ?? 0) > 0 && (
@@ -149,7 +226,7 @@ const creditTitleRecords = person.credits
             <h2 id="life-story" class="font-display text-2xl font-bold text-ivory-50">The life story</h2>
             <div class="mt-4 space-y-2.5">
               {person.bio!.map((chapter, ci) => (
-                <details class="card-sheen group rounded-2xl border border-ink-700/70 bg-ink-850/50" open={ci === 0}>
+                <details class="card-sheen group rounded-2xl border border-ink-700/70 bg-ink-850/50" open={false}>
                   <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                     <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
                       {String(ci + 1).padStart(2, '0')}
@@ -171,67 +248,6 @@ const creditTitleRecords = person.credits
             <p class="mt-3 text-xs text-ivory-600">
               Biography text from the Wikipedia article (<a class="underline decoration-ink-500 hover:text-saffron-300" href={person.wikiUrl} rel="noopener">source</a>, CC BY-SA 4.0).
             </p>
-          </section>
-        )}
-
-        {filmographyInCatalogue.length > 0 && (
-          <section class="mt-10" aria-labelledby="known-for">
-            <h2 id="known-for" class="font-display text-2xl font-bold text-ivory-50">Known for</h2>
-            <p class="mt-1 text-xs text-ivory-600">
-              {filmographyInCatalogue.length} filmography works are in our {stats.years.join(' & ')} catalogue · from the Wikipedia filmography
-            </p>
-            <div class="mt-4 flex gap-4 overflow-x-auto pb-3 [scrollbar-width:thin]">
-              {filmographyInCatalogue.slice(-14).reverse().map(({ title }) => (
-                <div class="w-32 shrink-0">
-                  <PosterCard item={title} />
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section class="mt-10" aria-labelledby="credits">
-          <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
-            Credits <span class="text-lg text-ivory-600">({person.credits.length})</span>
-          </h2>
-          {person.credits.length > 0 ? (
-            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {creditTitleRecords.map(({ credit, title }) => (
-                <div class="relative">
-                  {credit.role && (
-                    <p class="mb-1.5 line-clamp-1 text-xs text-ivory-500">{credit.role.replace(/^as /i, '')}</p>
-                  )}
-                  <PosterCard item={title} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p class="mt-4 text-ivory-500">No titles recorded yet.</p>
-          )}
-        </section>
-
-        {(person.awards?.length ?? 0) > 0 && (
-          <section class="mt-10" aria-labelledby="awards">
-            <h2 id="awards" class="font-display text-2xl font-bold text-ivory-50">
-              Awards &amp; accolades <span class="text-lg text-ivory-600">({person.awards!.length})</span>
-            </h2>
-            <div class="mt-4">
-              <AwardsTable awards={person.awards!} />
-            </div>
-          </section>
-        )}
-
-        {(person.filmography?.length ?? 0) > 0 && (
-          <section class="mt-10" aria-labelledby="filmography">
-            <h2 id="filmography" class="font-display text-2xl font-bold text-ivory-50">
-              Filmography <span class="text-lg text-ivory-600">({filmographyRows.length} works)</span>
-            </h2>
-            <p class="mt-2 text-sm text-ivory-500">
-              Structured from the Wikipedia filmography tables — year, role and notes for every work. {filmographyInCatalogue.length > 0 ? `${filmographyInCatalogue.length} are in our catalogue.` : ''}
-            </p>
-            <div class="mt-4">
-              <FilmographyTable sections={person.filmography!} />
-            </div>
           </section>
         )}
 

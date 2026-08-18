@@ -4,7 +4,7 @@
  *   data/search-index.json, data/site-stats.json
  * Persons are discovered from cast/crew links and fetched (cache-aware).
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -35,8 +35,8 @@ import { enrichWithAi } from './enrich/ai.js';
 import { loadEnv } from './env.js';
 
 loadEnv();
-import { fetchPages, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, buildSearchDocuments, displayTitle, wikiUrlFor } from './dataset-lib.js';
+import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
+import { SlugRegistry, buildSearchDocuments, computeKnownFor, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -169,6 +169,7 @@ function parseTitlePage(
   wikiTitle: string,
   page: CachedPage,
   slug: string,
+  opts: { year?: number; archive?: boolean } = {},
 ): TitleRecord {
   const wikitext = page.wikitext ?? '';
   const box = parseInfobox(wikitext) ?? {};
@@ -195,8 +196,9 @@ function parseTitlePage(
     wikiUrl: wikiUrlFor(wikiTitle),
     pageid: page.pageid,
     origin: 'in',
-    language: cleanValue(box.language) || (kind === 'movie' ? 'Hindi' : 'Hindi'),
-    year: YEAR,
+    language: cleanValue(box.language) || 'Hindi',
+    year: opts.year ?? YEAR,
+    ...(opts.archive ? { archive: true } : {}),
     poster: cleanThumb(page.thumb),
     summary: page.extract ? page.extract.trim() : leadFromWikitext(wikitext),
     plot: stripWikitext(plot ?? '') || undefined,
@@ -425,6 +427,62 @@ async function main() {
   }
   persons.sort((a, b) => a.name.localeCompare(b.name));
 
+  // ---- archive expansion: turn fetched filmography works into full pages ----
+  // Reads whatever the expand-titles waves have cached; unfetched works keep
+  // their Wikipedia link-out until a later wave. Records are trimmed to an
+  // archive-lite shape (no references/article sections/soundtrack/reception)
+  // to keep the dataset JSONs within build budget.
+  const frontierPath = path.join(DATA, 'cache', 'expansion-frontier.json');
+  if (existsSync(frontierPath)) {
+    const frontier = JSON.parse(readFileSync(frontierPath, 'utf8')) as {
+      targets: Record<string, { pageid: number; finalTitle?: string; status: string; kind?: 'movie' | 'series'; year?: string; refs: number }>;
+    };
+    const accepted = Object.entries(frontier.targets).filter(([, t]) => t.status === 'accepted' && t.kind && t.pageid > 0);
+    let archiveMovies = 0;
+    let archiveSeries = 0;
+    const seenFinal = new Set<string>([...movies, ...series].map((t) => t.wikiTitle));
+    for (const [requested, entry] of accepted) {
+      const finalTitle = entry.finalTitle ?? requested;
+      if (seenFinal.has(finalTitle)) continue;
+      const page = readCachedPage(entry.pageid);
+      if (!page?.wikitext) continue;
+      titlePages.set(finalTitle, page); // poster resolution + plot-link lookup
+      const kind = entry.kind!;
+      const slug = kind === 'movie' ? movieRegistry.slug(finalTitle, page.pageid) : seriesRegistry.slug(finalTitle, page.pageid);
+      const box = parseInfobox(page.wikitext) ?? {};
+      const yearFromBox = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
+      const year = yearFromBox ? Number(String(yearFromBox).slice(0, 4)) : Number(String(entry.year ?? '').slice(0, 4)) || undefined;
+      const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: true });
+      // archive-lite: drop the heavy fields that dominate record size
+      record.references = [];
+      record.articleSections = [];
+      record.reception = undefined;
+      record.soundtrack = undefined;
+      record.sections = [];
+      record.external = { imdbId: record.external.imdbId, official: record.external.official, links: record.external.links.slice(0, 6) };
+      // wire cast/crew to existing catalogue persons only — no new person discovery
+      record.cast = extractCast(page.wikitext).map((member) => {
+        const final = member.wikiTitle ? canonical.get(member.wikiTitle) : undefined;
+        return { name: member.name, role: member.role, slug: final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null };
+      });
+      const crewLinks = collectPersonLinks(box, [], CREW_FIELDS);
+      record.crew = crewLinks
+        .filter((c) => c.as !== 'Cast')
+        .map((c) => {
+          const final = canonical.get(c.target);
+          return { name: c.label || c.target, role: c.as, slug: final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null };
+        });
+      record.cast = record.cast.slice(0, 30);
+      record.crew = record.crew.slice(0, 24);
+      if (kind === 'movie') { movies.push(record); archiveMovies++; } else { series.push(record); archiveSeries++; }
+      seenFinal.add(finalTitle);
+      void requested;
+    }
+    if (accepted.length > 0) {
+      console.log(`→ Archive expansion: +${archiveMovies} films, +${archiveSeries} series from ${accepted.length} fetched works`);
+    }
+  }
+
   // Resolve posters/portraits: prop=pageimages skips non-free posters, so fall
   // back to the infobox image param resolved through imageinfo.
   console.log('→ Resolving infobox images…');
@@ -469,6 +527,7 @@ async function main() {
   }
   let plotLinkCount = 0;
   for (const record of [...movies, ...series]) {
+    if (record.archive) continue; // archive records keep plain plots — linked HTML doubles record size
     const wikitext = titlePages.get(record.wikiTitle)?.wikitext ?? '';
     const rawPlot =
       getSection(wikitext, 'Plot') ?? getSection(wikitext, 'Premise') ?? getSection(wikitext, 'Synopsis');
@@ -478,11 +537,13 @@ async function main() {
   }
   console.log(`→ Plot texts carry ${plotLinkCount} internal links to people/title pages`);
 
-  // multi-source enrichment (TMDB) — fills gaps Wikipedia leaves; no-op without key
-  await enrichTitles([...movies, ...series]);
+  // multi-source enrichment (TMDB) — catalogue only for wave 1: full enrichment of
+  // ~30k archive titles would take 12-38h at current call volume (all fields optional)
+  const catalogueTitles = [...movies, ...series].filter((t) => !t.archive);
+  await enrichTitles(catalogueTitles);
   await enrichPersons(persons);
   // AI hooks/moods — key-gated; falls back to tagline/first-sentence below
-  await enrichWithAi([...movies, ...series]);
+  await enrichWithAi(catalogueTitles);
 
   // display hook fallback: TMDB tagline → AI one-liner (already set) → first plot sentence
   for (const record of [...movies, ...series]) {
@@ -492,9 +553,17 @@ async function main() {
     if (firstSentence.length >= 40 && firstSentence.length <= 200) record.tagline = firstSentence.trim();
   }
 
-  // stats
+  // transparent "known for" ranking — computed after enrichment so ratings exist
+  const titleByWiki = new Map([...movies, ...series].map((t) => [t.wikiTitle, t]));
+  for (const person of persons) {
+    person.knownFor = computeKnownFor(person, titleByWiki, YEAR);
+  }
+
+  // stats — years/languages describe the current editorial catalogue only;
+  // archive records join the site without polluting "of YYYY" copy
+  const catalogueRecords = [...movies, ...series].filter((t) => !t.archive);
   const languageMap = new Map<string, { movies: number; series: number }>();
-  for (const record of [...movies, ...series]) {
+  for (const record of catalogueRecords) {
     const lang = record.language || 'Other';
     const entry = languageMap.get(lang) ?? { movies: 0, series: 0 };
     entry[record.kind === 'movie' ? 'movies' : 'series']++;
@@ -505,7 +574,7 @@ async function main() {
     movies: movies.length,
     series: series.length,
     persons: persons.length,
-    years: [...new Set([...movies, ...series].map((t) => t.year))].sort((a, b) => b - a),
+    years: [...new Set(catalogueRecords.map((t) => t.year))].sort((a, b) => b - a),
     languages: [...languageMap.entries()]
       .map(([language, counts]) => ({ language, ...counts }))
       .sort((a, b) => b.movies + b.series - (a.movies + a.series)),

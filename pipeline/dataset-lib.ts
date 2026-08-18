@@ -89,3 +89,63 @@ export function buildSearchDocuments(
 
   return docs;
 }
+
+import type { KnownForWork, PersonRecord, TitleRecord } from './types.js';
+
+/**
+ * Transparent "known for" ranking — the weights are published on the site
+ * (person page "how we pick these" note) so this stays explainable:
+ *   votes 2·log10(max(votes,10))  — popular works first (IMDb page-view proxy)
+ *   quality 1.5·(rating−5)        — only with ≥10 votes; poor films demote
+ *   recency 3 − 0.05·(now−year)   — decays to 0 for pre-mid-century classics
+ *   awarded +2                    — this person WON an award for the work
+ *   presence +1 catalogue / +0.25 archive-only
+ *   poster +0.5                   — rail aesthetics
+ * Ties break by year desc then title asc; top 6 returned.
+ */
+export function computeKnownFor(
+  person: PersonRecord,
+  titleByWiki: Map<string, TitleRecord>,
+  currentYear: number,
+): KnownForWork[] {
+  const wonWorks = new Set(
+    (person.awards ?? []).filter((a) => a.result === 'won' && a.workWikiTitle).map((a) => a.workWikiTitle!),
+  );
+
+  const candidates: KnownForWork[] = [];
+  const seen = new Set<string>();
+
+  const consider = (wikiTitle: string | undefined, rowYear?: string) => {
+    if (!wikiTitle || seen.has(wikiTitle)) return;
+    const record = titleByWiki.get(wikiTitle);
+    if (!record) return;
+    seen.add(wikiTitle);
+
+    const year = Number(record.year ?? rowYear ?? 0) || 0;
+    const votes = record.rating?.votes ?? 0;
+    let score = 0;
+    if (votes > 0) score += 2 * Math.log10(Math.max(votes, 10));
+    if (votes >= 10 && typeof record.rating?.value === 'number') score += 1.5 * (record.rating.value - 5);
+    if (year > 0) score += Math.max(0, 3 - 0.05 * (currentYear - year));
+    if (wonWorks.has(wikiTitle)) score += 2;
+    score += record.archive ? 0.25 : 1;
+    if (record.poster) score += 0.5;
+
+    candidates.push({
+      title: record.title,
+      year: record.year ?? rowYear,
+      kind: record.kind,
+      poster: record.poster,
+      slug: record.slug,
+      score: Math.round(score * 100) / 100,
+    });
+  };
+
+  for (const section of person.filmography ?? []) {
+    for (const row of section.rows) consider(row.wikiTitle, row.year);
+  }
+  for (const award of person.awards ?? []) consider(award.workWikiTitle, award.year);
+
+  candidates.sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || Number(b.year ?? 0) - Number(a.year ?? 0) || a.title.localeCompare(b.title));
+  return candidates.slice(0, 6);
+}

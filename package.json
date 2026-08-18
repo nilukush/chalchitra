@@ -1,7 +1,7 @@
 {
   "name": "chalachitra",
   "version": "0.1.0",
-  "description": "Chalchitra — a graphical discovery destination for Indian cinema & series (extensible to other origins), built from Wikipedia data",
+  "description": "Chalchitra \u2014 a graphical discovery destination for Indian cinema & series (extensible to other origins), built from Wikipedia data",
   "type": "module",
   "private": true,
   "scripts": {
@@ -15,7 +15,8 @@
     "pipeline:fetch": "tsx pipeline/fetch-pages.ts",
     "pipeline:dataset": "tsx pipeline/build-dataset.ts",
     "pipeline:trends": "tsx pipeline/fetch-trends.ts",
-    "pipeline:all": "npm run pipeline:titles && npm run pipeline:fetch && npm run pipeline:dataset && npm run pipeline:trends"
+    "pipeline:all": "npm run pipeline:titles && npm run pipeline:fetch && npm run pipeline:dataset && npm run pipeline:trends",
+    "pipeline:expand": "tsx pipeline/expand-titles.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.4.1",

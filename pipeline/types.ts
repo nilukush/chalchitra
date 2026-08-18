@@ -31,6 +31,8 @@ export interface ExternalRefs {
 export type Kind = 'movie' | 'series';
 
 export interface TitleRecord {
+  /** archive = discovered via a person's filmography, not part of the current editorial catalogue year */
+  archive?: boolean;
   kind: Kind;
   slug: string;
   title: string;
@@ -112,8 +114,12 @@ export interface KnownForWork {
   year?: string;
   kind: 'movie' | 'series';
   poster?: string;
+  /** internal page when the work is in our datasets, else TMDB/Wikipedia */
+  slug?: string;
   /** TMDB page link (work not in our catalogue yet) */
-  url: string;
+  url?: string;
+  /** fame-score debug value from the transparent known-for formula */
+  score?: number;
 }
 
 export interface PersonRecord {

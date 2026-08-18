@@ -7,6 +7,7 @@ interface Props {
 }
 
 const { awards } = Astro.props;
+const COLLAPSE_AFTER = 10;
 const byTarget = new Map(titles.map((t) => [t.wikiTitle, t]));
 
 const yearNum = (r: AwardRow) => (r.year && /^\d{4}/.test(r.year) ? Number(r.year.slice(0, 4)) : -1);
@@ -22,7 +23,9 @@ for (const row of sorted) {
   list.push(row);
   groups.set(row.award, list);
 }
-const ordered = [...groups.entries()].sort((a, b) => yearNum(b[1][0]) - yearNum(a[1][0]));
+const ordered = [...groups.entries()]
+  .map(([award, rows]) => [award, rows.map((row, i) => ({ row, overflow: i >= COLLAPSE_AFTER }))] as [string, { row: AwardRow; overflow: boolean }[]])
+  .sort((a, b) => yearNum(b[1][0].row) - yearNum(a[1][0].row));
 ---
 
 <div class="space-y-4">
@@ -39,7 +42,7 @@ const ordered = [...groups.entries()].sort((a, b) => yearNum(b[1][0]) - yearNum(
         {award} <span class="ml-1 normal-case tracking-normal text-ivory-700">({rows.length})</span>
       </h3>
       <ul class="space-y-2">
-        {rows.map((row) => {
+        {rows.map(({ row, overflow }) => {
           const title = row.workWikiTitle ? byTarget.get(row.workWikiTitle) : undefined;
           const href = title
             ? (title.kind === 'movie' ? `/movies/${title.slug}` : `/series/${title.slug}`)
@@ -50,6 +53,7 @@ const ordered = [...groups.entries()].sort((a, b) => yearNum(b[1][0]) - yearNum(
             <li class:list={[
               'card-sheen grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 rounded-2xl border px-4 py-3',
               row.result === 'won' ? 'border-saffron-500/30 bg-saffron-500/[0.04]' : 'border-ink-700/70 bg-ink-850/60',
+              overflow && 'award-overflow toggle-hidden',
             ]}>
               <span class="font-display text-sm font-bold tabular-nums text-ivory-500">{row.year ?? '—'}</span>
               <span class="min-w-0">
@@ -73,6 +77,31 @@ const ordered = [...groups.entries()].sort((a, b) => yearNum(b[1][0]) - yearNum(
           );
         })}
       </ul>
+      {rows.length > COLLAPSE_AFTER && (
+        <button
+          type="button"
+          class="toggle-btn min-h-[44px] mt-2 w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-2.5 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+          data-target="award-overflow"
+          data-label-show={`Show all ${rows.length} rows`}
+          data-label-hide="Show fewer"
+        >
+          Show all {rows.length} rows
+        </button>
+      )}
     </section>
   ))}
 </div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="award-overflow"]').forEach((btn) => {
+    const scope = btn.closest('section') ?? document;
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      scope.querySelectorAll('.' + (btn.dataset.target ?? '')).forEach((row) => row.classList.toggle('toggle-hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

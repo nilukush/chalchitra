@@ -68,7 +68,14 @@ const multiGroup = groups.length > 1;
         const title = row.wikiTitle ? byTarget.get(row.wikiTitle) : undefined;
         const href = title ? (title.kind === 'movie' ? `/movies/${title.slug}` : `/series/${title.slug}`) : row.wikiTitle ? `https://en.wikipedia.org/wiki/${encodeURIComponent(row.wikiTitle.replace(/ /g, '_'))}` : null;
         return (
-          <article class:list={['card-sheen flex items-baseline gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 px-4 py-3 transition hover:border-saffron-500/30', overflow && 'film-overflow toggle-hidden']}>
+          <article class:list={['card-sheen flex items-center gap-3.5 rounded-2xl border border-ink-700/70 bg-ink-850/60 px-4 py-3 transition hover:border-saffron-500/30', overflow && 'film-overflow toggle-hidden']}>
+            <span class="relative block h-[60px] w-10 shrink-0 overflow-hidden rounded-md border border-ink-700/70 bg-ink-800">
+              {title?.poster ? (
+                <img src={title.poster} alt="" loading="lazy" decoding="async" width="40" height="60" class="h-full w-full object-cover" />
+              ) : (
+                <span class="flex h-full w-full items-center justify-center grain"><span class="font-display text-sm text-ivory-600">च</span></span>
+              )}
+            </span>
             <span class="w-14 shrink-0 font-display text-sm font-bold tabular-nums text-saffron-400" title={row.year ?? ''}>{row.year ?? '—'}</span>
             <div class="min-w-0 flex-1">
               {href ? (
@@ -82,7 +89,10 @@ const multiGroup = groups.length > 1;
               {row.notes && <p class="mt-1 text-xs leading-snug text-ivory-600">{row.notes}</p>}
             </div>
             {title && (
-              <span class="hidden shrink-0 rounded-full border border-saffron-500/30 bg-saffron-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-saffron-300 sm:inline">In catalogue</span>
+              <span class="hidden shrink-0 items-center gap-2 sm:flex">
+                {title.rating && <span class="text-xs font-semibold text-saffron-300">★ {title.rating.value.toFixed(1)}</span>}
+                <span class="rounded-full border border-saffron-500/30 bg-saffron-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-saffron-300">In catalogue</span>
+              </span>
             )}
           </article>
         );

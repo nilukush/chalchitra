@@ -78,6 +78,10 @@ export function liveTrendingCandidates(count: number): LiveCandidate[] {
 
 export const titles: TitleRecord[] = [...movies, ...series];
 
+/** Current editorial-catalogue records (archive titles live on person pages & search). */
+export const catalogueMovies: TitleRecord[] = movies.filter((m) => !m.archive);
+export const catalogueSeries: TitleRecord[] = series.filter((s) => !s.archive);
+
 const TODAY = new Date().toISOString().slice(0, 10);
 
 export function isReleased(item: TitleRecord): boolean {
@@ -108,14 +112,14 @@ export function getTitleBySlug(slug: string, kind?: 'movie' | 'series'): TitleRe
 
 /** Already-released titles, newest first — "Fresh in theatres" & friends. */
 export function recentTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
-  return titles
+  return titles.filter((t) => !t.archive)
     .filter((t) => t.kind === kind && isReleased(t))
     .slice(0, count);
 }
 
 /** Future-dated titles, soonest first — "Coming soon". */
 export function comingSoonTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
-  return titles
+  return titles.filter((t) => !t.archive)
     .filter((t) => t.kind === kind && t.releaseDate && t.releaseDate > TODAY)
     .sort((a, b) => (a.releaseDate ?? '').localeCompare(b.releaseDate ?? ''))
     .slice(0, count);
@@ -123,7 +127,7 @@ export function comingSoonTitles(kind: 'movie' | 'series', count: number): Title
 
 /** Titles without a date yet — undated announcements. */
 export function undatedTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
-  return titles.filter((t) => t.kind === kind && !t.releaseDate).slice(0, count);
+  return titles.filter((t) => !t.archive).filter((t) => t.kind === kind && !t.releaseDate).slice(0, count);
 }
 
 export function spotlightPersons(count: number): PersonRecord[] {

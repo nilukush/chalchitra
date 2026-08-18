@@ -7,6 +7,23 @@ interface Props {
 const { references } = Astro.props;
 const COLLAPSE_AFTER = 25;
 const collapsed = references.length > COLLAPSE_AFTER;
+
+// Publisher badge material: derived locally, no external preview services —
+// OG/screenshot previews are a chat pattern, not an editorial one.
+const hostOf = (url: string): string | null => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+};
+const chipFor = (ref: ReferenceEntry): string | null => {
+  const host = ref.url ? hostOf(ref.url) : null;
+  const publisher = ref.source?.trim() || host;
+  if (!publisher) return null;
+  if (host && publisher.toLowerCase().includes(host.split('.')[0])) return host;
+  return publisher;
+};
 ---
 
 <div>
@@ -22,7 +39,11 @@ const collapsed = references.length > COLLAPSE_AFTER;
           ) : (
             <span class="text-ivory-100">{ref.label}</span>
           )}
-          {ref.source && <span class="italic text-ivory-500"> — {ref.source}</span>}
+          {chipFor(ref) && (
+            <span class="ml-1.5 inline-flex max-w-[12rem] items-center gap-1 rounded-md border border-ink-600 bg-ink-800 px-1.5 py-0.5 align-middle text-[10px] font-semibold uppercase tracking-wider text-ivory-500">
+              <span class="truncate">{chipFor(ref)}</span>
+            </span>
+          )}
           {ref.date && <span class="text-ivory-600"> · {ref.date}</span>}
         </span>
       </li>

@@ -63,6 +63,10 @@ const plotParagraphs = (item.plotHtml ?? item.plot ?? '')
   .filter(Boolean)
   .flatMap((para) => (item.plotHtml ? [para] : splitLongParagraphs(para)));
 
+// Spoiler safety (IMDb premise/synopsis convention): the first paragraphs are
+// setup; the ending lives in the tail and stays behind the warned toggle.
+const premiseCount = plotParagraphs.length >= 4 ? 2 : plotParagraphs.length >= 2 ? 1 : plotParagraphs.length;
+
 const moodChips = (item.moods ?? []).filter(
   (mood) => !item.genres.some((genre) => genre.toLowerCase() === mood.toLowerCase()),
 );
@@ -331,13 +335,43 @@ const jsonLd: Record<string, unknown>[] = [
 
         {plotParagraphs.length > 0 && (
           <section class="mt-10" aria-labelledby="plot">
-            <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
+            <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">Premise</h2>
             <div class="prose-article prose-hero mt-4 max-w-[68ch]">
-              {plotParagraphs.map((para) =>
+              {plotParagraphs.slice(0, premiseCount).map((para) =>
                 item.plotHtml ? <p set:html={para} /> : <p>{para}</p>,
               )}
             </div>
+            {plotParagraphs.length > premiseCount && (
+              <div class="mt-5 rounded-2xl border border-ink-700/70 bg-ink-850/50 p-4">
+                <p class="flex items-center gap-2 text-sm text-ivory-400">
+                  <Icon name="play" class="h-4 w-4 shrink-0 text-saffron-400" />
+                  Spoiler ahead — the full plot below reveals how the story ends.
+                </p>
+                <button
+                  type="button"
+                  class="toggle-btn focus-ring mt-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-full border border-saffron-500/40 bg-saffron-500/10 px-4 py-2 text-sm font-semibold text-saffron-300 transition hover:bg-saffron-500/20"
+                  data-target="plot-spoiler"
+                  aria-expanded="false"
+                  data-label-show="Reveal the full plot — spoilers ahead"
+                  data-label-hide="Hide the full plot"
+                >
+                  Reveal the full plot — spoilers ahead
+                </button>
+              </div>
+            )}
           </section>
+        )}
+
+        {plotParagraphs.length > premiseCount && (
+          <div class="plot-spoiler toggle-hidden mt-4">
+            <div class="rounded-2xl border border-ink-700/70 bg-ink-850/50 px-5 py-4">
+              <div class="prose-article prose-hero max-w-[68ch]">
+                {plotParagraphs.slice(premiseCount).map((para) =>
+                  item.plotHtml ? <p set:html={para} /> : <p>{para}</p>,
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {item.kind === 'series' && item.episodesList.length > 0 && (
@@ -572,6 +606,19 @@ const jsonLd: Record<string, unknown>[] = [
     btn.addEventListener('click', () => {
       startPlayback();
       document.getElementById('trailer')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+</script>
+
+<script>
+  // spoiler gate for the full plot
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="plot-spoiler"]').forEach((btn) => {
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      document.querySelectorAll('.plot-spoiler').forEach((el) => el.classList.toggle('toggle-hidden', !open));
+      btn.textContent = open ? (btn.dataset.labelHide ?? 'Hide') : (btn.dataset.labelShow ?? 'Show');
+      btn.setAttribute('aria-expanded', String(open));
     });
   });
 </script>

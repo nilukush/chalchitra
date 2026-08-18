@@ -387,3 +387,42 @@ trailer modal opens on-site (youtube-nocookie embed), filter click verified.
   Edit tool. Lesson: no blind index() slicing on template files.
 - Verified: 167/167 tests, 2,651 pages, toggles incl. film-overflow, 986px widths clean on all key
   pages, link sample 0 missing.
+
+## Session 13 — archive expansion live; person-page research applied (176 tests)
+
+**3-agent consensus (Analyzer online research / Debugger pipeline design / Verifier measurements):**
+- Person-page order now matches IMDb/TMDB/Letterboxd convention: Known for → Credits → Filmography →
+  Awards → Life story (collapsed) → Sources. Wikipedia is the only model with bio on top — product
+  surfaces don't. "Read the life story ↓" anchor added to summary.
+- Known For = transparent fame score (votes 2·log10, quality ×1.5 above 5, recency decay, +2 won
+  award, catalogue presence, poster) — computeKnownFor in dataset-lib (TDD 16/16), published in a
+  "How we pick these" disclosure on the page.
+- Filmography rows carry poster thumbnails (IMDb 2021 pattern) + ★ rating chips; awards collapse
+  after 10 rows per ceremony; reference rows show publisher/domain chips — research verdict: NO
+  preview cards (entertainment peers don't; OG images missing on Wikipedia refs; build fragility).
+- Plot spoiler gate (IMDb premise/synopsis convention): first 1-2 paragraphs = Premise (always
+  visible); the rest behind "Reveal the full plot — spoilers ahead" saffron toggle. Fires on 580/870
+  movies; short plots skip the gate by design.
+
+**Archive expansion (the 29,793-works mandate):**
+- pipeline/classify-title.ts (TDD): infobox-name accept-list (film/television), disambiguation,
+  country/language Indian check (Hollywood in filmographies rejected), no-infobox rejected.
+- pipeline/expand-titles.ts + data/cache/expansion-frontier.json: wave fetcher through paced
+  fetchPages (never bypassed), most-referenced first, EXPAND_FOCUS=<slug> hoists one person's works.
+- build-dataset merges frontier-accepted pages as full TitleRecords (archive: true), archive-lite
+  shape (no plotHtml/references/articleSections/soundtrack; cast 30/crew 24 caps) ≈ 8.8KB/rec.
+  TMDB + AI enrichment stay catalogue-only this wave (12-38h / real cost otherwise — Verifier).
+  stats.years + languages scoped to !archive so "of 2026" copy holds; index/home rails filter
+  !archive (catalogueMovies/catalogueSeries in data.ts).
+- Wave 1 + Emraan focus wave: 531 works → 531 pages (505 films + 26 series), 864/956 posters,
+  Emraan filmography 94% internal links (51/54), awards 7/14. Site: 3,182 pages. Background wave
+  of 5,000 launched; frontier has 29,233 pending — run `npm run pipeline:expand` repeatedly to
+  continue (~1.5-2h total pacing); dataset+build picks up whatever is cached.
+- Verifier hard limits to respect as waves land: movies.json ≤100MB (≈8k more archive titles →
+  then split per-decade JSON); build RSS < 2.5GB; search index <5MB (now ~2.9k docs fine).
+  getStaticPaths passes full records (fine at 3k pages; switch to slug-only props past ~10k).
+- Astro component-brace regression bit twice (missing `}` after summary map; python index-slicing
+  ate a main column earlier) — always `npm run build` before declaring an edit done.
+
+**Verified:** 176/176 tests, 3,182 pages, toggles (refs/film/award), 986px widths clean on
+Emraan/Wamiqa/Toxic/archive Murder/home, spoiler gate click-tested, awards badges + show-all.
