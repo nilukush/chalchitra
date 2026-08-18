@@ -103,3 +103,33 @@ describe('episodesFromTmdbSeason', () => {
     expect(episodesFromTmdbSeason({})).toEqual([]);
   });
 });
+
+import { pickTmdbTrailer } from './tmdb-lib.js';
+
+describe('pickTmdbTrailer', () => {
+  const yt = (key: string, type: string, official = true): { key: string; site: string; type: string; official: boolean } => ({
+    key, site: 'YouTube', type, official,
+  });
+
+  it('prefers official trailers over everything', () => {
+    expect(pickTmdbTrailer([[yt('a', 'Teaser'), yt('b', 'Trailer')]])).toBe('b');
+  });
+
+  it('falls back to any trailer/teaser, then any YouTube video', () => {
+    expect(pickTmdbTrailer([[yt('t', 'Teaser', false), yt('c', 'Clip')]])).toBe('t');
+    expect(pickTmdbTrailer([[yt('c', 'Clip', false), { key: 'v', site: 'Vimeo' }]])).toBe('c');
+  });
+
+  it('never picks a non-YouTube site', () => {
+    expect(pickTmdbTrailer([[{ key: 'vm', site: 'Vimeo', type: 'Trailer', official: true }]])).toBeUndefined();
+  });
+
+  it('merges season-level pools with show-level pools', () => {
+    expect(pickTmdbTrailer([[], [yt('se1', 'Trailer', false)]])).toBe('se1');
+    expect(pickTmdbTrailer([[yt('s1', 'Teaser')], [yt('se1', 'Trailer', false)]])).toBe('s1');
+  });
+
+  it('returns undefined for empty pools', () => {
+    expect(pickTmdbTrailer([[], []])).toBeUndefined();
+  });
+});

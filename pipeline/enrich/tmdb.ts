@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { TitleRecord } from '../types.js';
-import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult } from './tmdb-lib.js';
+import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -122,12 +122,23 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       record.rating = { source: 'tmdb', value: details.vote_average, votes };
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
-    const trailerKey = (details.videos?.results ?? []).find(
-      (v: any) => v.site === 'YouTube' && v.type === 'Trailer' && v.official,
-    ) ?? (details.videos?.results ?? [])[0];
-    if (!record.trailer && trailerKey?.key) {
-      record.trailer = `https://www.youtube.com/watch?v=${trailerKey.key}`;
-      if (!sources.includes('tmdb')) sources.push('tmdb');
+    // Trailer: show-level videos first; for series, season-level pools often
+    // hold the only trailers — merge them before the tiered YouTube-only pick.
+    let trailerKey: string | undefined;
+    if (!record.trailer) {
+      const videoPools: TmdbVideo[][] = [(details.videos?.results ?? []) as TmdbVideo[]];
+      if (record.kind === 'series' && (details.videos?.results ?? []).length === 0) {
+        const seasons = Math.min(Number((details as any).number_of_seasons) || 1, 2);
+        for (let season = 1; season <= seasons; season++) {
+          const sv = await tmdbGet(`/tv/${hit.id}/season/${season}/videos?language=en-US`, apiKey);
+          if (sv?.results?.length) videoPools.push(sv.results as TmdbVideo[]);
+        }
+      }
+      trailerKey = pickTmdbTrailer(videoPools);
+      if (trailerKey) {
+        record.trailer = `https://www.youtube.com/watch?v=${trailerKey}`;
+        if (!sources.includes('tmdb')) sources.push('tmdb');
+      }
     }
 
     // episode summaries/runtimes for series with a wiki table

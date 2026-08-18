@@ -1,0 +1,78 @@
+---
+import type { AwardRow } from '../../pipeline/wikitext/awards.js';
+import { titles } from '../lib/data';
+
+interface Props {
+  awards: AwardRow[];
+}
+
+const { awards } = Astro.props;
+const byTarget = new Map(titles.map((t) => [t.wikiTitle, t]));
+
+const yearNum = (r: AwardRow) => (r.year && /^\d{4}/.test(r.year) ? Number(r.year.slice(0, 4)) : -1);
+const sorted = [...awards].sort((a, b) => yearNum(b) - yearNum(a) || a.award.localeCompare(b.award));
+
+const wins = sorted.filter((r) => r.result === 'won').length;
+const nominations = sorted.filter((r) => r.result === 'nominated').length;
+
+// group consecutive rows of the same ceremony (rows are year-sorted; re-group by award)
+const groups = new Map<string, AwardRow[]>();
+for (const row of sorted) {
+  const list = groups.get(row.award) ?? [];
+  list.push(row);
+  groups.set(row.award, list);
+}
+const ordered = [...groups.entries()].sort((a, b) => yearNum(b[1][0]) - yearNum(a[1][0]));
+---
+
+<div class="space-y-4">
+  <p class="text-sm text-ivory-400">
+    <span class="font-display text-lg font-bold text-saffron-400">{wins}</span> wins
+    <span class="mx-1.5 text-ivory-600">·</span>
+    <span class="font-display text-lg font-bold text-ivory-200">{nominations}</span> nominations
+    <span class="ml-2 text-xs text-ivory-600">from Wikipedia accolades tables</span>
+  </p>
+
+  {ordered.map(([award, rows]) => (
+    <section aria-label={award}>
+      <h3 class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ivory-600">
+        {award} <span class="ml-1 normal-case tracking-normal text-ivory-700">({rows.length})</span>
+      </h3>
+      <ul class="space-y-2">
+        {rows.map((row) => {
+          const title = row.workWikiTitle ? byTarget.get(row.workWikiTitle) : undefined;
+          const href = title
+            ? (title.kind === 'movie' ? `/movies/${title.slug}` : `/series/${title.slug}`)
+            : row.workWikiTitle
+              ? `https://en.wikipedia.org/wiki/${encodeURIComponent(row.workWikiTitle.replace(/ /g, '_'))}`
+              : null;
+          return (
+            <li class:list={[
+              'card-sheen grid grid-cols-[3.5rem_1fr_auto] items-center gap-3 rounded-2xl border px-4 py-3',
+              row.result === 'won' ? 'border-saffron-500/30 bg-saffron-500/[0.04]' : 'border-ink-700/70 bg-ink-850/60',
+            ]}>
+              <span class="font-display text-sm font-bold tabular-nums text-ivory-500">{row.year ?? '—'}</span>
+              <span class="min-w-0">
+                {row.category && <span class="block truncate text-sm font-semibold text-ivory-100" title={row.category}>{row.category}</span>}
+                {row.work && (
+                  href ? (
+                    <a href={href} class="focus-ring text-xs text-ivory-400 transition hover:text-saffron-300">{row.work}{!title && ' ↗'}</a>
+                  ) : (
+                    <span class="text-xs text-ivory-500">{row.work}</span>
+                  )
+                )}
+              </span>
+              {row.result === 'won' ? (
+                <span class="rounded-full bg-saffron-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-950">Won</span>
+              ) : row.result === 'nominated' ? (
+                <span class="rounded-full border border-ink-600 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-ivory-500">Nominated</span>
+              ) : (
+                <span class="rounded-full border border-ink-700 px-3 py-1 text-[11px] font-medium uppercase tracking-wide text-ivory-700">Listed</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  ))}
+</div>

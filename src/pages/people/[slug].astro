@@ -2,12 +2,14 @@
 import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ExternalLinks from '../../components/ExternalLinks.astro';
+import FilmographyTable from '../../components/FilmographyTable.astro';
+import AwardsTable from '../../components/AwardsTable.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
 import ReferenceList from '../../components/ReferenceList.astro';
 import { SITE, stats, persons, personInitials, getTitleBySlug, titles, imdbNameUrl } from '../../lib/data';
 import { computeAgeFromFacts } from '../../lib/dates';
-import { splitLongParagraphs } from '../../lib/format';
+import { splitLongParagraphs, splitLeadSentence } from '../../lib/format';
 
 export function getStaticPaths() {
   return persons.map((person) => ({ params: { slug: person.slug }, props: { person } }));
@@ -15,7 +17,8 @@ export function getStaticPaths() {
 
 const { person } = Astro.props;
 const canonical = new URL(`/people/${person.slug}`, SITE.url).href;
-const filmographyInCatalogue = (person.filmography ?? [])
+const filmographyRows = (person.filmography ?? []).flatMap((s) => s.rows);
+const filmographyInCatalogue = filmographyRows
   .map((work) => ({ work, title: titles.find((t) => t.wikiTitle === work.wikiTitle) }))
   .filter((e) => e.title !== undefined) as { work: { title: string; wikiTitle: string }; title: NonNullable<ReturnType<typeof getTitleBySlug>> }[];
 
@@ -141,6 +144,36 @@ const creditTitleRecords = person.credits
           </div>
         )}
 
+        {(person.bio?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="life-story">
+            <h2 id="life-story" class="font-display text-2xl font-bold text-ivory-50">The life story</h2>
+            <div class="mt-4 space-y-2.5">
+              {person.bio!.map((chapter, ci) => (
+                <details class="card-sheen group rounded-2xl border border-ink-700/70 bg-ink-850/50" open={ci === 0}>
+                  <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+                    <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
+                      {String(ci + 1).padStart(2, '0')}
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block font-display text-xl font-bold tracking-tight text-ivory-50">{chapter.heading}</span>
+                      <span class="block text-xs text-ivory-600">{chapter.text.split(/\s+/).length} words · from Wikipedia</span>
+                    </span>
+                    <span class="shrink-0 text-ivory-500 transition group-open:rotate-180" aria-hidden="true">▾</span>
+                  </summary>
+                  <div class="px-4 pb-4">
+                    <div class="prose-article max-w-[68ch] border-l-2 border-ink-700 pl-5">
+                      {(() => { const { lead, rest } = splitLeadSentence(chapter.text); return lead || rest ? <p>{lead && <span class="font-semibold text-ivory-100">{lead}</span>} {rest}</p> : null; })()}
+                    </div>
+                  </div>
+                </details>
+              ))}
+            </div>
+            <p class="mt-3 text-xs text-ivory-600">
+              Biography text from the Wikipedia article (<a class="underline decoration-ink-500 hover:text-saffron-300" href={person.wikiUrl} rel="noopener">source</a>, CC BY-SA 4.0).
+            </p>
+          </section>
+        )}
+
         {filmographyInCatalogue.length > 0 && (
           <section class="mt-10" aria-labelledby="known-for">
             <h2 id="known-for" class="font-display text-2xl font-bold text-ivory-50">Known for</h2>
@@ -182,44 +215,23 @@ const creditTitleRecords = person.credits
             <h2 id="awards" class="font-display text-2xl font-bold text-ivory-50">
               Awards &amp; accolades <span class="text-lg text-ivory-600">({person.awards!.length})</span>
             </h2>
-            <ul class="mt-4 grid gap-2 lg:columns-2">
-              {person.awards!.slice(0, 40).map((award) => (
-                <li class="break-inside-avoid rounded-xl border border-ink-700/60 bg-ink-850/50 px-4 py-2.5 text-sm text-ivory-300">
-                  {/won/i.test(award) && <span class="mr-1.5" aria-hidden="true">🏆</span>}
-                  {award}
-                </li>
-              ))}
-            </ul>
-            <p class="mt-3 text-xs text-ivory-600">From the Wikipedia accolades section (CC BY-SA 4.0).</p>
+            <div class="mt-4">
+              <AwardsTable awards={person.awards!} />
+            </div>
           </section>
         )}
 
         {(person.filmography?.length ?? 0) > 0 && (
           <section class="mt-10" aria-labelledby="filmography">
             <h2 id="filmography" class="font-display text-2xl font-bold text-ivory-50">
-              Full filmography <span class="text-lg text-ivory-600">({person.filmography!.length} works · Wikipedia)</span>
+              Filmography <span class="text-lg text-ivory-600">({filmographyRows.length} works)</span>
             </h2>
             <p class="mt-2 text-sm text-ivory-500">
-              Every linked work from the filmography, discography and television sections. {filmographyInCatalogue.length > 0 ? `${filmographyInCatalogue.length} are in our catalogue — they link to full pages.` : 'None are in our current catalogue yet.'}
+              Structured from the Wikipedia filmography tables — year, role and notes for every work. {filmographyInCatalogue.length > 0 ? `${filmographyInCatalogue.length} are in our catalogue.` : ''}
             </p>
-            <ul class="mt-4 flex flex-wrap gap-2">
-              {person.filmography!.map((work) => {
-                const inCatalogue = filmographyInCatalogue.find((e) => e.work.wikiTitle === work.wikiTitle);
-                const href = inCatalogue ? (inCatalogue.title.kind === 'movie' ? `/movies/${inCatalogue.title.slug}` : `/series/${inCatalogue.title.slug}`) : null;
-                const year = inCatalogue?.title.year;
-                return (
-                  <li>
-                    {href ? (
-                      <a href={href} class="focus-ring inline-block rounded-full border border-saffron-500/30 bg-saffron-500/5 px-3.5 py-1.5 text-sm text-ivory-200 transition hover:border-saffron-500/60 hover:text-saffron-300">
-                        {work.title} {year ? <span class="text-ivory-600">· {year}</span> : ''}
-                      </a>
-                    ) : (
-                      <span class="inline-block rounded-full border border-ink-700 bg-ink-850/60 px-3.5 py-1.5 text-sm text-ivory-400">{work.title}</span>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            <div class="mt-4">
+              <FilmographyTable sections={person.filmography!} />
+            </div>
           </section>
         )}
 

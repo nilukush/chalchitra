@@ -298,6 +298,37 @@ const jsonLd: Record<string, unknown>[] = [
         )}
         </div>
 
+        {trailerId && (
+          <section id="trailer" class="mt-8 overflow-hidden rounded-2xl border border-ink-700/70 bg-ink-900 shadow-xl shadow-black/30" aria-label={`${item.title} trailer`}>
+            <div class="relative aspect-video w-full" data-trailer-box>
+              <button type="button" data-trailer-play class="focus-ring group absolute inset-0 flex h-full w-full cursor-pointer items-center justify-center" aria-label={`Play the ${item.title} trailer on this page`}>
+                {item.backdrop && (
+                  <img src={item.backdrop} alt="" aria-hidden="true" class="absolute inset-0 h-full w-full object-cover opacity-60 transition group-hover:opacity-40" />
+                )}
+                <span class="absolute inset-0 bg-gradient-to-t from-ink-950/80 via-transparent to-ink-950/30"></span>
+                <span class="relative flex h-16 w-16 items-center justify-center rounded-full bg-saffron-500 text-ink-950 shadow-lg shadow-saffron-500/30 transition group-hover:scale-110">
+                  <Icon name="play" class="h-8 w-8" />
+                </span>
+                <span class="absolute bottom-3 left-4 text-sm font-semibold text-ivory-100">Watch the trailer — plays right here</span>
+              </button>
+              <iframe
+                data-trailer-frame
+                data-embed={trailerId}
+                class="absolute inset-0 hidden h-full w-full"
+                src=""
+                title={`${item.title} trailer`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+                referrerpolicy="strict-origin-when-cross-origin"
+              ></iframe>
+            </div>
+            <div class="flex items-center justify-between gap-4 border-t border-ink-700 px-4 py-2 text-xs text-ivory-600">
+              <span>The page stays right here while you watch.</span>
+              <a href={item.trailer} rel="noopener" class="shrink-0 underline decoration-ink-500 transition hover:text-saffron-300">Open on YouTube ↗</a>
+            </div>
+          </section>
+        )}
+
         {plotParagraphs.length > 0 && (
           <section class="mt-10" aria-labelledby="plot">
             <h2 id="plot" class="font-display text-2xl font-bold text-ivory-50">{item.kind === 'movie' ? 'Full plot' : 'Premise'}</h2>
@@ -519,49 +550,28 @@ const jsonLd: Record<string, unknown>[] = [
   </article>
 
   {trailerId && (
-    <dialog
-      id="trailer-dialog"
-      class="w-[min(92vw,960px)] rounded-2xl border border-ink-700 bg-ink-900 p-0 shadow-2xl backdrop:bg-ink-950/90 backdrop:backdrop-blur-sm"
-      aria-label={`${item.title} trailer`}
-    >
-      <div class="flex items-center justify-between gap-4 border-b border-ink-700 px-5 py-3">
-        <p class="font-display text-lg font-bold text-ivory-50">{item.title} · Trailer</p>
-        <div class="flex items-center gap-3 text-sm">
-          <a href={item.trailer} rel="noopener" class="text-ivory-500 underline decoration-ink-500 hover:text-saffron-300">Open on YouTube ↗</a>
-          <button type="button" data-trailer-close class="focus-ring rounded-full border border-ink-600 px-3 py-1 text-ivory-300 hover:border-saffron-500/50 hover:text-saffron-300">✕ Close</button>
-        </div>
-      </div>
-      <div class="aspect-video w-full">
-        <iframe
-          data-trailer-frame
-          data-embed={trailerId}
-          class="h-full w-full"
-          src=""
-          title={`${item.title} trailer`}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowfullscreen
-          referrerpolicy="strict-origin-when-cross-origin"
-        ></iframe>
-      </div>
-    </dialog>
+    <a id="trailer-top" href="#trailer" class="sr-only">Jump to the on-page trailer</a>
   )}
 </Base>
 
 <script>
-  const dialog = document.getElementById('trailer-dialog') as HTMLDialogElement | null;
-  const frame = dialog?.querySelector<HTMLIFrameElement>('[data-trailer-frame]') ?? null;
-  const embed = frame?.dataset.embed ?? '';
+  // In-page trailer: clicking the facade (or the sidebar button) swaps the
+  // facade for the embed inside the same container — no navigation, no modal.
+  const frame = document.querySelector<HTMLIFrameElement>('[data-trailer-frame]');
+  const facade = document.querySelector<HTMLButtonElement>('[data-trailer-play]');
 
+  const startPlayback = () => {
+    if (!frame || !facade) return;
+    facade.classList.add('toggle-hidden');
+    frame.classList.remove('hidden');
+    frame.src = `https://www.youtube-nocookie.com/embed/${frame.dataset.embed}?autoplay=1&rel=0`;
+  };
+
+  facade?.addEventListener('click', startPlayback);
   document.querySelectorAll('[data-trailer-open]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      if (!dialog || !frame) return;
-      frame.src = `https://www.youtube-nocookie.com/embed/${embed}?autoplay=1&rel=0`;
-      dialog.showModal();
+      startPlayback();
+      document.getElementById('trailer')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
-  const stop = () => {
-    if (frame) frame.src = '';
-  };
-  document.querySelectorAll('[data-trailer-close]').forEach((b) => b.addEventListener('click', () => dialog?.close()));
-  dialog?.addEventListener('close', stop);
 </script>

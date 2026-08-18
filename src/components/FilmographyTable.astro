@@ -1,0 +1,144 @@
+---
+import type { FilmographySection } from '../../pipeline/wikitext/filmography.js';
+import { titles } from '../lib/data';
+
+interface Props {
+  sections: FilmographySection[];
+}
+
+const { sections } = Astro.props;
+const COLLAPSE_AFTER = 8;
+
+const byTarget = new Map(titles.map((t) => [t.wikiTitle, t]));
+const MEDIUM_LABEL: Record<string, string> = {
+  film: 'Film',
+  television: 'Television',
+  other: 'Other work',
+};
+
+/** newest year first; no-year rows last, alphabetically */
+function sortedRows(section: FilmographySection) {
+  return [...section.rows].sort((a, b) => {
+    const ya = a.year && /^\d{4}/.test(a.year) ? Number(a.year.slice(0, 4)) : -1;
+    const yb = b.year && /^\d{4}/.test(b.year) ? Number(b.year.slice(0, 4)) : -1;
+    if (ya !== yb) return yb - ya;
+    return a.title.localeCompare(b.title);
+  });
+}
+
+const groups = sections
+  .map((section) => ({
+    ...section,
+    label: section.heading === section.medium || /^(film|films|television|tv)$/i.test(section.heading)
+      ? MEDIUM_LABEL[section.medium]
+      : section.heading,
+    rows: sortedRows(section).map((row, i) => ({ row, overflow: i >= COLLAPSE_AFTER })),
+  }))
+  .filter((g) => g.rows.length > 0);
+
+const totalWorks = groups.reduce((n, g) => n + g.rows.length, 0);
+const multiGroup = groups.length > 1;
+---
+
+<div data-filmography class="space-y-3">
+  {multiGroup && (
+    <div role="tablist" aria-label="Filmography by medium" class="flex flex-wrap gap-2">
+      {groups.map((group, gi) => (
+        <button
+          type="button"
+          role="tab"
+          class={`film-tab focus-ring min-h-[36px] rounded-full border px-4 py-1.5 text-sm font-medium transition ${gi === 0 ? 'border-saffron-500/60 bg-saffron-500/10 text-saffron-300' : 'border-ink-600 bg-ink-800 text-ivory-300 hover:border-saffron-500/40'}`}
+          data-medium={group.medium}
+          data-heading={group.heading}
+          aria-selected={gi === 0 ? 'true' : 'false'}
+        >
+          {group.label} <span class="text-xs opacity-70">{group.rows.length}</span>
+        </button>
+      ))}
+    </div>
+  )}
+
+  {groups.map((group, gi) => (
+    <div
+      class:list={['space-y-2.5', 'film-section', multiGroup && `film-m-${group.medium}-${group.heading.replace(/\W+/g, '')}`, multiGroup && gi > 0 && 'toggle-hidden']}
+      data-medium={group.medium}
+      data-heading={group.heading}
+    >
+      {group.rows.map(({ row, overflow }) => {
+        const title = row.wikiTitle ? byTarget.get(row.wikiTitle) : undefined;
+        const href = title ? (title.kind === 'movie' ? `/movies/${title.slug}` : `/series/${title.slug}`) : row.wikiTitle ? `https://en.wikipedia.org/wiki/${encodeURIComponent(row.wikiTitle.replace(/ /g, '_'))}` : null;
+        return (
+          <article class:list={['card-sheen flex items-baseline gap-4 rounded-2xl border border-ink-700/70 bg-ink-850/60 px-4 py-3 transition hover:border-saffron-500/30', overflow && 'film-overflow toggle-hidden']}>
+            <span class="w-14 shrink-0 font-display text-sm font-bold tabular-nums text-saffron-400" title={row.year ?? ''}>{row.year ?? '—'}</span>
+            <div class="min-w-0 flex-1">
+              {href ? (
+                <a href={href} class="focus-ring text-[15px] font-semibold text-ivory-100 transition hover:text-saffron-300">
+                  {row.title}{!title && <span class="ml-1 text-xs font-normal text-ivory-600">Wikipedia ↗</span>}
+                </a>
+              ) : (
+                <span class="text-[15px] font-semibold text-ivory-100">{row.title}</span>
+              )}
+              {row.role && <p class="mt-0.5 text-sm leading-snug text-ivory-500">{row.role}</p>}
+              {row.notes && <p class="mt-1 text-xs leading-snug text-ivory-600">{row.notes}</p>}
+            </div>
+            {title && (
+              <span class="hidden shrink-0 rounded-full border border-saffron-500/30 bg-saffron-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-saffron-300 sm:inline">In catalogue</span>
+            )}
+          </article>
+        );
+      })}
+
+      {group.rows.length > COLLAPSE_AFTER && (
+        <button
+          type="button"
+          class="toggle-btn min-h-[44px] w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-2.5 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+          data-target="film-overflow"
+          data-label-show={`Show all ${group.rows.length} works`}
+          data-label-hide="Show fewer"
+        >
+          Show all {group.rows.length} works
+        </button>
+      )}
+    </div>
+  ))}
+
+  <p class="pt-1 text-xs text-ivory-600">
+    {totalWorks} works from the Wikipedia filmography tables · titles in our catalogue link to full pages · CC BY-SA 4.0
+  </p>
+</div>
+
+<script>
+  // medium tabs: one group visible at a time
+  document.querySelectorAll<HTMLElement>('[data-filmography]').forEach((root) => {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('.film-tab')];
+    const groups = [...root.querySelectorAll<HTMLElement>('.film-section')];
+    tabs.forEach((tab) => {
+      tab.addEventListener('click', () => {
+        tabs.forEach((t) => {
+          const active = t === tab;
+          t.setAttribute('aria-selected', String(active));
+          t.classList.toggle('border-saffron-500/60', active);
+          t.classList.toggle('bg-saffron-500/10', active);
+          t.classList.toggle('text-saffron-300', active);
+          t.classList.toggle('border-ink-600', !active);
+          t.classList.toggle('bg-ink-800', !active);
+          t.classList.toggle('text-ivory-300', !active);
+        });
+        groups.forEach((g) => g.classList.toggle('toggle-hidden', g !== groups[tabs.indexOf(tab)]));
+      });
+    });
+  });
+
+  // per-section overflow toggles
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="film-overflow"]').forEach((btn) => {
+    const scope = btn.closest('.film-section') ?? document;
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      scope.querySelectorAll('.' + (btn.dataset.target ?? '')).forEach((row) => row.classList.toggle('toggle-hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

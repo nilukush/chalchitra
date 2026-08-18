@@ -1,7 +1,9 @@
 import type { EpisodeRow } from './wikitext/episodes.js';
 import type { Soundtrack } from './wikitext/soundtrack.js';
 import type { ReferenceEntry } from './wikitext/references.js';
-import type { FilmographyWork } from './wikitext/filmography.js';
+import type { FilmographySection } from './wikitext/filmography.js';
+import type { AwardRow } from './wikitext/awards.js';
+import type { BioSection } from './wikitext/bio.js';
 
 export interface ArticleSection {
   title: string;
@@ -129,10 +131,12 @@ export interface PersonRecord {
   references: ReferenceEntry[];
   sections: string[];
   /** pre/other-catalogue notable works from TMDB */
-  /** rows from the Wikipedia Accolades/Awards section (cleaned strings) */
-  awards?: string[];
-  /** linked works named in the person's Wikipedia filmography/discography sections */
-  filmography?: FilmographyWork[];
+  /** structured rows from the Wikipedia Accolades/Awards tables (incl. subpages) */
+  awards?: AwardRow[];
+  /** works from the Wikipedia filmography tables (incl. dedicated subpages) */
+  filmography?: FilmographySection[];
+  /** Early life / Personal life prose from the Wikipedia article */
+  bio?: BioSection[];
   knownFor?: KnownForWork[];
   tmdbId?: number;
 }

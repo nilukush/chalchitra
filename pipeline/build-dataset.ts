@@ -10,12 +10,15 @@ import { fileURLToPath } from 'node:url';
 import {
   extractCast,
   extractAwards,
+  extractBioSections,
   extractEpisodes,
   extractExternalLinks,
   extractFilmography,
   extractReferences,
   extractSections,
   extractSoundtrack,
+  findAwardsSubpage,
+  findFilmographySubpage,
   getSection,
   listSectionTitles,
   parseInfobox,
@@ -24,6 +27,8 @@ import {
   collectPersonLinks,
   parseStartDate,
 } from './wikitext/index.js';
+import type { AwardRow } from './wikitext/awards.js';
+import type { FilmographySection } from './wikitext/filmography.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
 import { enrichPersons, enrichTitles } from './enrich/tmdb.js';
 import { enrichWithAi } from './enrich/ai.js';
@@ -285,6 +290,22 @@ async function main() {
   }
   console.log(`→ ${finalPersons.size} person pages resolved`);
 
+  // Follow {{Main|X filmography}} / {{Main|List of awards…}} pointers to the
+  // dedicated subpages that hold the real tables (Emraan Hashmi et al).
+  // Fetched through the same paced, cache-resumable path as everything else.
+  const subpageWanted = new Set<string>();
+  for (const page of finalPersons.values()) {
+    for (const target of [findFilmographySubpage(page.wikitext ?? ''), findAwardsSubpage(page.wikitext ?? '')]) {
+      if (target) subpageWanted.add(target);
+    }
+  }
+  let subpages = new Map<string, CachedPage>();
+  if (subpageWanted.size > 0) {
+    console.log(`→ Following ${subpageWanted.size} filmography/awards subpages…`);
+    subpages = await fetchPages([...subpageWanted]);
+    console.log(`  ${[...subpages.values()].filter((p) => !p.missing).length} subpages resolved`);
+  }
+
   // person slug lookup: finalTitle → slug
   const personRegistry = new SlugRegistry();
   const personSlugByFinal = new Map<string, string>();
@@ -356,6 +377,33 @@ async function main() {
       return value ? [{ label, value: truncate(value, 160) }] : [];
     });
 
+    // filmography/awards may live on a dedicated subpage; merge with the
+    // main article's own rows, subpage tables winning on duplicates
+    const filmSub = findFilmographySubpage(page.wikitext ?? '');
+    const filmSubPage = filmSub ? subpages.get(filmSub) : undefined;
+    const awardsSub = findAwardsSubpage(page.wikitext ?? '');
+    const awardsSubPage = awardsSub ? subpages.get(awardsSub) : undefined;
+
+    const filmography: FilmographySection[] = [];
+    for (const source of [filmSubPage?.wikitext, page.wikitext]) {
+      if (!source) continue;
+      for (const section of extractFilmography(source)) {
+        const existing = filmography.find((s) => s.heading === section.heading);
+        if (!existing) filmography.push(section);
+        else {
+          const known = new Set(existing.rows.map((r) => r.wikiTitle ?? r.title));
+          existing.rows.push(...section.rows.filter((r) => !known.has(r.wikiTitle ?? r.title)));
+        }
+      }
+    }
+
+    const awardRows: AwardRow[] = [];
+    for (const source of [awardsSubPage?.wikitext, page.wikitext]) {
+      if (!source) continue;
+      const known = new Set(awardRows.map((r) => `${r.year ?? ''}|${r.award}|${r.category ?? ''}|${r.work ?? ''}`));
+      awardRows.push(...extractAwards(source).filter((r) => !known.has(`${r.year ?? ''}|${r.award}|${r.category ?? ''}|${r.work ?? ''}`)));
+    }
+
     persons.push({
       slug,
       name: displayTitle(finalTitle),
@@ -369,8 +417,9 @@ async function main() {
       credits,
       external: { imdbId: external.imdbId, official: external.official, links: dedupeLinks(external.links).slice(0, 12) },
       references: extractReferences(page.wikitext ?? ''),
-      awards: extractAwards(page.wikitext ?? ''),
-      filmography: extractFilmography(page.wikitext ?? ''),
+      awards: awardRows.length > 0 ? awardRows : undefined,
+      filmography: filmography.length > 0 ? filmography : undefined,
+      bio: extractBioSections(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });
   }

@@ -103,3 +103,31 @@ export function mergeEpisodeSummaries(
   });
   return changed ? merged : wikiEpisodes;
 }
+
+export interface TmdbVideo {
+  key: string;
+  site?: string;
+  type?: string;
+  official?: boolean;
+}
+
+/**
+ * Pick the best on-site-playable trailer from TMDB video pools (show level
+ * plus season level for TV). Tiered so YouTube-only sources always win:
+ * official Trailer → official Teaser → any Trailer/Teaser → any YouTube.
+ * Never returns a non-YouTube entry — our player embeds youtube-nocookie.
+ */
+export function pickTmdbTrailer(pools: TmdbVideo[][]): string | undefined {
+  const videos = pools.flat().filter((v) => v?.site === 'YouTube' && v.key);
+  const tiers: Array<(v: TmdbVideo) => boolean> = [
+    (v) => v.type === 'Trailer' && v.official === true,
+    (v) => (v.type === 'Trailer' || v.type === 'Teaser') && v.official === true,
+    (v) => v.type === 'Trailer' || v.type === 'Teaser',
+    () => true,
+  ];
+  for (const tier of tiers) {
+    const hit = videos.find(tier);
+    if (hit) return hit.key;
+  }
+  return undefined;
+}

@@ -361,3 +361,29 @@ trailer modal opens on-site (youtube-nocookie embed), filter click verified.
 - Parameterise `YEAR` (pipeline/build-dataset.ts) to add 2025, 2024… datasets (1950s goal).
 - Sister editions: fork repo per country (Korea first) — origin-agnostic data model already.
 - Deploy: set `SITE_URL`, host dist/ on any static host.
+
+## Session 12 — Wikipedia-structured filmography & awards; bio; on-page trailer (167 tests)
+
+**3-agent consensus (Analyzer research / Debugger root-cause / Verifier feasibility), then atomic TDD:**
+- Filmography is now STRUCTURED like Wikipedia's own tables: FilmographySection{heading, medium,
+  rows[{year,title,wikiTitle?,role?,notes?}]} — shared tables.ts parser (rowspan carry, ||/-chained
+  cells, headerless positional fallback, attr stripping). 122,925 rows across 2,030 persons.
+- Subpage filmographies followed: {{Main|X filmography}} / {{Main list|List of awards…}} pointers
+  detected (findFilmographySubpage/findAwardsSubpage), 190 subpages fetched once via paced
+  fetchPages (cache-resumable). Emraan Hashmi 0 → 57 rows with years+roles.
+- Awards structured: AwardRow{year,award,category,work,result} — {{won}}/{{nom}} templates read
+  BEFORE stripWikitext (they used to be deleted — Emraan had 0 results in 18 rows); 2,865 won /
+  2,322 nominated / 6,206 total rows.
+- Person schema + UI: bio (Early life / Personal life, 1,275 persons, CC BY-SA captioned),
+  AwardsTable (wins·nominations summary, ceremony groups, Won filled badge / Nominated outline —
+  text not color-alone), FilmographyTable (medium tabs like season tabs, row cards year/title/role,
+  show-8 + toggle, in-catalogue links, Wikipedia ↗ otherwise). Known-for = filmography∩catalogue.
+- Trailer: modal REPLACED by an in-page player panel under the identity band (click-to-play
+  facade → youtube-nocookie embed swap; sidebar Watch-trailer scrolls & plays). Click-verified on
+  movie + series: stays on page, panel plays. Series-trailer scarcity root-caused: TMDB has zero
+  videos (show AND season level) for 34/60 shows — data limit, not a bug; pickTmdbTrailer is
+  tiered YouTube-only now (Vimeo leak fixed).
+- Python string-surgery on TitleDetail ate the main column once — restored from git, redone with
+  Edit tool. Lesson: no blind index() slicing on template files.
+- Verified: 167/167 tests, 2,651 pages, toggles incl. film-overflow, 986px widths clean on all key
+  pages, link sample 0 missing.
