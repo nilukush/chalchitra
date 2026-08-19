@@ -1,5 +1,6 @@
 ---
 import type { FilmographySection } from '../../pipeline/wikitext/filmography.js';
+import Icon from './Icon.astro';
 import { titles } from '../lib/data';
 
 interface Props {
@@ -73,7 +74,9 @@ const multiGroup = groups.length > 1;
               {title?.poster ? (
                 <img src={title.poster} alt="" loading="lazy" decoding="async" width="40" height="60" class="h-full w-full object-cover" />
               ) : (
-                <span class="flex h-full w-full items-center justify-center grain"><span class="font-display text-sm text-ivory-600">च</span></span>
+                <span class="flex h-full w-full items-center justify-center text-ink-500" title="No poster available">
+                  <Icon name={row.medium === 'television' ? 'tv' : 'film'} class="h-4 w-4" />
+                </span>
               )}
             </span>
             <span class="w-14 shrink-0 font-display text-sm font-bold tabular-nums text-saffron-400" title={row.year ?? ''}>{row.year ?? '—'}</span>
@@ -89,10 +92,11 @@ const multiGroup = groups.length > 1;
               {row.notes && <p class="mt-1 text-xs leading-snug text-ivory-600">{row.notes}</p>}
             </div>
             {title && (
-              <span class="hidden shrink-0 items-center gap-2 sm:flex">
-                {title.rating && <span class="text-xs font-semibold text-saffron-300">★ {title.rating.value.toFixed(1)}</span>}
-                <span class="rounded-full border border-saffron-500/30 bg-saffron-500/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-saffron-300">In catalogue</span>
-              </span>
+              title.rating && (
+                <span class="hidden shrink-0 items-center gap-2 sm:flex">
+                  <span class="text-xs font-semibold text-saffron-300">★ {title.rating.value.toFixed(1)}</span>
+                </span>
+              )
             )}
           </article>
         );

@@ -30,7 +30,7 @@ import {
 import type { AwardRow } from './wikitext/awards.js';
 import type { FilmographySection } from './wikitext/filmography.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
-import { enrichPersons, enrichTitles } from './enrich/tmdb.js';
+import { enrichPersons, enrichTitles, enrichTitlesLite } from './enrich/tmdb.js';
 import { enrichWithAi } from './enrich/ai.js';
 import { loadEnv } from './env.js';
 
@@ -537,10 +537,17 @@ async function main() {
   }
   console.log(`→ Plot texts carry ${plotLinkCount} internal links to people/title pages`);
 
-  // multi-source enrichment (TMDB) — catalogue only for wave 1: full enrichment of
-  // ~30k archive titles would take 12-38h at current call volume (all fields optional)
+  // multi-source enrichment (TMDB). Catalogue pass: full field+episode work.
+  // Archive pass: lite (search + one validated details payload each) behind a
+  // polite 8 req/s gate — the old 12–38h figure was serial-client latency,
+  // not a TMDB limit; every response is disk-cached so re-runs are fast.
+  // Set TMDB_ARCHIVE_LITE=0 to skip the archive pass on slow links.
   const catalogueTitles = [...movies, ...series].filter((t) => !t.archive);
   await enrichTitles(catalogueTitles);
+  if (process.env.TMDB_ARCHIVE_LITE !== '0') {
+    const archiveTitles = [...movies, ...series].filter((t) => t.archive);
+    await enrichTitlesLite(archiveTitles);
+  }
   await enrichPersons(persons);
   // AI hooks/moods — key-gated; falls back to tagline/first-sentence below
   await enrichWithAi(catalogueTitles);

@@ -55,6 +55,13 @@ function readResult(rawCell: string): AwardResult | null {
   return null;
 }
 
+/** Links like `[[IIFA Award for Best Supporting Actor|…]]` point at the
+ *  award-CATEGORY article, not the ceremony — they belong in `category`. */
+function isCategoryArticleLink(text: string): boolean {
+  const link = extractWikiLinks(text)[0];
+  return link?.target !== undefined && /\baward for\b/i.test(link.target);
+}
+
 export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
   const rows: AwardRow[] = [];
   const seen = new Set<string>();
@@ -73,6 +80,10 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
       const fields = view.header?.map((h) => HEADER_FIELD[h] ?? null) ?? null;
       let lastYear: string | undefined;
       let lastResult: AwardResult = '';
+      let lastAward = '';
+      let lastAwardWiki: string | undefined;
+      let lastWork: string | undefined;
+      let lastWorkWiki: string | undefined;
 
       for (const cells of view.rows) {
         const texts = cells.map((c) => c.trim()).filter((t) => t !== '');
@@ -100,10 +111,16 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
           }
           const display = stripWikitext(text).replace(/\s+/g, ' ').trim();
           if (!display) return;
-          if (field === 'award' || (field === null && award === '' && AWARD_NAME_HINT.test(text))) {
+          if (
+            (field === 'award' || (field === null && award === '' && AWARD_NAME_HINT.test(text))) &&
+            !isCategoryArticleLink(text)
+          ) {
             const link = extractWikiLinks(text)[0];
             award = display;
             awardWikiTitle = link?.target;
+          } else if (isCategoryArticleLink(text) && category === undefined) {
+            // category article wikilink, whichever column it strayed into
+            category = display;
           } else if (field === 'category') {
             category = display;
           } else if (field === 'work' || field === null) {
@@ -121,15 +138,37 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
           }
         });
 
-        if (year === undefined && (award || work) && lastYear) year = lastYear;
+        // rowspan carry-forward: ceremony name and film often span the
+        // continuation rows of one nomination group
+        let carriedAward = false;
+        if (award === '' && lastAward) {
+          award = lastAward;
+          awardWikiTitle = lastAwardWiki;
+          carriedAward = true;
+        }
+        if (work === undefined && carriedAward && lastWork) {
+          work = lastWork;
+          workWikiTitle = lastWorkWiki;
+        }
+        if (year === undefined && (award || work || category) && lastYear) year = lastYear;
         if (result === null && lastResult) result = lastResult;
         if (year) lastYear = year;
         if (result) lastResult = result;
+        if (award) {
+          lastAward = award;
+          lastAwardWiki = awardWikiTitle;
+        }
+        if (work) {
+          lastWork = work;
+          lastWorkWiki = workWikiTitle;
+        }
 
-        if (award || work || category) {
+        // a row must carry substance beyond a bare ceremony name — pure
+        // ceremony/fragment rows are table structure, not nominations
+        if (award && (category || work || result || year)) {
           push({
             year,
-            award: award || '—',
+            award,
             awardWikiTitle,
             category,
             work,

@@ -35,7 +35,7 @@ const WORK_SUBSECTION =
   /^as\s+(an?\s+)?(actor|actress|director|producer|writer|host|singer|artist|dancer|composer|playback)/i;
 
 const NOT_A_WORK =
-  /^(list of|index of|awards?|accolades?|nominations?|19\d\d|20\d\d|category|wikipedia|template|the following|filmography|discography|bibliography|references|external links)/i;
+  /^(\+\s*)?(list of|index of|awards?|accolades?|nominations?|19\d\d|20\d\d|category|wikipedia|template|the following|filmography|discography|bibliography|references|external links)/i;
 
 const NOT_A_WORK_EXACT =
   /^(the times of india|hindustan times|the indian express|india today|deccan herald|deccan chronicle|the hindu|ndtv|cnn-news18|zee news|bollywood hungama|rediff|dna india|firstpost|the free press journal|mid-day|youtube|netflix|amazon prime video|disney\+ hotstar|jiocinema|sonyliv|mx player|zee5|aha \(streaming service\)|sun nxt|imdb|rotten tomatoes|cinema of india|indian cinema|bollywood|tollywood|kollywood|mollywood|sandalwood|playback singing|playback singer|feature film|short film|soundtrack album|filmfare awards?|filmfare ott awards?|national film awards?|siima awards?|iifa awards?|screen awards?|stardust awards?|zee cine awards?|nandi awards?)$/i;
@@ -87,6 +87,11 @@ const YEARISH = /^(\d{4}|\d{4}\s*[–—-]\s*\d{0,4}|TBA|forthcoming|upcoming)$/
 /** Header words that must never become a work title. */
 const JUNK_TITLE =
   /^(language|languages|review|reviews|year|title|role|roles|note|notes|ref\.?|refs?|result|award|category|work|film|show|serial|network|channel|director|producer|rank|no\.|#|references?)$/i;
+
+/** Release-status words that leak into the title slot when a real title cell
+ *  was template-wrapped ({{Pending film|…}}) or a rowspan notes cell shifted. */
+const STATUS_TITLE =
+  /^(filming|filmed|released|release|tba|announced|pre-?production|post-?production|production|delayed|upcoming|completed|scheduled|unreleased)$/i;
 
 export function extractFilmography(pageWikitext: string, limit = 240): FilmographySection[] {
   const sections: FilmographySection[] = [];
@@ -171,13 +176,20 @@ export function extractFilmography(pageWikitext: string, limit = 240): Filmograp
 
       const finalTitle = (title || '').trim();
       const target = wikiTitle ?? finalTitle;
-      if (finalTitle && isWorkLink(target) && !JUNK_TITLE.test(finalTitle)) {
+      const cleanRole = (role || '').replace(/\s*\(\s*\)/g, '').trim();
+      if (
+        finalTitle &&
+        isWorkLink(target) &&
+        !JUNK_TITLE.test(finalTitle) &&
+        !STATUS_TITLE.test(finalTitle) &&
+        !/^\d{4}$/.test(finalTitle)
+      ) {
         if (section.rows.some((r) => (r.wikiTitle ?? r.title) === target)) continue;
         section.rows.push({
           year,
           title: finalTitle,
           wikiTitle,
-          role: role || undefined,
+          role: cleanRole && cleanRole !== 'TBA' ? cleanRole : undefined,
           notes: noteBits.length > 0 ? noteBits.join('; ') : undefined,
           medium: section.medium,
         });

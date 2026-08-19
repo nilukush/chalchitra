@@ -150,6 +150,74 @@ describe('extractFilmography (structured)', () => {
   });
 });
 
+// Real shapes from Emraan Hashmi's filmography subpage (2026-08 session):
+// captioned tables, {{Pending film}} names destroyed by template removal,
+// release-status notes masquerading as titles, {{small}} role annotations.
+const leakyPage = `
+== Filmography ==
+=== Film ===
+{| class="wikitable"
+! Year !! Title !! Role !! Notes
+|-
+| 2026 || [[Awarapan 2]] || Shivam Pandit ||
+|-
+| {{Pending film|Gunmaaster G9}} || {{TableTBA}} || rowspan="2" | Filming
+|-
+| 2027 || [[G2 (film)|G2]] || || Telugu film; filming
+|-
+| 2020 || ''55'' || Sagar Bhai ||
+|-
+| 2026 || Filming || ||
+|}
+
+=== Television ===
+{| class="wikitable sortable"
+|+ List of Emraan Hashmi television credits
+! Year !! Title !! Role !! Notes
+|-
+| 2019 || [[Bard of Blood]] || Prof. Kabir Anand ({{small|Agent Adonis}}) || {{no wrap|[[Netflix]] series}}
+|}
+`;
+
+describe('extractFilmography (leak guards)', () => {
+  it('never creates a row from a table caption (|+ List of …)', () => {
+    const sections = extractFilmography(leakyPage);
+    const titles = sections.flatMap((s) => s.rows).map((r) => r.title);
+    expect(titles.join('\n')).not.toMatch(/\+\s*List of/i);
+    expect(titles).toContain('Bard of Blood');
+  });
+
+  it('recovers {{Pending film|X}} titles instead of promoting the status note', () => {
+    const rows = extractFilmography(leakyPage).flatMap((s) => s.rows);
+    const gunmaster = rows.find((r) => /Gunmaaster/i.test(r.title));
+    expect(gunmaster).toBeDefined();
+    expect(gunmaster?.title).toBe('Gunmaaster G9');
+    expect(gunmaster?.notes).toBe('Filming');
+  });
+
+  it('drops rows whose title is only a release-status word', () => {
+    const rows = extractFilmography(leakyPage).flatMap((s) => s.rows);
+    expect(rows.some((r) => /^(filming|released|tba|post-production)$/i.test(r.title))).toBe(false);
+  });
+
+  it('keeps numeric film titles (55 is a real film)', () => {
+    const rows = extractFilmography(leakyPage).flatMap((s) => s.rows);
+    expect(rows.some((r) => r.title === '55')).toBe(true);
+  });
+
+  it('keeps {{small}} annotations inside roles without empty parentheses', () => {
+    const rows = extractFilmography(leakyPage).flatMap((s) => s.rows);
+    const bard = rows.find((r) => r.wikiTitle === 'Bard of Blood');
+    expect(bard?.role).toBe('Prof. Kabir Anand (Agent Adonis)');
+    expect(bard?.notes).toBe('Netflix series');
+  });
+
+  it('does not use a bare year as a title', () => {
+    const rows = extractFilmography(leakyPage).flatMap((s) => s.rows);
+    expect(rows.some((r) => /^\d{4}$/.test(r.title))).toBe(false);
+  });
+});
+
 describe('subpage pointers', () => {
   it('detects {{Main|X filmography}} including leading spaces', () => {
     expect(findFilmographySubpage(subpagePage)).toBe('Emraan Hashmi filmography');

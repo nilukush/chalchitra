@@ -9,7 +9,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import type { TitleRecord } from '../types.js';
-import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
+import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -49,6 +49,103 @@ async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null
 
 export function tmdbEnabled(): boolean {
   return Boolean(process.env.TMDB_API_KEY);
+}
+
+/** Global start-gate: spaces request STARTS ≥ minInterval apart across all
+ *  workers. TMDB staff-stated ceiling is 50 req/s; we run far under it. */
+function startGate(minIntervalMs: number) {
+  let lastStart = 0;
+  let chain: Promise<void> = Promise.resolve();
+  return (): Promise<void> => {
+    const run = async () => {
+      const wait = Math.max(0, lastStart + minIntervalMs - Date.now());
+      if (wait > 0) await sleep(wait);
+      lastStart = Date.now();
+    };
+    const next = chain.then(run);
+    chain = next.catch(() => {});
+    return next;
+  };
+}
+
+/**
+ * Archive-lite enrichment: search + one validated details payload per record
+ * (append_to_response=credits,videos — credits validate the match, the same
+ * payload feeds the field merge). Concurrent workers behind a global rate
+ * gate; every response is disk-cached so re-runs are cheap and resumable.
+ * The old "12–38h for the archive" estimate assumed a serial client
+ * (~0.6s/round-trip); at a polite 8 req/s this pass runs ~30 min for ~5.9k
+ * records (TMDB documents no per-endpoint limit; respect 429s — we do).
+ */
+export async function enrichTitlesLite(
+  titles: TitleRecord[],
+  opts: { rps?: number; concurrency?: number; candidates?: number } = {},
+): Promise<{ matched: number; enriched: number }> {
+  const apiKey = process.env.TMDB_API_KEY;
+  if (!apiKey || titles.length === 0) return { matched: 0, enriched: 0 };
+  const { rps = 8, concurrency = 6, candidates: maxCandidates = 2 } = opts;
+  const gate = startGate(Math.round(1000 / rps));
+
+  async function pacedGet(pathAndQuery: string): Promise<any | null> {
+    await gate();
+    return tmdbGet(pathAndQuery, apiKey);
+  }
+
+  let matched = 0;
+  let enriched = 0;
+  let cursor = 0;
+  const started = Date.now();
+
+  async function worker() {
+    for (;;) {
+      const i = cursor++;
+      if (i >= titles.length) return;
+      const record = titles[i];
+      if (record.tmdbId) {
+        matched++;
+        continue;
+      }
+      const kind = record.kind === 'movie' ? 'movie' : 'tv';
+      const yearParam = kind === 'movie' ? `&year=${record.year}` : `&first_air_date_year=${record.year}`;
+      const search = await pacedGet(
+        `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false${yearParam}`,
+      );
+
+      // validate the top candidates against Wikipedia names so same-year
+      // namesakes can't win; the winner's payload already carries the fields
+      const wikiNames = [...record.directedBy, ...record.createdBy, ...record.cast.slice(0, 6).map((c) => c.name)];
+      let hit: TmdbSearchResult | null = null;
+      let hitDetails: any = null;
+      let bestScore = -1;
+      for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, maxCandidates)) {
+        const det = await pacedGet(`/${kind}/${candidate.id}?language=en-US&append_to_response=credits,videos`);
+        const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
+        const score = scoreNameOverlap(credits, wikiNames);
+        if (score > bestScore) {
+          bestScore = score;
+          hit = candidate;
+          hitDetails = det;
+        }
+        if (score >= 3) break; // a director match is decisive
+      }
+      if (!hit || bestScore <= 0) {
+        hit = pickTmdbMatch((search?.results ?? []) as TmdbSearchResult[], record.title, record.year);
+        hitDetails = null; // details for this one not fetched yet
+      }
+      if (!hit?.id) continue;
+      matched++;
+      record.tmdbId = hit.id;
+      // same URL shape as the candidate probes → one cache key per title
+      const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos`));
+      if (details && applyLiteEnrichment(record, details)) enriched++;
+    }
+  }
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, titles.length) }, worker));
+
+  const secs = Math.round((Date.now() - started) / 1000);
+  console.log(`→ TMDB archive-lite: ${matched}/${titles.length} matched, ${enriched} records enriched in ${secs}s`);
+  return { matched, enriched };
 }
 
 /**

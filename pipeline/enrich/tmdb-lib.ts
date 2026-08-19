@@ -131,3 +131,67 @@ export function pickTmdbTrailer(pools: TmdbVideo[][]): string | undefined {
   }
   return undefined;
 }
+
+export interface TmdbDetailsLite {
+  backdrop_path?: string | null;
+  genres?: { name?: string }[];
+  tagline?: string;
+  vote_average?: number;
+  vote_count?: number;
+  videos?: { results?: TmdbVideo[] };
+}
+
+/** Enrichable TitleRecord subset (structural — avoids importing the whole record type). */
+export interface LiteRecord {
+  genres: string[];
+  backdrop?: string;
+  tagline?: string;
+  rating?: { source: string; value: number; votes: number };
+  trailer?: string;
+  enrichedFrom?: string[];
+}
+
+/**
+ * Archive-lite field merge: fills ONLY empty gaps from one TMDB details
+ * payload (search-validated). Same gap-only discipline as the catalogue
+ * pass, minus episode work — record size and call budget stay small.
+ * Returns whether anything changed (drives `enrichedFrom` attribution).
+ */
+export function applyLiteEnrichment(record: LiteRecord, details: TmdbDetailsLite): boolean {
+  const sources = new Set(record.enrichedFrom ?? []);
+  let changed = false;
+
+  if (!record.backdrop && details.backdrop_path) {
+    record.backdrop = `https://image.tmdb.org/t/p/w780${details.backdrop_path}`;
+    changed = true;
+  }
+  if (record.genres.length === 0 && Array.isArray(details.genres)) {
+    const names = [...new Set(details.genres.map((g) => (g.name ?? '').trim()).filter(Boolean))].slice(0, 4);
+    if (names.length > 0) {
+      record.genres = names;
+      changed = true;
+    }
+  }
+  if (!record.tagline && typeof details.tagline === 'string' && details.tagline.trim()) {
+    record.tagline = details.tagline.trim();
+    changed = true;
+  }
+  const votes = details.vote_count ?? 0;
+  if (!record.rating && typeof details.vote_average === 'number' && votes >= 3) {
+    record.rating = { source: 'tmdb', value: details.vote_average, votes };
+    changed = true;
+  }
+  if (!record.trailer) {
+    const key = pickTmdbTrailer([(details.videos?.results ?? []) as TmdbVideo[]]);
+    if (key) {
+      record.trailer = `https://www.youtube.com/watch?v=${key}`;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    sources.add('tmdb');
+    record.enrichedFrom = [...sources];
+  }
+  return changed;
+}

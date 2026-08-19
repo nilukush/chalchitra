@@ -58,6 +58,11 @@ const yearsActive = person.facts.find((f) => f.label === 'Years active')?.value;
 const creditTitleRecords = person.credits
   .map((credit) => ({ credit, title: getTitleBySlug(credit.titleSlug, credit.kind) }))
   .filter((entry) => entry.title !== undefined);
+
+// IMDb/TMDB/Letterboxd all headline career-wide credit counts; the Wikipedia
+// filmography below is the career list, so the stat must match its scale
+// (catalogue-only reciprocal links would show "3" next to 57 works).
+const careerCredits = filmographyRows.length > 0 ? filmographyRows.length : person.credits.length;
 ---
 
 <Base title={person.name} description={description} image={person.image} type="article">
@@ -104,10 +109,10 @@ const creditTitleRecords = person.credits
           ))}
         </div>
 
-        <!-- quick stats -->
+        <!-- quick stats: career-wide credit count, like IMDb/TMDB headers -->
         <div class={`grid gap-2 text-center ${age !== null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div class="rounded-xl border border-ink-700/70 bg-ink-850/70 px-2 py-3">
-            <p class="font-display text-2xl font-bold text-saffron-400">{person.credits.length}</p>
+            <p class="font-display text-2xl font-bold text-saffron-400">{careerCredits}</p>
             <p class="text-[10px] font-semibold uppercase tracking-widest text-ivory-600">Credits</p>
           </div>
           {age !== null && (
@@ -176,25 +181,30 @@ const creditTitleRecords = person.credits
           </section>
         )}
 
-        <section class="mt-10" aria-labelledby="credits">
-          <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
-            Credits in our {stats.years.join(' & ')} catalogue <span class="text-lg text-ivory-600">({person.credits.length})</span>
-          </h2>
-          {person.credits.length > 0 ? (
-            <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {creditTitleRecords.map(({ credit, title }) => (
-                <div class="relative">
-                  {credit.role && (
-                    <p class="mb-1.5 line-clamp-1 text-xs text-ivory-500">{credit.role.replace(/^as /i, '')}</p>
-                  )}
-                  <PosterCard item={title} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p class="mt-4 text-ivory-500">No titles recorded yet.</p>
-          )}
-        </section>
+        {(person.filmography?.length ?? 0) === 0 && (
+          <section class="mt-10" aria-labelledby="credits">
+            <h2 id="credits" class="font-display text-2xl font-bold text-ivory-50">
+              Credits <span class="text-lg text-ivory-600">({person.credits.length})</span>
+            </h2>
+            <p class="mt-2 text-sm text-ivory-500">
+              Titles in our {stats.years.join(' & ')} catalogue — no Wikipedia filmography table found for this person yet.
+            </p>
+            {person.credits.length > 0 ? (
+              <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                {creditTitleRecords.map(({ credit, title }) => (
+                  <div class="relative">
+                    {credit.role && (
+                      <p class="mb-1.5 line-clamp-1 text-xs text-ivory-500">{credit.role.replace(/^as /i, '')}</p>
+                    )}
+                    <PosterCard item={title} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p class="mt-4 text-ivory-500">No titles recorded yet.</p>
+            )}
+          </section>
+        )}
 
         {(person.filmography?.length ?? 0) > 0 && (
           <section class="mt-10" aria-labelledby="filmography">

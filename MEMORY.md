@@ -468,3 +468,61 @@ ports 4730; commit per session; MEMORY.md append before finishing.
 .astro templates has corrupted markup twice — use the Edit tool for .astro files, and run
 `npm run build` after every component edit before declaring done (esbuild catches unbalanced
 braces that vitest doesn't).
+
+## Session 14 — 2026-08-19 (person-page audit round + archive TMDB-lite live) — COMPLETE
+
+**3-agent consensus round** (Debugger root causes w/ file:line / Analyzer online research /
+Verifier measurements), then TDD. 192/192 tests; 7,970 pages.
+
+**Parser bugs fixed (all TDD, tables.test.ts new):**
+1. `|+ caption` table lines leaked as rows ("+ List of Emraan Hashmi television credits")
+   → tables.ts line filter drops `|+`; NOT_A_WORK tolerates leading "+ ". Dataset-wide:
+   414 leak rows → 1.
+2. Status-word titles ("Filming", "TBA"…) promoted when real titles were template-wrapped
+   → clean.ts now unwraps {{small|nowrap|no wrap|nobr|Pending film|Pending series|X}}→X and
+   {{TableTBA}}/{{TBA}}→TBA; filmography STATUS_TITLE + bare-year gates. "Gunmaaster G9"
+   recovered (was rendered as "Filming"); status→notes. Empty-() roles fixed (0 left).
+3. Awards rowspan damage: Award column rowspan'd + category wikilinks ("… Award for …")
+   promoted to ceremony; 1,085 rows had award "—". → awards.ts carries lastAward/lastWork
+   (+year via category), routes category-article links to category, never fabricates "—",
+   rows need substance (category|work|result|year). "—" rows 1,085→0; category-as-award
+   681→303 (remainder are legitimately-shaped tables); Emraan 8 groups → 6 clean ones.
+   Residual known-noise: ~14 discography year-as-title rows, one "+Key", one "TBA" title.
+
+**Person page (research verdicts from Analyzer: IMDb/TMDB/Letterboxd):**
+- No peer site badges "in our catalog" on rows → **In-catalogue badge REMOVED** (★ rating
+  chip stays — IMDb rows show ratings). Link-only is the Wikipedia blue/red-link pattern.
+- All peers headline CAREER credit totals → sidebar tile now filmography-works count
+  (Emraan 57, was "3 Credits"). Fallback to credits count when no filmography.
+- No peer has a year-scoped credits section → "Credits in our 2026 catalogue" section now
+  renders ONLY for persons without filmography data (crew fallback), labeled plainly.
+- Poster placeholder: च brand tile on filmography rows read as broken Devanagari (user
+  report "च —") → neutral film/tv Icon tile (TMDB precedent: blank tile, no initials).
+- Awards collapse is PER CEREMONY after 10 (IMDb-style); Emraan's largest group is 4 → no
+  toggle by design. Wins·nominations summary already present.
+- Readability scores (Verifier): person page 6/10 (refs = 51% of text; sub-12px chips;
+  parser-damage rows — now fixed), references section 7/10 (chips on 136/136 rows work;
+  known gap: publisher labels un-normalized, 53 variants).
+
+**TMDB archive-lite pass (build-dataset + enrich/tmdb.ts enrichTitlesLite):** the old
+"12–38h" estimate was serial-client latency, not a TMDB limit (staff: ~50 req/s ceiling).
+New paced-concurrent pass (8 req/s global start-gate, 6 workers, credits-validated match,
+one append_to_response=credits,videos payload per title, sha1 disk cache) ran the whole
+built archive in **23 min: 5,019/5,319 matched, 4,906 enriched**. Archive coverage now:
+trailer 38.1%, rating 72.8%, genres 91.5%, tagline 89%, backdrop 76% (was 0/0/4.3%).
+TMDB_ARCHIVE_LITE=0 env skips it; re-runs are cache-hits (fast). Murder(2004): trailer +
+5.1★(39 votes) + Drama/Thriller + tagline. Remaining deliberate archive gaps: AI
+moods/hooks (cost), references/soundtrack/articleSections (record-size budget).
+
+**Plot/premise (Analyzer, MOS:FILM/MOS:TV):** films use "Plot" (400–700 w) — "Premise" is
+a TV-adopted heading (Plot/Premise/Synopsis/Overview allowed); per-episode plots live in
+"List of … episodes" subpages, not series articles. Our extractor already tries
+Plot→Premise→Synopsis in order; spoiler gate = our IMDb-style premise/synopsis split.
+
+**Known-for precedent:** IMDb top-4, TMDB 8 — our top-6 transparent score is in range.
+
+**Site state:** 7,970 pages (5,363 movies + 381 series + 2,219 persons + indexes), dev
+server restarted as `npm run preview` on 4730 (internal links are no-trailing-slash).
+Frontier still has ~24k pending works for future waves (`npm run pipeline:expand 5000`).
+
+**Edit-safety:** all .astro edits via Edit tool; build run after every component change.

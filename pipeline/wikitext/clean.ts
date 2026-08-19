@@ -15,6 +15,9 @@ const VALUE_TEMPLATES: Record<string, string> = {
   'circa': 'c. ',
   'c.': 'c. ',
   approx: '~',
+  // placeholders that render as text, not deletions
+  tabletba: 'TBA',
+  tba: 'TBA',
 };
 
 const ENTITIES: Record<string, string> = {
@@ -61,6 +64,18 @@ export function stripWikitext(raw: string): string {
     // {{lang|code|Text}} → Text
     text = text.replace(/\{\{\s*ill\s*\|\s*([^|}]+)[^{}]*\}\}/gi, (_m, first: string) => first.trim());
     text = text.replace(/\{\{\s*langx?\s*\|\s*[a-zA-Z-]+\s*\|\s*([^|}]+)[^{}]*\}\}/gi, (_m, shown: string) => shown.trim());
+
+    // More display-preserving templates: formatting wrappers keep their
+    // content ({{small|X}}, {{nowrap|X}}, …), {{Pending film|X}} keeps the
+    // announced title, and {{TableTBA}} renders as "TBA" on Wikipedia
+    text = text.replace(
+      /\{\{\s*(?:small|nowrap|no\s*wrap|nobr)\s*\|\s*([^{}|]+)[^{}]*\}\}/gi,
+      (_m, shown: string) => shown.trim(),
+    );
+    text = text.replace(
+      /\{\{\s*pending\s+(?:film|series)\s*\|\s*([^{}|]+)[^{}]*\}\}/gi,
+      (_m, shown: string) => shown.trim(),
+    );
 
     // Remaining templates removed innermost-first
     for (let i = 0; i < 20 && text.includes('{{'); i++) {

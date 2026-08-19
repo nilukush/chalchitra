@@ -66,3 +66,45 @@ describe('extractAwards (structured)', () => {
     expect(extractAwards('== Plot ==\ntext')).toEqual([]);
   });
 });
+
+// Real shapes from Emraan Hashmi's Accolades table (2026-08 session): the
+// Award column itself is rowspan'd, and continuation rows carry only a
+// category link + result — sometimes wikilinked to the award-CATEGORY
+// article ("… Award for …"), which used to be promoted to the ceremony name.
+const rowspanAwardPage = `
+== Accolades ==
+{| class="wikitable"
+! Year !! Film !! Award !! Category !! Result
+|-
+| 2011 || ''[[Murder 2]]'' || rowspan="2" | IIFA Awards || [[IIFA Award for Best Performance in a Negative Role|Best Performance in a Negative Role]] || {{nom}}
+|-
+| [[IIFA Award for Best Supporting Actor|Best Supporting Actor]] || {{nom}}
+|-
+| 2011 || ''[[Murder 2]]'' || rowspan="2" | [[Producers Guild Film Awards]] || [[Apsara Award for Best Actor in a Supporting Role|Best Actor in a Supporting Role]] || {{nom}}
+|-
+| [[Apsara Award for Best Actor in a Negative Role|Best Actor in a Negative Role]] || {{nom}}
+|}
+`;
+
+describe('extractAwards (rowspan award column)', () => {
+  it('carries the ceremony name down rowspan continuation rows', () => {
+    const rows = extractAwards(rowspanAwardPage);
+    const supporting = rows.find((r) => r.category === 'Best Supporting Actor');
+    expect(supporting).toMatchObject({ year: '2011', award: 'IIFA Awards', result: 'nominated' });
+    const negative = rows.find((r) => r.category === 'Best Actor in a Negative Role');
+    expect(negative).toMatchObject({ year: '2011', award: 'Producers Guild Film Awards', result: 'nominated' });
+  });
+
+  it('never promotes a wikilinked award-category article (… Award for …) to the ceremony field', () => {
+    const rows = extractAwards(rowspanAwardPage);
+    expect(rows.some((r) => /Best (Supporting|Negative) Actor/i.test(r.award))).toBe(false);
+    expect(rows.every((r) => r.awardWikiTitle !== 'Apsara Award for Best Actor in a Negative Role')).toBe(true);
+  });
+
+  it('never fabricates an "—" ceremony; continuation work rows carry the rowspan film', () => {
+    const rows = extractAwards(rowspanAwardPage);
+    expect(rows.some((r) => r.award === '—' || r.award === '')).toBe(false);
+    const supporting = rows.find((r) => r.category === 'Best Supporting Actor');
+    expect(supporting?.work).toBe('Murder 2');
+  });
+});

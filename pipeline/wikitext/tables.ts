@@ -28,7 +28,8 @@ export function parseWikitableView(table: string): WikitableView {
     const lines = chunk
       .split('\n')
       .map((l) => l.trimEnd())
-      .filter((l) => /^\s*[!|]/.test(l) && !/^\s*\|\}/.test(l) && l.trim() !== '');
+      // `|+ …` is the table CAPTION, not a data row; `{|`/`|}` are delimiters
+      .filter((l) => /^\s*[!|]/.test(l) && !/^\s*\|\}/.test(l) && !/^\s*\|\+/.test(l) && l.trim() !== '');
     if (lines.length === 0) continue;
     const cells: string[] = [];
     for (const line of lines) {

@@ -28,6 +28,20 @@ describe('stripWikitext', () => {
     expect(stripWikitext('Note{{efn|some footnote}} end')).toBe('Note end');
   });
 
+  it('unwraps display-preserving formatting templates to their first parameter', () => {
+    expect(stripWikitext('Prof. Kabir Anand ({{small|Agent Adonis}})')).toBe(
+      'Prof. Kabir Anand (Agent Adonis)',
+    );
+    expect(stripWikitext('{{nowrap|[[Netflix]] series}}')).toBe('Netflix series');
+    expect(stripWikitext('{{no wrap|8 episodes}}')).toBe('8 episodes');
+    expect(stripWikitext('{{nobr|TBA}}')).toBe('TBA');
+  });
+
+  it('unwraps {{Pending film}} keeping the real title and renders {{TableTBA}} as TBA', () => {
+    expect(stripWikitext('{{Pending film|Gunmaaster G9}}')).toBe('Gunmaaster G9');
+    expect(stripWikitext('{{TableTBA}}')).toBe('TBA');
+  });
+
   it('removes file/image links', () => {
     expect(stripWikitext('[[File:Poster.jpg|thumb|Some poster]] text')).toBe('text');
   });

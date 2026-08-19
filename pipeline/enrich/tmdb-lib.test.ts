@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap } from './tmdb-lib.js';
+import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap } from './tmdb-lib.js';
 
 describe('scoreNameOverlap', () => {
   const credits = {
@@ -131,5 +131,60 @@ describe('pickTmdbTrailer', () => {
 
   it('returns undefined for empty pools', () => {
     expect(pickTmdbTrailer([[], []])).toBeUndefined();
+  });
+});
+
+describe('applyLiteEnrichment (archive pass)', () => {
+  const details = {
+    backdrop_path: '/b.jpg',
+    genres: [{ id: 27, name: 'Thriller' }, { id: 53, name: 'Thriller' }, { id: 80, name: 'Crime' }],
+    tagline: 'Love kills.',
+    vote_average: 6.4,
+    vote_count: 41,
+    videos: { results: [{ key: 'tr1', type: 'Trailer', site: 'YouTube', official: true, name: 'Official trailer' }] },
+  } as any;
+
+  it('fills empty gaps: backdrop, deduped genres, tagline, rating (≥3 votes), trailer', () => {
+    const record = {
+      kind: 'movie',
+      genres: [],
+      backdrop: undefined,
+      tagline: undefined,
+      rating: undefined,
+      trailer: undefined,
+      enrichedFrom: [],
+    } as any;
+    const changed = applyLiteEnrichment(record, details);
+    expect(changed).toBe(true);
+    expect(record.genres).toEqual(['Thriller', 'Crime']);
+    expect(record.backdrop).toContain('/b.jpg');
+    expect(record.tagline).toBe('Love kills.');
+    expect(record.rating).toEqual({ source: 'tmdb', value: 6.4, votes: 41 });
+    expect(record.trailer).toBe('https://www.youtube.com/watch?v=tr1');
+    expect(record.enrichedFrom).toContain('tmdb');
+  });
+
+  it('never overwrites fields Wikipedia already provided', () => {
+    const record = {
+      kind: 'movie',
+      genres: ['Drama'],
+      backdrop: '/wiki.jpg',
+      tagline: 'Wiki hook',
+      rating: { source: 'tmdb', value: 9.9, votes: 5 },
+      trailer: 'https://www.youtube.com/watch?v=wiki',
+      enrichedFrom: [],
+    } as any;
+    const changed = applyLiteEnrichment(record, details);
+    expect(changed).toBe(false);
+    expect(record.genres).toEqual(['Drama']);
+    expect(record.tagline).toBe('Wiki hook');
+    expect(record.trailer).toBe('https://www.youtube.com/watch?v=wiki');
+    expect(record.enrichedFrom).toEqual([]);
+  });
+
+  it('ignores ratings with fewer than 3 votes', () => {
+    const record = { kind: 'movie', genres: [], enrichedFrom: [] } as any;
+    applyLiteEnrichment(record, { ...details, vote_count: 2 } as any);
+    expect(record.rating).toBeUndefined();
   });
 });
