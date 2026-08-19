@@ -526,3 +526,50 @@ server restarted as `npm run preview` on 4730 (internal links are no-trailing-sl
 Frontier still has ~24k pending works for future waves (`npm run pipeline:expand 5000`).
 
 **Edit-safety:** all .astro edits via Edit tool; build run after every component change.
+
+## Session 14 — STATE HANDOFF (read this first next session)
+
+**Where things stand (last commit c7c5ff1):** 192/192 tests, 7,970 pages (5,363 movies +
+381 series + 2,219 persons), 986px widths clean, toggles jsdom-verified. Person pages:
+Known for → Filmography → Awards → Life story → Sources; sidebar shows CAREER works count
+(filmography rows, fallback credits); no In-catalogue badge; neutral film/tv icon
+placeholder for poster-less rows; "Credits" grid only for persons WITHOUT filmography.
+Archive pages carry TMDB trailer/rating/genres/tagline/backdrop (38/73/92/89/76%).
+
+**Server on 4730 is `npm run preview` now** (was astro dev; killed + restarted after the
+rebuild). Internal links are no-trailing-slash — `/movies/murder` 200s, `/movies/murder/`
+404s on preview; that is expected, not a bug. User hard-refreshes; restart preview after
+every rebuild.
+
+**TMDB cache is warm** (data/cache/tmdb/, ~15k responses incl. all 5,319 built archive
+titles). `pipeline:dataset` now auto-enriches NEW archive titles at ~8 req/s (~4.4s/title
+network time, ~23 min per 5k fresh ones); `TMDB_ARCHIVE_LITE=0` skips. Politeness: TMDB
+staff ceiling ~50 req/s — never raise rps past ~10 without re-checking their docs; always
+honor 429/Retry-After (tmdbGet already retries).
+
+**Next moves (in order):**
+1. Continue archive waves: `npm run pipeline:expand 5000` per run (~25 min paced,
+   resumable) until frontier pending (~24k) hits 0; after each wave `npm run
+   pipeline:dataset && npm run build` (new titles fetch TMDB automatically) + spot-check
+   one person's internal-link rate (Emraan benchmark 94%) and build RSS < 2.5GB.
+2. Verifier thresholds from session 13 still apply: movies.json ≤100MB (check after ~6k
+   more archive records → per-decade JSON split if near), search index <5MB,
+   getStaticPaths slug-only props past ~10k pages.
+3. Small polish backlog (user-flagged, research-validated): publisher-chip label
+   normalization (53 variants e.g. "boxofficeindia.com" vs "Box Office India");
+   bump award-row chip type if it still reads small; ~16 discography year-as-title
+   straggler rows (Anu Malik/Mithoon/Imtiaz Ali class).
+
+**Deferred threads (deliberate):** AI moods/hooks for archive (API cost); archive
+references/soundtrack/articleSections (record-size budget — adding refs for ~5.9k archive
+pages ≈ +68k refs would blow the size cap); rating gate inconsistency (archive ≥3 votes vs
+catalogue ≥10) — unify if it ever looks wrong on a page; Emraan awards work-links 7/14
+(rest arrive with waves).
+
+**Standing user requirements (every session):** 3-agent consensus (Analyzer researches
+online, Debugger root-causes with file:line, Verifier measures) before building; TDD for
+all pipeline/pure logic; UI decisions must be research-backed; graphical over textual;
+commit per session; MEMORY.md append before finishing; ports 4730.
+
+**Edit-safety (unchanged, bit twice before):** Edit tool for .astro files (no python
+index-slicing), `npm run build` after every component edit before declaring done.

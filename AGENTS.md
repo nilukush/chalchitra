@@ -26,6 +26,10 @@
 ```bash
 npm run pipeline:titles   # ~10s
 npm run pipeline:fetch    # minutes; resumable via data/cache/pages
-npm run pipeline:dataset  # parses + fetches persons; resumable
+npm run pipeline:dataset  # parses + fetches persons; resumable. Also runs TMDB
+                          # archive-lite enrichment (needs TMDB_API_KEY): network-paced
+                          # ~8 req/s for NEW archive titles (~23 min per 5k); repeats
+                          # are disk-cache hits. TMDB_ARCHIVE_LITE=0 skips it.
+npm run pipeline:expand <n>  # archive wave fetcher (paced, cache-resumable)
 npm run build             # verify page count in output
 ```

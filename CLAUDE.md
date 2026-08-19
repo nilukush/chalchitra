@@ -8,7 +8,7 @@ Korean cinema is the planned next dataset.
 ## Commands
 - `npm run pipeline:all` — titles → fetch → dataset → trends (idempotent, disk-cached, polite ~1 req/s)
 - `npm run dev` / `npm run build` / `npm run preview` — port **4730** (non-standard by design)
-- `npm test` — vitest, 80 tests (wikitext parsers, dataset builders, trends scoring) — **TDD: extend tests first**
+- `npm test` — vitest, 192 tests (wikitext parsers, tables, TMDB merge logic, dataset builders, trends scoring) — **TDD: extend tests first**
 - Deploy env var: `SITE_URL` (canonical/OG/sitemap/JSON-LD base URL)
 
 ## Architecture
