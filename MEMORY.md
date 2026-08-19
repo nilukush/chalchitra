@@ -426,3 +426,45 @@ trailer modal opens on-site (youtube-nocookie embed), filter click verified.
 
 **Verified:** 176/176 tests, 3,182 pages, toggles (refs/film/award), 986px widths clean on
 Emraan/Wamiqa/Toxic/archive Murder/home, spoiler gate click-tested, awards badges + show-all.
+
+## Session 13 — STATE HANDOFF (read this first next session)
+
+**Where things stand (last commit 10624de):** 176/176 tests, 3,182 pages built, 986px clean.
+Person pages follow the research-backed order (Known for → Credits → Filmography → Awards →
+Life story → Sources) with the transparent fame-score known-for, poster-thumbed filmography
+rows, won/nominated badges with collapse-after-10, IMDb-style plot spoiler gate, publisher
+chips on references. Trailer plays in an on-page container (facade → youtube-nocookie embed).
+
+**CACHED BUT NOT YET BUILT:** the background wave finished AFTER the last dataset build —
+frontier now shows 5,359 accepted / 201 rejected / 24,233 pending. The 5,359 pages are on
+disk in data/cache/pages but data/*.json and dist/ still reflect only the first 531. **Next
+session's first move:** `npm run pipeline:dataset && npm run build` (≈2-4 min) → site goes
+to ~7,900 pages. Verify build RSS stays <2.5GB; if movies.json nears ~50MB (≈6k more archive
+records), implement the per-decade JSON split BEFORE continuing waves (see thresholds below).
+
+**Continuing the archive (the 29,793-works mandate):** `npm run pipeline:expand 5000` per run
+(~25 min paced, resumable); repeat until pending hits 0 (~5 more runs). Optional focus:
+`EXPAND_FOCUS=<person-slug> npm run pipeline:expand <n>` hoists one person's works first.
+Politeness rule #3 is wired in (1100ms pacing in wiki-api.ts) — never bypass, never
+FORCE_REFRESH during expansion. After each wave: dataset + build + spot-check one person's
+internal-link rate (Emraan benchmark: 94%).
+
+**Deferred threads (deliberate, with rationale in session notes):**
+- TMDB enrichment for archive titles (12-38h at current call pattern) — a dedicated TMDB-lite
+  pass (search+details only) is the upgrade path when wanted.
+- AI hooks/moods for archive titles (cost) — fields already optional in the UI.
+- getStaticPaths passes full records as props — fine at ~8k pages; switch to slug-only past ~10k.
+- Search index grows ~1.5KB/100 archive docs — review at 5MB.
+- Emraan awards: 7/14 work-links internal (rest arrive with waves).
+
+**Standing user requirements (every session):** 3-agent consensus (Analyzer researches online,
+Debugger root-causes with file:line evidence, Verifier measures/quantifies) before building;
+TDD for all pipeline/pure logic; UI decisions must be research-backed (user rejects
+unresearched design); graphical over textual; user hard-refreshes — never blame cache;
+restart `astro preview` after every rebuild (stale server caused two false bug reports);
+ports 4730; commit per session; MEMORY.md append before finishing.
+
+**Edit-safety lessons (this project's recurring failure mode):** python index()-slicing on
+.astro templates has corrupted markup twice — use the Edit tool for .astro files, and run
+`npm run build` after every component edit before declaring done (esbuild catches unbalanced
+braces that vitest doesn't).
