@@ -78,6 +78,7 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
     for (const table of section.body.match(/\{\|[\s\S]*?\|\}/g) ?? []) {
       const view = parseWikitableView(table);
       const fields = view.header?.map((h) => HEADER_FIELD[h] ?? null) ?? null;
+      const hasWorkColumn = fields?.some((f) => f === 'work') ?? false;
       let lastYear: string | undefined;
       let lastResult: AwardResult = '';
       let lastAward = '';
@@ -86,9 +87,9 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
       let lastWorkWiki: string | undefined;
 
       for (const cells of view.rows) {
-        const texts = cells.map((c) => c.trim()).filter((t) => t !== '');
-        if (texts.length === 0) continue;
-        const aligned = fields !== null && texts.length === fields.length;
+        if (cells.every((c) => c.trim() === '')) continue;
+        // rows come rowspan-expanded and positionally aligned with the header
+        const aligned = fields !== null && cells.length === fields.length;
 
         let year: string | undefined;
         let award = '';
@@ -98,7 +99,9 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
         let workWikiTitle: string | undefined;
         let result: AwardResult | null = null;
 
-        texts.forEach((text, i) => {
+        cells.forEach((rawCell, i) => {
+          const text = rawCell.trim();
+          if (text === '') return;
           const field = aligned ? (fields![i] ?? null) : null;
           if (YEARISH.test(text) && year === undefined) {
             year = text;
@@ -138,15 +141,17 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
           }
         });
 
-        // rowspan carry-forward: ceremony name and film often span the
-        // continuation rows of one nomination group
+        // rowspan carry-forward: ceremony, film and year often span the
+        // continuation rows of one nomination group. A work is inherited when
+        // the ceremony was carried (award-column rowspan) OR when the table
+        // itself declares a work column whose cell this row left empty.
         let carriedAward = false;
         if (award === '' && lastAward) {
           award = lastAward;
           awardWikiTitle = lastAwardWiki;
           carriedAward = true;
         }
-        if (work === undefined && carriedAward && lastWork) {
+        if (work === undefined && lastWork && (carriedAward || hasWorkColumn)) {
           work = lastWork;
           workWikiTitle = lastWorkWiki;
         }

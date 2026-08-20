@@ -18,15 +18,20 @@ const IMG = 'https://image.tmdb.org/t/p';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
+/** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt). */
+function readTmdbCache(pathAndQuery: string): any | undefined {
   const cacheFile = path.join(CACHE_DIR, `${createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20)}.json`);
-  if (existsSync(cacheFile)) {
-    try {
-      return JSON.parse(readFileSync(cacheFile, 'utf8'));
-    } catch {
-      /* refetch */
-    }
+  if (!existsSync(cacheFile)) return undefined;
+  try {
+    return JSON.parse(readFileSync(cacheFile, 'utf8'));
+  } catch {
+    return undefined; // corrupt → refetch
   }
+}
+
+async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
+  const cached = readTmdbCache(pathAndQuery);
+  if (cached !== undefined) return cached;
   const url = `${API}${pathAndQuery}${pathAndQuery.includes('?') ? '&' : '?'}api_key=${apiKey}`;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await sleep(1000 * 2 ** attempt);
@@ -87,6 +92,10 @@ export async function enrichTitlesLite(
   const gate = startGate(Math.round(1000 / rps));
 
   async function pacedGet(pathAndQuery: string): Promise<any | null> {
+    // Cache hits skip the rate gate entirely — re-runs must not pay network
+    // pacing for responses already on disk (was: ~30 min of pure sleeping).
+    const cached = readTmdbCache(pathAndQuery);
+    if (cached !== undefined) return cached;
     await gate();
     return tmdbGet(pathAndQuery, apiKey);
   }

@@ -108,3 +108,82 @@ describe('extractAwards (rowspan award column)', () => {
     expect(supporting?.work).toBe('Murder 2');
   });
 });
+
+// Verbatim shape of the REAL Emraan Hashmi Accolades table (session 15 user
+// report): the FILM column carries the rowspan while the award is restated
+// per row — the inverse of the fixture above. Used to lose Shanghai etc.
+const rowspanFilmPage = `
+== Accolades ==
+{| class="wikitable"
+|-
+! Year
+! Film
+! Award
+! Category
+! Result
+! Ref.
+|-
+| rowspan="2"|2007
+| rowspan="2"|''[[Gangster (2006 film)|Gangster]]''
+| [[Filmfare Awards]]
+| [[Filmfare Award for Best Performance in a Negative Role|Best Performance in a Negative Role]]
+| {{nom}}
+| <ref>{{cite web|url=x}}</ref>
+|-
+| [[International Indian Film Academy Awards|IIFA Awards]]
+| [[IIFA Award for Best Performance in a Negative Role|Best Performance in a Negative Role]]
+| {{nom}}
+| <ref>{{cite web|url=x}}</ref>
+|-
+| rowspan="3"|2013
+| rowspan="3"|''[[Shanghai (2012 film)|Shanghai]]''
+| Filmfare Awards
+| Best Supporting Actor
+| {{nom}}
+| <ref>{{cite web|url=x}}</ref>
+|-
+| Screen Awards
+| [[Screen Award for Best Supporting Actor|Best Supporting Actor]]
+| {{nom}}
+| <ref>{{cite web|url=x}}</ref>
+|-
+| Stardust Awards
+| Best Actor – Thriller/Action
+| {{nom}}
+| <ref>{{cite web|url=x}}</ref>
+|}
+`;
+
+describe('extractAwards (rowspan film column — the Shanghai bug)', () => {
+  it('continuation rows inherit the rowspan film and year', () => {
+    const rows = extractAwards(rowspanFilmPage);
+    const screen = rows.find((r) => r.award === 'Screen Awards' && r.category === 'Best Supporting Actor');
+    expect(screen).toMatchObject({
+      year: '2013',
+      work: 'Shanghai',
+      workWikiTitle: 'Shanghai (2012 film)',
+      result: 'nominated',
+    });
+    const iifa = rows.find((r) => r.award === 'IIFA Awards');
+    expect(iifa).toMatchObject({ year: '2007', work: 'Gangster', workWikiTitle: 'Gangster (2006 film)' });
+    const stardust = rows.find((r) => r.award === 'Stardust Awards' && r.year === '2013');
+    expect(stardust?.work).toBe('Shanghai');
+  });
+
+  it('never inherits a work when the table has no work column', () => {
+    const noWorkColumn = `
+== Awards ==
+{| class="wikitable"
+|-
+! Year !! Award !! Category !! Result
+|-
+| 2011 || Filmfare Awards || Best Supporting Actor || {{nom}}
+|-
+| 2011 || Screen Awards || Best Villain || {{nom}}
+|}
+`;
+    const rows = extractAwards(noWorkColumn);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.work === undefined)).toBe(true);
+  });
+});

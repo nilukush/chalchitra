@@ -19,6 +19,7 @@ import {
   extractSoundtrack,
   findAwardsSubpage,
   findFilmographySubpage,
+  findPlotSection,
   getSection,
   listSectionTitles,
   parseInfobox,
@@ -149,7 +150,7 @@ function imageFilenameFromInfobox(value: string | undefined): string | null {
 /** Sections rendered elsewhere (plot, cast, tables) or pure navigation → excluded
  *  from the article deep-dive text. */
 const SKIP_ARTICLE_SECTIONS =
-  /^(references?|external links?|see also|notes?|citations?|further reading|bibliography|sources?|footnotes?|gallery|trivia|plot|premise|synopsis|cast( and (characters|crew))?|main cast|principal cast|recurring|guest|cameo appearances|voice cast|episodes?|series overview|season \d+|soundtracks?|music|music \(album\)|songs?|soundtrack album|marketing|promotion)$/i;
+  /^(references?|external links?|see also|notes?|citations?|further reading|bibliography|sources?|footnotes?|gallery|trivia|plots?|plot (summary|synopsis)|premise|synops(is|es)|story|cast( and (characters|crew))?|main cast|principal cast|recurring|guest|cameo appearances|voice cast|episodes?|series overview|season \d+|soundtracks?|music|music \(album\)|songs?|soundtrack album|marketing|promotion)$/i;
 
 function extractArticleSections(wikitext: string): { title: string; text: string }[] {
   return extractSections(wikitext)
@@ -178,10 +179,7 @@ function parseTitlePage(
   const website = box.website ? stripWikitext(box.website) : undefined;
   const official = external.official ?? (website && /^https?:\/\//.test(website) ? website : undefined);
 
-  const plot =
-    getSection(wikitext, 'Plot') ??
-    getSection(wikitext, 'Premise') ??
-    getSection(wikitext, 'Synopsis');
+  const plot = findPlotSection(wikitext);
   const reception =
     getSection(wikitext, 'Reception') ??
     getSection(wikitext, 'Critical response') ??
@@ -529,8 +527,7 @@ async function main() {
   for (const record of [...movies, ...series]) {
     if (record.archive) continue; // archive records keep plain plots — linked HTML doubles record size
     const wikitext = titlePages.get(record.wikiTitle)?.wikitext ?? '';
-    const rawPlot =
-      getSection(wikitext, 'Plot') ?? getSection(wikitext, 'Premise') ?? getSection(wikitext, 'Synopsis');
+    const rawPlot = findPlotSection(wikitext);
     if (!rawPlot) continue;
     record.plotHtml = renderLinkedHtml(rawPlot, lookup) || undefined;
     if (record.plotHtml) plotLinkCount += (record.plotHtml.match(/<a /g) ?? []).length;

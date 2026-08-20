@@ -573,3 +573,88 @@ commit per session; MEMORY.md append before finishing; ports 4730.
 
 **Edit-safety (unchanged, bit twice before):** Edit tool for .astro files (no python
 index-slicing), `npm run build` after every component edit before declaring done.
+
+## Session 15 — 2026-08-20 (data-completeness audit) — ANALYSIS + PLAN DONE, AWAITING USER GO
+
+3-agent consensus round; every user-reported case verified against cached wikitext +
+dataset. **Full findings + 8-step plan in `SESSION-15-ANALYSIS-PLAN.md` (read that
+first).** Root causes, all with file:line evidence:
+
+1. **Awards work-title loss (Emraan/Screen/Shanghai)**: rowspan sits on the FILM
+   column; tables.ts strips span attrs, alignment breaks, and awards.ts:143-152 gates
+   lastWork carry on carriedAward (only models rowspan-on-AWARD). 1,865/6,154 rows
+   missing work dataset-wide. Fix = rowspan-expanded grid in parseWikitableView.
+2. **No recursive persons**: person universe fixed from catalogue titles
+   (build-dataset.ts:259-292); archive branch resolves cast vs known persons ONLY
+   ("no new person discovery", :463-476). Aadhi Pinisetty not in persons.json;
+   archive cast link rate 29.5%. Fix = wave-based person-lite expansion (plan Step 7,
+   AFTER pagination/size work).
+3. **Multi-season episodes missing**: 0 "List of X episodes" subpages cached;
+   episodes.ts never tags season (UI defaults all rows to S1); tmdb.ts hardcodes
+   season/1 (:243) and synthesis blocked when any wiki table exists (:257). Only 1
+   series has >1 season of rows.
+4. **Soundtracks 0 on archive**: build-dataset.ts:460 deletes the field outright;
+   parser only knows {{Track listing}}. The Family Man has ==Music== unparsed.
+5. **No title-page awards**: TitleRecord has no awards field; extractAwards runs
+   persons-only. 0 titles carry awards. (IMDb carries awards on every title page —
+   feature is research-backed.)
+6. **Plot heading variants**: getSection exact-match only; Crime Beat's
+   "== Plot summary ==" missed. Series plot coverage 60.1%.
+7. **No pagination**: all 3 indexes render every card (movies index = 7.06MB HTML);
+   paginate() unused anywhere; search index extrapolates to ~16MB at 1 lakh docs.
+8. **No freshness**: cache has no TTL, FORCE_REFRESH nukes everything, no cron;
+   trends.json 4 days stale. Standard fix (researched): daily lastrevid-diff refresh +
+   TMDB /changes delta + GH Actions cron.
+
+**Plan order**: 1 rowspan grid → 2 plot aliases → 3 title awards → 4 multi-season
+episodes (subpage follower + TMDB per-season) → 5 soundtrack re-enable → 6 paginate()
++ JSON chunking (MUST precede 7) → 7 recursive person-lite waves (Mayasabha fix) →
+8 freshness pipeline. Each step: TDD with verbatim cached-wikitext fixtures, size
+thresholds measured, Emraan benchmark spot-checks.
+
+**Answers given**: hero collage IS data-driven (hotTitles→latestMovies fallback,
+index.astro:19); trending people = 7-day pageviews recency-weighted (last-2-days ×1.0,
+earlier ×0.5); "archive" = the 29,793-works expansion tier (TMDB-lite moved its
+trailer/rating/genres 0→38/73/92%); coverage scoreboard delivered (what % of each
+datum is captured — see plan Part 0).
+
+Baseline: 192/192 tests green, no code changed this session. Next session: execute
+plan Step 1 onward after user approval.
+
+## Session 15 (continued) — 2026-08-20 — PRODUCT DECISIONS + Steps 1–2 SHIPPED
+
+**User product decisions (binding, recorded in SESSION-15-ANALYSIS-PLAN.md v2):**
+1. ONE tier — no catalogue/archive fidelity split; every title gets the full parse.
+   The Session-13 "archive-lite no-new-persons, no-soundtrack" scoping is OVERRULED.
+2. Recursion is unbounded graph traversal (title→cast→person→filmography→titles→…).
+   Cache census: 109,366 unique wikilink targets = the frontier's shape.
+3. Real-time freshness approved WITH budget ("will try and pay", ≈$0–5/mo target):
+   EventStreams consumer + partial rebuilds; >20k pages → on-demand rendering
+   (Cloudflare free static hosting caps ≈20k files/deploy).
+4. Seasons: ON-PAGE multi-season is the primary gap (65 pages carry ≥2 complete
+   Season-N sections we drop after the first match) — subpages are secondary.
+5. Plot: all heading variants must parse; premise visible + full plot behind the
+   existing spoiler toggle, everywhere a Wikipedia plot exists.
+
+**Shipped this session (TDD, 202/202 tests, build 7,970 pages, preview restarted):**
+- **Step 1 rowspan grid**: `parseWikitableView` now expands rowspan/colspan into a
+  positionally-aligned grid (MediaWiki semantics; empty cells preserved). awards.ts
+  iterates positionally; work-carry fires when the table DECLARES a work column (never
+  fabricates in work-less tables). **Awards missing-work 30.3%→10.2% (1,238 works
+  recovered); Emraan 10→0 — Shanghai on the Screen Awards rows, verified live.**
+- **Step 2 plot aliases**: `findPlotSection` (plot|premise|synopsis|plot summary|plot
+  synopsis|story, MOS-ordered; exact-match so "Plot and cast" can't match) + variants
+  in SKIP_ARTICLE_SECTIONS. Crime Beat plot renders (premise + gated); +20 titles.
+- **F9 fix — TMDB gate was sleeping on cache hits** (the "hang": 15 min, 0 sockets,
+  0 cache writes = pure timer sleeps): pacedGet now reads the disk cache BEFORE the
+  8 req/s start-gate. **Archive-lite re-run ~30 min → 2s**, same 5,019/5,319+4,906.
+- **F10 trade (documented, not a regression)**: grid aligns musicians' FILM column, so
+  filmographies now list films (Tanishk 240→133 rows; +Dhadak 2/Baaghi 4/Tehran; lost
+  rows were song titles + noise like "Atif Aslam" as works). Net filmography
+  122,629→121,885 (−0.6%); Emraan benchmark holds (57 rows / 94% linked). Song data
+  returns as a REAL discography parser in plan Step 5b.
+
+**Next session:** plan Step 3 (title-page awards) → Step 4 (multi-season episodes,
+on-page first) → Step 5/5b (soundtracks + discography) → Step 6 (pagination+chunking,
+prereq) → Step 7 (recursive persons) → Step 8 (real-time). Verify-toggles + link-check
+after UI-touching steps as usual.
