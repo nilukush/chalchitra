@@ -29,7 +29,7 @@ export interface FilmographySection {
 }
 
 const WORK_SECTIONS =
-  /(filmograph|\bfilm\b|\bfilms\b|\bmovies\b|television|discography|videography|notable works|music videos|web series)/i;
+  /(filmograph|\bfilm\b|\bfilms\b|\bmovies\b|television|videography|notable works|music videos|web series)/i;
 
 const WORK_SUBSECTION =
   /^as\s+(an?\s+)?(actor|actress|director|producer|writer|host|singer|artist|dancer|composer|playback)/i;
@@ -261,4 +261,146 @@ export function findAwardsSubpage(pageWikitext: string): string | null {
     if (/^list of awards/i.test(target)) return target;
   }
   return null;
+}
+
+/** `{{Main|X discography}}` → the discography subpage title, or null. */
+export function findDiscographySubpage(pageWikitext: string): string | null {
+  const templates = findTemplates(pageWikitext ?? '', /^(main|main\s*list|main\s*article)$/i);
+  for (const t of templates) {
+    const target = (t.params['1'] ?? '').replace(/<[^>]+>/g, '').trim();
+    if (/discography/i.test(target)) return target;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Discography: songs as first-class rows (Year | Film | Track(s) | Singer(s)).
+// The filmography walker deliberately no longer enters discography sections —
+// there the FILM column is context, not the work; the song is the work.
+// ---------------------------------------------------------------------------
+
+export interface DiscographyRow {
+  year?: string;
+  song: string;
+  songWikiTitle?: string;
+  film?: string;
+  filmWikiTitle?: string;
+  singers?: string;
+  writers?: string;
+}
+
+export interface DiscographySection {
+  heading: string;
+  rows: DiscographyRow[];
+}
+
+const DISC_SECTIONS = /(discography|\bsongs?\b|as\s+(an?\s+)?(singer|composer|lyricist|music director|playback))/i;
+
+const DISC_HEADER_FIELD: Record<string, 'year' | 'film' | 'song' | 'singers' | 'writers' | null> = {
+  year: 'year',
+  film: 'film',
+  movie: 'film',
+  album: 'film',
+  for: 'film',
+  show: 'film',
+  serie: 'film',
+  series: 'film',
+  track: 'song',
+  song: 'song',
+  title: 'song',
+  name: 'song',
+  singer: 'singers',
+  vocal: 'singers',
+  artist: 'singers',
+  writer: 'writers',
+  lyric: 'writers',
+  poet: 'writers',
+};
+
+const DISC_JUNK_SONG =
+  /^(tba|track|track\(s\)|song|title|notes?|ref\.?|references?|#|no\.?|total)$/i;
+
+export function extractDiscography(pageWikitext: string, limit = 600): DiscographySection[] {
+  const sections: DiscographySection[] = [];
+  let current: DiscographySection | null = null;
+  let active = false;
+  let activeLevel = 0;
+  let buffer: string[] = [];
+
+  const flush = () => {
+    if (!current || buffer.length === 0) {
+      buffer = [];
+      return;
+    }
+    for (const table of buffer.join('\n').match(/\{\|[\s\S]*?\|\}/g) ?? []) {
+      const view = parseWikitableView(table);
+      if (!view.header) continue;
+      const fields = view.header.map((h) => DISC_HEADER_FIELD[h] ?? null);
+      if (!fields.includes('song')) continue;
+      for (const cells of view.rows) {
+        const aligned = cells.length === fields.length;
+        const row: Partial<DiscographyRow> = {};
+        cells.forEach((raw, i) => {
+          const text = raw.trim();
+          if (text === '' || !aligned) return;
+          const field = fields[i];
+          if (!field) return;
+          const display = stripWikitext(text).replace(/\s+/g, ' ').trim();
+          if (!display) return;
+          if (field === 'year' && row.year === undefined) {
+            row.year = display;
+          } else if (field === 'film' && row.film === undefined) {
+            row.film = display.replace(/^''+|''+$/g, '');
+            row.filmWikiTitle = extractWikiLinks(text)[0]?.target;
+          } else if (field === 'song' && row.song === undefined) {
+            const link = extractWikiLinks(text)[0];
+            row.song = display.replace(/^["“”]+|["“”]+$/g, '');
+            row.songWikiTitle = link?.target;
+          } else if (field === 'singers' && row.singers === undefined) {
+            row.singers = display;
+          } else if (field === 'writers' && row.writers === undefined) {
+            row.writers = display;
+          }
+        });
+        if (typeof row.song === 'string' && row.song.length > 1 && !DISC_JUNK_SONG.test(row.song)) {
+          current.rows.push(row as DiscographyRow);
+        }
+      }
+    }
+    buffer = [];
+  };
+
+  for (const line of (pageWikitext ?? '').split('\n')) {
+    const heading = HEADING.exec(line);
+    if (heading) {
+      flush();
+      const level = heading[1].length;
+      const title = heading[2].replace(/\[edit\]/gi, '').trim();
+      if (DISC_SECTIONS.test(title)) {
+        if (current && current.rows.length > 0) sections.push(current);
+        current = { heading: title, rows: [] };
+        active = true;
+        activeLevel = level;
+      } else if (active && level > activeLevel) {
+        // deeper subsection inside the discography block → its own bucket
+        if (current && current.rows.length > 0) sections.push(current);
+        current = current ? { heading: title, rows: [] } : null;
+      } else if (active && level <= activeLevel) {
+        if (current && current.rows.length > 0) sections.push(current);
+        current = null;
+        active = false;
+      }
+    } else if (active && current) {
+      buffer.push(line);
+    }
+  }
+  flush();
+  if (current && current.rows.length > 0) sections.push(current);
+
+  let total = 0;
+  for (const s of sections) {
+    if (total + s.rows.length > limit) s.rows = s.rows.slice(0, Math.max(0, limit - total));
+    total += s.rows.length;
+  }
+  return sections.filter((s) => s.rows.length > 0);
 }

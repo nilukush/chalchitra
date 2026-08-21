@@ -1,65 +1,227 @@
 {
-  "generatedAt": "2026-08-21T10:39:36.919Z",
+  "generatedAt": "2026-08-21T13:12:17.205Z",
   "movies": 5363,
   "series": 381,
   "persons": 2219,
   "years": [
-    2026
+    2026,
+    2025,
+    2024,
+    2023,
+    2022,
+    2021,
+    2020,
+    2019,
+    2018,
+    2017,
+    2016,
+    2015,
+    2014,
+    2013,
+    2012,
+    2011,
+    2010,
+    2009,
+    2008,
+    2007,
+    2006,
+    2005,
+    2004,
+    2003,
+    2002,
+    2001,
+    2000,
+    1999,
+    1998,
+    1997,
+    1996,
+    1995,
+    1994,
+    1993,
+    1992,
+    1991,
+    1990,
+    1989,
+    1988,
+    1987,
+    1986,
+    1985,
+    1984,
+    1983,
+    1982,
+    1981,
+    1980,
+    1975
   ],
   "languages": [
     {
-      "language": "Hindi",
-      "movies": 77,
-      "series": 34
+      "language": "Tamil",
+      "movies": 1395,
+      "series": 77
     },
     {
-      "language": "Tamil",
-      "movies": 83,
+      "language": "Hindi",
+      "movies": 1229,
+      "series": 219
+    },
+    {
+      "language": "Malayalam",
+      "movies": 1036,
       "series": 20
     },
     {
       "language": "Telugu",
-      "movies": 63,
-      "series": 1
+      "movies": 1005,
+      "series": 26
     },
     {
       "language": "Kannada",
-      "movies": 41,
-      "series": 1
-    },
-    {
-      "language": "Malayalam",
-      "movies": 39,
-      "series": 1
+      "movies": 276,
+      "series": 3
     },
     {
       "language": "Bengali",
-      "movies": 18,
-      "series": 0
+      "movies": 136,
+      "series": 9
     },
     {
       "language": "Marathi",
-      "movies": 15,
-      "series": 2
+      "movies": 89,
+      "series": 9
+    },
+    {
+      "language": "Tamil, Telugu",
+      "movies": 28,
+      "series": 1
+    },
+    {
+      "language": "Hindi, English",
+      "movies": 14,
+      "series": 7
+    },
+    {
+      "language": "Telugu, Tamil",
+      "movies": 17,
+      "series": 0
     },
     {
       "language": "Gujarati",
-      "movies": 9,
+      "movies": 12,
+      "series": 0
+    },
+    {
+      "language": "Malayalam, Tamil",
+      "movies": 11,
       "series": 0
     },
     {
       "language": "Punjabi",
-      "movies": 2,
-      "series": 0
+      "movies": 9,
+      "series": 1
     },
     {
       "language": "Telugu, Hindi",
+      "movies": 8,
+      "series": 0
+    },
+    {
+      "language": "English, Hindi",
+      "movies": 6,
+      "series": 1
+    },
+    {
+      "language": "English",
+      "movies": 6,
+      "series": 1
+    },
+    {
+      "language": "Tamil, Hindi",
+      "movies": 7,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Punjabi",
+      "movies": 6,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Tamil",
+      "movies": 5,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Telugu",
+      "movies": 3,
+      "series": 1
+    },
+    {
+      "language": "Hindi, Tamil",
+      "movies": 3,
+      "series": 1
+    },
+    {
+      "language": "Tamil, English",
       "movies": 2,
+      "series": 1
+    },
+    {
+      "language": "Tulu",
+      "movies": 3,
+      "series": 0
+    },
+    {
+      "language": "Telugu, Kannada",
+      "movies": 3,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Kannada, Telugu",
+      "movies": 3,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Malayalam",
+      "movies": 3,
       "series": 0
     },
     {
       "language": "Kannada, Telugu",
-      "movies": 1,
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Marathi, Hindi",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Rajasthani",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Telugu, Hindi",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Hindi, English",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Urdu",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Malayalam, Kannada",
+      "movies": 2,
+      "series": 0
+    },
+    {
+      "language": "Bengali, Hindi",
+      "movies": 2,
       "series": 0
     },
     {
@@ -69,11 +231,6 @@
     },
     {
       "language": "Tamil, Korean, English",
-      "movies": 1,
-      "series": 0
-    },
-    {
-      "language": "English, Hindi",
       "movies": 1,
       "series": 0
     },
@@ -103,16 +260,6 @@
       "series": 0
     },
     {
-      "language": "Marathi, Hindi",
-      "movies": 1,
-      "series": 0
-    },
-    {
-      "language": "Hindi, Punjabi",
-      "movies": 1,
-      "series": 0
-    },
-    {
       "language": "Kannada, Hindi",
       "movies": 1,
       "series": 0
@@ -133,12 +280,127 @@
       "series": 0
     },
     {
-      "language": "Tamil, Telugu",
+      "language": "Malayalam, Hindi, Marathi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Bengali, English",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Marathi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi.",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Telugu, Tamil, Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Tulu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Spanish, English, Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Bengali, Hindi, English, Arabic",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hinglish",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Malayalam (Jeseri), Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Tamil, Kannada",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Bangla",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Malayalam, Telugu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Telugu & Tamil",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi/Urdu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Kannada, Telugu, Hindi, Tamil",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Bundeli",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Malayalam<!--, Tamil-->",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Punjabi/Hindi",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Hindi, Tamil, Telugu",
+      "movies": 1,
+      "series": 0
+    },
+    {
+      "language": "Punjabi, Hindi",
       "movies": 1,
       "series": 0
     },
     {
       "language": "Tamil (Original), Telugu, Kannada, Hindi, Malayalam.",
+      "movies": 0,
+      "series": 1
+    },
+    {
+      "language": "Bengali, English, Hindi, Urdu",
+      "movies": 0,
+      "series": 1
+    },
+    {
+      "language": "Season:1, Tamil, Kannada''', Season: 2''', Kannada",
+      "movies": 0,
+      "series": 1
+    },
+    {
+      "language": "Haryanvi, Hindi, Tamil, English",
       "movies": 0,
       "series": 1
     }

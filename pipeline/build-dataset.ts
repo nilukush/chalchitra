@@ -14,6 +14,8 @@ import {
   extractEpisodes,
   extractExternalLinks,
   extractFilmography,
+  extractDiscography,
+  findDiscographySubpage,
   findEpisodesSubpage,
   findSoundtrackSubpage,
   extractReferences,
@@ -31,7 +33,7 @@ import {
   parseStartDate,
 } from './wikitext/index.js';
 import type { AwardRow } from './wikitext/awards.js';
-import type { FilmographySection } from './wikitext/filmography.js';
+import type { DiscographySection, FilmographySection } from './wikitext/filmography.js';
 import { renderLinkedHtml, type LinkLookup } from './wikitext/linked-html.js';
 import { enrichPersons, enrichTitles, enrichTitlesLite } from './enrich/tmdb.js';
 import { enrichWithAi } from './enrich/ai.js';
@@ -407,6 +409,23 @@ async function main() {
       }
     }
 
+    // discography: same subpage-first merge (the discography subpage is often
+    // the same {{Main|X discography}} page the filmography union fetched)
+    const discSub = findDiscographySubpage(page.wikitext ?? '');
+    const discSubPage = discSub ? subpages.get(discSub) : undefined;
+    const discography: DiscographySection[] = [];
+    for (const source of [discSubPage?.wikitext, page.wikitext]) {
+      if (!source) continue;
+      for (const section of extractDiscography(source)) {
+        const existing = discography.find((s) => s.heading === section.heading);
+        if (!existing) discography.push(section);
+        else {
+          const known = new Set(existing.rows.map((r) => r.song));
+          existing.rows.push(...section.rows.filter((r) => !known.has(r.song)));
+        }
+      }
+    }
+
     const awardRows: AwardRow[] = [];
     for (const source of [awardsSubPage?.wikitext, page.wikitext]) {
       if (!source) continue;
@@ -429,6 +448,7 @@ async function main() {
       references: extractReferences(page.wikitext ?? ''),
       awards: awardRows.length > 0 ? awardRows : undefined,
       filmography: filmography.length > 0 ? filmography : undefined,
+      discography: discography.length > 0 ? discography : undefined,
       bio: extractBioSections(page.wikitext ?? ''),
       sections: listSectionTitles(page.wikitext).filter((s) => !BORING_SECTIONS.has(s)),
     });
@@ -624,11 +644,10 @@ async function main() {
     person.knownFor = computeKnownFor(person, titleByWiki, YEAR);
   }
 
-  // stats — years/languages describe the current editorial catalogue only;
-  // archive records join the site without polluting "of YYYY" copy
-  const catalogueRecords = [...movies, ...series].filter((t) => !t.archive);
+  // stats — single-tier mandate (2026-08-20): years/languages describe EVERY
+  // record on the site, catalogue + archive alike
   const languageMap = new Map<string, { movies: number; series: number }>();
-  for (const record of catalogueRecords) {
+  for (const record of [...movies, ...series]) {
     const lang = record.language || 'Other';
     const entry = languageMap.get(lang) ?? { movies: 0, series: 0 };
     entry[record.kind === 'movie' ? 'movies' : 'series']++;
@@ -639,7 +658,7 @@ async function main() {
     movies: movies.length,
     series: series.length,
     persons: persons.length,
-    years: [...new Set(catalogueRecords.map((t) => t.year))].sort((a, b) => b - a),
+    years: [...new Set([...movies, ...series].map((t) => t.year))].sort((a, b) => b - a),
     languages: [...languageMap.entries()]
       .map(([language, counts]) => ({ language, ...counts }))
       .sort((a, b) => b.movies + b.series - (a.movies + a.series)),

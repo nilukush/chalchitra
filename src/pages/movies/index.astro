@@ -1,86 +1,49 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Pagination from '../../components/Pagination.astro';
 import PosterCard from '../../components/PosterCard.astro';
-import { movies, languages, stats, SITE } from '../../lib/data';
+import { movies, indexLanguages, indexPage, sortForIndex, SITE } from '../../lib/data';
 
-const yearsLabel = stats.years.join(" & ");
-const movieLanguages = languages().filter((l) => l.movies > 0);
+const sorted = sortForIndex(movies);
+const page = indexPage(sorted, 1);
+const movieLanguages = indexLanguages('movie');
+const yearRange = page.items.length > 0 ? `${sorted[sorted.length - 1].year}–${sorted[0].year}` : '';
 ---
 
 <Base
-  title={`Indian Movies of ${stats.years.join(", ")}`}
-  description={`Every Indian film of ${stats.years.join(', ')} on ${SITE.name} — ${movies.length} films across Hindi, Tamil, Telugu, Malayalam, Kannada and more, with posters, plots, cast and credits.`}
+  title={`Indian Movies — ${movies.length} films`}
+  description={`Every Indian film on ${SITE.name} — ${movies.length} films from ${yearRange || 'classic to current'} across Hindi, Tamil, Telugu, Malayalam, Kannada and more, with posters, plots, cast and credits.`}
 >
   <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">Feature films</p>
-    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50" data-years={yearsLabel}>Indian movies of {yearsLabel}</h1>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Indian movies</h1>
     <p class="mt-3 max-w-2xl text-ivory-500">
-      {movies.length} films across India's industries — from Bollywood blockbusters to regional
-      independents. Filter by language, or open any film for its full picture: plot, cast, crew,
-      release and reception.
+      {movies.length} films across India's industries and eras — from Bollywood blockbusters to
+      regional independents. Filter by language, or open any film for its full picture: plot,
+      cast, crew, release and reception.
     </p>
 
-    <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter by language" id="lang-filter">
-      <button type="button" data-lang="" class="focus-ring lang-chip rounded-full border border-saffron-500/60 bg-saffron-500/10 px-4 py-1.5 text-sm font-medium text-saffron-300" aria-pressed="true">
+    <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter by language">
+      <a href="/movies" class="focus-ring rounded-full border border-saffron-500/60 bg-saffron-500/10 px-4 py-1.5 text-sm font-medium text-saffron-300" aria-current="page">
         All <span class="text-xs opacity-70">{movies.length}</span>
-      </button>
+      </a>
       {movieLanguages.map((lang) => (
-        <button type="button" data-lang={lang.language} class="focus-ring lang-chip rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm font-medium text-ivory-300 transition hover:border-saffron-500/40">
-          {lang.language} <span class="text-xs text-ivory-600">{lang.movies}</span>
-        </button>
+        <a href={`/movies/lang/${lang.language.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm font-medium text-ivory-300 transition hover:border-saffron-500/40">
+          {lang.language} <span class="text-xs text-ivory-600">{lang.count}</span>
+        </a>
       ))}
     </div>
 
-    <p class="mt-6 text-sm text-ivory-600" id="result-count" aria-live="polite">
-      Showing {movies.length} films
+    <p class="mt-6 text-sm text-ivory-600">
+      Showing {page.items.length} of {page.total} films{page.pages > 1 ? ` · page 1 of ${page.pages}` : ''}
     </p>
 
-    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" id="grid">
-      {movies.map((item, i) => (
-        <div class="poster-item" data-lang={item.language}>
-          <PosterCard item={item} eager={i < 6} />
-        </div>
+    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {page.items.map((item, i) => (
+        <PosterCard item={item} eager={i < 6} />
       ))}
     </div>
+
+    <Pagination base="/movies" pageNo={page.pageNo} pages={page.pages} />
   </section>
 </Base>
-
-<script>
-  const chips = document.querySelectorAll<HTMLButtonElement>('.lang-chip');
-  const items = document.querySelectorAll<HTMLElement>('.poster-item');
-  const count = document.getElementById('result-count');
-
-  function apply(lang: string) {
-    let visible = 0;
-    items.forEach((item) => {
-      const show = !lang || item.dataset.lang === lang;
-      item.hidden = !show;
-      if (show) visible++;
-    });
-    if (count) {
-      count.textContent = `Showing ${visible} ${visible === 1 ? 'film' : 'films'}${lang ? ` in ${lang}` : ''}`;
-    }
-    chips.forEach((chip) => {
-      const active = (chip.dataset.lang ?? '') === lang;
-      chip.setAttribute('aria-pressed', String(active));
-      chip.classList.toggle('border-saffron-500/60', active);
-      chip.classList.toggle('bg-saffron-500/10', active);
-      chip.classList.toggle('text-saffron-300', active);
-      chip.classList.toggle('border-ink-600', !active);
-      chip.classList.toggle('bg-ink-800', !active);
-      chip.classList.toggle('text-ivory-300', !active);
-    });
-    const heading = document.querySelector('h1');
-    if (heading) {
-      const yearsLabel = heading.dataset.years ?? '';
-      heading.textContent = lang ? `${lang} movies of ${yearsLabel}` : `Indian movies of ${yearsLabel}`;
-    }
-  }
-
-  chips.forEach((chip) => {
-    chip.addEventListener('click', () => apply(chip.dataset.lang ?? ''));
-  });
-
-  const initial = new URLSearchParams(location.search).get('lang');
-  if (initial) apply(initial);
-</script>

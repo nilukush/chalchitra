@@ -1,0 +1,43 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Pagination from '../../../components/Pagination.astro';
+import PosterCard from '../../../components/PosterCard.astro';
+import { series, INDEX_PAGE_SIZE, indexPage, sortForIndex, SITE } from '../../../lib/data';
+
+export async function getStaticPaths() {
+  const sorted = sortForIndex(series);
+  const pages = Math.ceil(sorted.length / INDEX_PAGE_SIZE);
+  return Array.from({ length: Math.max(0, pages - 1) }, (_, i) => ({
+    params: { page: String(i + 2) },
+    props: { pageNo: i + 2 },
+  }));
+}
+
+const { pageNo } = Astro.props;
+const sorted = sortForIndex(series);
+const page = indexPage(sorted, pageNo);
+---
+
+<Base
+  title={`Indian Series — page ${pageNo}`}
+  description={`Indian TV and streaming series on ${SITE.name} — page ${pageNo} of ${page.pages}.`}
+>
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-lotus-400">Television &amp; streaming</p>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Indian series</h1>
+
+    <div class="mt-6"><a href="/series" class="focus-ring text-sm text-saffron-300 hover:text-saffron-200">← All series</a></div>
+
+    <p class="mt-6 text-sm text-ivory-600">
+      Showing {page.items.length} of {page.total} series · page {page.pageNo} of {page.pages}
+    </p>
+
+    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {page.items.map((item) => (
+        <PosterCard item={item} />
+      ))}
+    </div>
+
+    <Pagination base="/series" pageNo={page.pageNo} pages={page.pages} />
+  </section>
+</Base>

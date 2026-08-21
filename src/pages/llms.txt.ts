@@ -3,16 +3,17 @@ import { SITE, stats } from '../lib/data';
 
 export const GET: APIRoute = ({ site }) => {
   const base = (site?.href ?? SITE.url).replace(/\/$/, '');
+  const yearRange = stats.years.length > 1 ? `${stats.years[stats.years.length - 1]}–${stats.years[0]}` : String(stats.years[0] ?? '');
   const body = `# ${SITE.name}
 
 > ${SITE.tagline}. A structured catalogue of Indian movies and television series,
-> launched with the class of 2026 (${stats.movies} films, ${stats.series} series debuts,
+> ${yearRange} (${stats.movies} films, ${stats.series} series,
 > ${stats.persons} cast & crew profiles). Data derived from Wikipedia (CC BY-SA 4.0).
 
 Catalogue sections:
-- /movies — all 2026 Indian feature films, filterable by language
-- /series — all 2026 Indian television & streaming series debuts
-- /people — cast & crew profiles with 2026 credits
+- /movies — every Indian feature film in the catalogue, paginated, filterable by language
+- /series — every Indian television & streaming series, paginated, filterable by language
+- /people — cast & crew profiles with filmographies, awards and discographies
 - /search — full-text search over titles and people
 
 Detail pages carry structured metadata as schema.org JSON-LD (Movie, TVSeries, Person)

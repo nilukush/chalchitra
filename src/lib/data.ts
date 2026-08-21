@@ -145,7 +145,7 @@ export const SITE = {
   devanagari: 'चलचित्र',
   tagline: 'Every Indian movie & series has a home',
   description:
-    'Chalchitra is a graphical discovery destination for Indian movies and television series — posters, plots, cast, crew, credits and facts, curated from open knowledge. Launching with the class of 2026.',
+    'Chalchitra is a graphical discovery destination for Indian movies and television series — posters, plots, cast, crew, credits and facts from classic to current, curated from open knowledge.',
   url: (import.meta.env.SITE as string | undefined)?.replace(/\/$/, '') ?? 'https://chalachitra.example',
 } as const;
 
@@ -210,3 +210,49 @@ export function personInitials(name: string): string {
     .join('')
     .toUpperCase();
 }
+
+// ---------------------------------------------------------------------------
+// Index pagination (Step 6): indexes are server-rendered pages of INDEX_PAGE_SIZE
+// cards; page 1 lives at the route root, deeper pages at <root>/page/N, and
+// language facets at <root>/lang/<lang>. Sort is stable: year desc, then title.
+// ---------------------------------------------------------------------------
+
+export const INDEX_PAGE_SIZE = 200;
+
+export interface IndexPage<T> {
+  items: T[];
+  pageNo: number;
+  pages: number;
+  total: number;
+}
+
+export function sortForIndex<T extends { year: number; title: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));
+}
+
+export function indexPage<T>(sorted: T[], pageNo: number, pageSize = INDEX_PAGE_SIZE): IndexPage<T> {
+  return {
+    items: sorted.slice((pageNo - 1) * pageSize, pageNo * pageSize),
+    pageNo,
+    pages: Math.max(1, Math.ceil(sorted.length / pageSize)),
+    total: sorted.length,
+  };
+}
+
+/** Language facet counts across ALL records of one kind (single tier). */
+export function indexLanguages(kind: 'movie' | 'series'): { language: string; count: number }[] {
+  const source = kind === 'movie' ? movies : series;
+  const counts = new Map<string, number>();
+  for (const item of source) {
+    const lang = item.language || 'Other';
+    counts.set(lang, (counts.get(lang) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([language, count]) => ({ language, count }))
+    .filter((l) => l.count >= 12)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 12);
+}
+
+/** Alphabetically sorted persons for the A–Z index (dataset pre-sorts; this keeps the contract explicit). */
+export const personsSorted: PersonRecord[] = [...persons].sort((a, b) => a.name.localeCompare(b.name));

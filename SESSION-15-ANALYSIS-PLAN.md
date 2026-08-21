@@ -138,7 +138,19 @@ follower (501 fetched) with a section→page fallback fix (the "== Songs ==" sec
 album subpages used to shadow the real {{Track listing}}s). **Soundtracks: 150 →
 4,216 titles** (series 9 → 120; The Family Man 21 tracks, verified live).
 
-**Step 5b — discography parser — NEXT (songs as first-class rows on person pages).**
+**Step 5b — discography parser — ✅ DONE (2026-08-21)**
+extractDiscography + findDiscographySubpage (filmography.ts); discography sections no
+longer feed filmography (songs are the work there). PersonRecord.discography +
+DiscographyTable on person pages. **178 persons, 7,686 song rows** (Tanishk: 274 songs,
+films linked). The F10 song data is now first-class.
+
+**Step 6 — Pagination + de-scoping — ✅ DONE (2026-08-21)**
+200/page on /movies (27 pages), /series (2), /people (12, A–Z buckets preserved per
+page); language facets as static routes (/movies/lang/tamil/page/2 — 34 movie + series
+facet routes, languages ≥12 titles); Pagination component; language chips are links now.
+Copy de-2026ed everywhere (home strip "Cataloguing 1975–2026 and growing", h1s, about,
+llms.txt, SITE.description); stats.years/languages span ALL records. **8,047 pages.**
+JSON chunking deferred to threshold (movies 38MB / persons 35MB ≪ 100MB cap).
 
 **Step 6 — Pagination + data-shape scaling (approved prerequisite).**
 `paginate()` 200/page on /movies, /series, /people (+ language facet subroutes, bounded

@@ -3,6 +3,7 @@ import Base from '../../layouts/Base.astro';
 import Breadcrumbs from '../../components/Breadcrumbs.astro';
 import ExternalLinks from '../../components/ExternalLinks.astro';
 import FilmographyTable from '../../components/FilmographyTable.astro';
+import DiscographyTable from '../../components/DiscographyTable.astro';
 import AwardsTable from '../../components/AwardsTable.astro';
 import JsonLd from '../../components/JsonLd.astro';
 import PosterCard from '../../components/PosterCard.astro';
@@ -216,6 +217,17 @@ const careerCredits = filmographyRows.length > 0 ? filmographyRows.length : pers
             </p>
             <div class="mt-4">
               <FilmographyTable sections={person.filmography!} />
+            </div>
+          </section>
+        )}
+
+        {(person.discography?.length ?? 0) > 0 && (
+          <section class="mt-10" aria-labelledby="discography">
+            <h2 id="discography" class="font-display text-2xl font-bold text-ivory-50">
+              Discography <span class="text-lg text-ivory-600">({person.discography!.reduce((n, s) => n + s.rows.length, 0)} songs)</span>
+            </h2>
+            <div class="mt-4">
+              <DiscographyTable sections={person.discography!} />
             </div>
           </section>
         )}

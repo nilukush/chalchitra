@@ -1,0 +1,84 @@
+---
+import type { DiscographyRow, DiscographySection } from '../../pipeline/wikitext/filmography.js';
+import { titles } from '../lib/data';
+
+interface Props {
+  sections: DiscographySection[];
+}
+
+const { sections } = Astro.props;
+const COLLAPSE_AFTER = 10;
+const byTarget = new Map(titles.map((t) => [t.wikiTitle, t]));
+
+const total = sections.reduce((n, s) => n + s.rows.length, 0);
+const ordered = sections
+  .map((s) => [s.heading, s.rows.map((row, i) => ({ row, overflow: i >= COLLAPSE_AFTER }))] as [string, { row: DiscographyRow; overflow: boolean }[]])
+  .sort((a, b) => b[1].length - a[1].length);
+---
+
+<div class="space-y-4">
+  <p class="text-sm text-ivory-400">
+    <span class="font-display text-lg font-bold text-saffron-400">{total}</span> songs
+    <span class="ml-2 text-xs text-ivory-600">from Wikipedia discography tables</span>
+  </p>
+
+  {ordered.map(([heading, rows]) => (
+    <section aria-label={heading}>
+      <h3 class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-ivory-600">
+        {heading} <span class="ml-1 normal-case tracking-normal text-ivory-700">({rows.length})</span>
+      </h3>
+      <ul class="space-y-1.5">
+        {rows.map(({ row, overflow }) => {
+          const filmTitle = row.filmWikiTitle ? byTarget.get(row.filmWikiTitle) : undefined;
+          const filmHref = filmTitle
+            ? (filmTitle.kind === 'movie' ? `/movies/${filmTitle.slug}` : `/series/${filmTitle.slug}`)
+            : row.filmWikiTitle
+              ? `https://en.wikipedia.org/wiki/${encodeURIComponent(row.filmWikiTitle.replace(/ /g, '_'))}`
+              : null;
+          return (
+            <li class:list={[
+              'card-sheen flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-xl border border-ink-700/70 bg-ink-850/60 px-4 py-2.5',
+              overflow && 'disc-overflow toggle-hidden',
+            ]}>
+              {row.year && <span class="font-display text-xs font-bold tabular-nums text-ivory-500">{row.year}</span>}
+              <span class="min-w-0 text-sm font-semibold text-ivory-100" title={row.song}>{row.song}</span>
+              {row.film && (
+                filmHref ? (
+                  <a href={filmHref} class="focus-ring text-xs text-ivory-400 transition hover:text-saffron-300">{row.film}{!filmTitle && ' ↗'}</a>
+                ) : (
+                  <span class="text-xs text-ivory-500">{row.film}</span>
+                )
+              )}
+              {row.singers && <span class="ml-auto truncate text-xs text-ivory-500" title={row.singers}>{row.singers}</span>}
+            </li>
+          );
+        })}
+      </ul>
+      {rows.length > COLLAPSE_AFTER && (
+        <button
+          type="button"
+          class="toggle-btn min-h-[44px] mt-2 w-full rounded-2xl border border-ink-700 bg-ink-800/60 px-4 py-2.5 text-sm font-semibold text-saffron-300 transition hover:bg-ink-700"
+          data-target="disc-overflow"
+          data-label-show={`Show all ${rows.length} songs`}
+          data-label-hide="Show fewer"
+        >
+          Show all {rows.length} songs
+        </button>
+      )}
+    </section>
+  ))}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="disc-overflow"]').forEach((btn) => {
+    const scope = btn.closest('section') ?? document;
+    const show = btn.dataset.labelShow ?? 'Show all';
+    const hide = btn.dataset.labelHide ?? 'Show fewer';
+    let open = false;
+    btn.addEventListener('click', () => {
+      open = !open;
+      scope.querySelectorAll('.disc-overflow').forEach((row) => row.classList.toggle('toggle-hidden', !open));
+      btn.textContent = open ? hide : show;
+    });
+  });
+</script>

@@ -1,0 +1,55 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Pagination from '../../../components/Pagination.astro';
+import PosterCard from '../../../components/PosterCard.astro';
+import { movies, INDEX_PAGE_SIZE, indexPage, sortForIndex, SITE } from '../../../lib/data';
+
+export async function getStaticPaths() {
+  const langSlug = (language: string) => language.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  const byLang = new Map<string, string>();
+  for (const item of movies) byLang.set(item.language || 'Other', langSlug(item.language || 'Other'));
+  const paths: { params: { slug: string[] }; props: { language: string; pageNo: number } }[] = [];
+  for (const [language, slug] of byLang) {
+    const sorted = sortForIndex(movies.filter((m) => (m.language || 'Other') === language));
+    if (sorted.length < 12) continue; // tiny languages stay on the all-films grid + search
+    const pages = Math.ceil(sorted.length / INDEX_PAGE_SIZE);
+    for (let n = 1; n <= pages; n++) {
+      paths.push({
+        params: { slug: n === 1 ? slug : `${slug}/page/${n}` },
+        props: { language, pageNo: n },
+      });
+    }
+  }
+  return paths;
+}
+
+const { language, pageNo } = Astro.props;
+const langSlug = (l: string) => l.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+const base = `/movies/lang/${langSlug(language)}`;
+const sorted = sortForIndex(movies.filter((m) => (m.language || 'Other') === language));
+const page = indexPage(sorted, pageNo);
+---
+
+<Base
+  title={`${language} Movies — ${page.total} films`}
+  description={`${language} Indian films on ${SITE.name} — ${page.total} films with posters, plots, cast and credits.`}
+>
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">{language} cinema</p>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">{language} movies</h1>
+
+    <div class="mt-6"><a href="/movies" class="focus-ring text-sm text-saffron-300 hover:text-saffron-200">← All films</a></div>
+
+    <p class="mt-6 text-sm text-ivory-600">
+      Showing {page.items.length} of {page.total} {language} films{page.pages > 1 ? ` · page ${page.pageNo} of ${page.pages}` : ''}
+    </p>
+
+    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {page.items.map((item) => (
+        <PosterCard item={item} />
+      ))}
+    </div>
+
+    <Pagination base={base} pageNo={page.pageNo} pages={page.pages} />
+  </section>
+</Base>

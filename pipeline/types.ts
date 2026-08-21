@@ -1,7 +1,7 @@
 import type { EpisodeRow } from './wikitext/episodes.js';
 import type { Soundtrack } from './wikitext/soundtrack.js';
 import type { ReferenceEntry } from './wikitext/references.js';
-import type { FilmographySection } from './wikitext/filmography.js';
+import type { DiscographySection, FilmographySection } from './wikitext/filmography.js';
 import type { AwardRow } from './wikitext/awards.js';
 import type { BioSection } from './wikitext/bio.js';
 
@@ -143,6 +143,8 @@ export interface PersonRecord {
   awards?: AwardRow[];
   /** works from the Wikipedia filmography tables (incl. dedicated subpages) */
   filmography?: FilmographySection[];
+  /** songs from the discography tables (song | film | singers | year) */
+  discography?: DiscographySection[];
   /** Early life / Personal life prose from the Wikipedia article */
   bio?: BioSection[];
   knownFor?: KnownForWork[];

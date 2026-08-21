@@ -1,85 +1,47 @@
 ---
 import Base from '../../layouts/Base.astro';
+import Pagination from '../../components/Pagination.astro';
 import PosterCard from '../../components/PosterCard.astro';
-import { series, languages, stats, SITE } from '../../lib/data';
+import { series, indexLanguages, indexPage, sortForIndex, SITE } from '../../lib/data';
 
-const yearsLabel = stats.years.join(" & ");
-const seriesLanguages = languages().filter((l) => l.series > 0);
+const sorted = sortForIndex(series);
+const page = indexPage(sorted, 1);
+const seriesLanguages = indexLanguages('series');
 ---
 
 <Base
-  title={`Indian Television Series Debuts of ${stats.years.join(", ")}`}
-  description={`Every Indian TV and streaming series debut of ${stats.years.join(', ')} on ${SITE.name} — ${series.length} series across languages and platforms, with casts, plots and credits.`}
+  title={`Indian Television & Streaming Series — ${series.length} shows`}
+  description={`Indian TV and streaming series on ${SITE.name} — ${series.length} shows across languages, platforms and decades, with casts, plots and credits.`}
 >
   <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-lotus-400">Television &amp; streaming</p>
-    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50" data-years={yearsLabel}>Indian series debuts of {yearsLabel}</h1>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Indian series</h1>
     <p class="mt-3 max-w-2xl text-ivory-500">
-      {series.length} shows that first aired in {stats.years.join(" or ")} — weekday dramas, OTT originals and reality
-      formats across India's languages. Filter by language, or open any series for its full picture.
+      {series.length} shows — weekday dramas, OTT originals and reality formats across India's
+      languages and eras. Filter by language, or open any series for its full picture.
     </p>
 
-    <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter by language" id="lang-filter">
-      <button type="button" data-lang="" class="focus-ring lang-chip rounded-full border border-saffron-500/60 bg-saffron-500/10 px-4 py-1.5 text-sm font-medium text-saffron-300" aria-pressed="true">
+    <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Filter by language">
+      <a href="/series" class="focus-ring rounded-full border border-saffron-500/60 bg-saffron-500/10 px-4 py-1.5 text-sm font-medium text-saffron-300" aria-current="page">
         All <span class="text-xs opacity-70">{series.length}</span>
-      </button>
+      </a>
       {seriesLanguages.map((lang) => (
-        <button type="button" data-lang={lang.language} class="focus-ring lang-chip rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm font-medium text-ivory-300 transition hover:border-saffron-500/40">
-          {lang.language} <span class="text-xs text-ivory-600">{lang.series}</span>
-        </button>
+        <a href={`/series/lang/${lang.language.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`} class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-4 py-1.5 text-sm font-medium text-ivory-300 transition hover:border-saffron-500/40">
+          {lang.language} <span class="text-xs text-ivory-600">{lang.count}</span>
+        </a>
       ))}
     </div>
 
-    <p class="mt-6 text-sm text-ivory-600" id="result-count" aria-live="polite">
-      Showing {series.length} series
+    <p class="mt-6 text-sm text-ivory-600">
+      Showing {page.items.length} of {page.total} series{page.pages > 1 ? ` · page 1 of ${page.pages}` : ''}
     </p>
 
-    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6" id="grid">
-      {series.map((item, i) => (
-        <div class="poster-item" data-lang={item.language}>
-          <PosterCard item={item} eager={i < 6} />
-        </div>
+    <div class="mt-4 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+      {page.items.map((item, i) => (
+        <PosterCard item={item} eager={i < 6} />
       ))}
     </div>
+
+    <Pagination base="/series" pageNo={page.pageNo} pages={page.pages} />
   </section>
 </Base>
-
-<script>
-  const chips = document.querySelectorAll<HTMLButtonElement>('.lang-chip');
-  const items = document.querySelectorAll<HTMLElement>('.poster-item');
-  const count = document.getElementById('result-count');
-
-  function apply(lang: string) {
-    let visible = 0;
-    items.forEach((item) => {
-      const show = !lang || item.dataset.lang === lang;
-      item.hidden = !show;
-      if (show) visible++;
-    });
-    if (count) {
-      count.textContent = `Showing ${visible} ${visible === 1 ? 'series' : 'series'}${lang ? ` in ${lang}` : ''}`;
-    }
-    chips.forEach((chip) => {
-      const active = (chip.dataset.lang ?? '') === lang;
-      chip.setAttribute('aria-pressed', String(active));
-      chip.classList.toggle('border-saffron-500/60', active);
-      chip.classList.toggle('bg-saffron-500/10', active);
-      chip.classList.toggle('text-saffron-300', active);
-      chip.classList.toggle('border-ink-600', !active);
-      chip.classList.toggle('bg-ink-800', !active);
-      chip.classList.toggle('text-ivory-300', !active);
-    });
-    const heading = document.querySelector('h1');
-    if (heading) {
-      const yearsLabel = heading.dataset.years ?? '';
-      heading.textContent = lang ? `${lang} series debuts of ${yearsLabel}` : `Indian series debuts of ${yearsLabel}`;
-    }
-  }
-
-  chips.forEach((chip) => {
-    chip.addEventListener('click', () => apply(chip.dataset.lang ?? ''));
-  });
-
-  const initial = new URLSearchParams(location.search).get('lang');
-  if (initial) apply(initial);
-</script>

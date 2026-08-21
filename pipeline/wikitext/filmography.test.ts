@@ -121,7 +121,9 @@ describe('extractFilmography (structured)', () => {
     expect(titles).toContain('KGF: Chapter 2');
     expect(titles).toContain('Salaar');
     expect(titles).toContain('Matka King');
-    expect(titles).toContain('Song One');
+    // discography sections are the discography extractor's territory now —
+    // songs must not leak into filmography rows
+    expect(titles).not.toContain('Song One');
     const targets = sections.flatMap((s) => s.rows).map((r) => r.wikiTitle);
     expect(new Set(targets).size).toBe(targets.length);
   });

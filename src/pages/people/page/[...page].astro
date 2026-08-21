@@ -1,0 +1,58 @@
+---
+import Base from '../../../layouts/Base.astro';
+import Pagination from '../../../components/Pagination.astro';
+import PersonCard from '../../../components/PersonCard.astro';
+import { INDEX_PAGE_SIZE, SITE, personsSorted } from '../../../lib/data';
+
+export async function getStaticPaths() {
+  const pages = Math.ceil(personsSorted.length / INDEX_PAGE_SIZE);
+  return Array.from({ length: Math.max(0, pages - 1) }, (_, i) => ({
+    params: { page: String(i + 2) },
+    props: { pageNo: i + 2 },
+  }));
+}
+
+const { pageNo } = Astro.props;
+const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
+
+const total = personsSorted.length;
+const pages = Math.max(1, Math.ceil(total / INDEX_PAGE_SIZE));
+const slice = personsSorted.slice((pageNo - 1) * INDEX_PAGE_SIZE, pageNo * INDEX_PAGE_SIZE);
+const byLetter = new Map<string, typeof slice>();
+for (const letter of letters) byLetter.set(letter, []);
+for (const person of slice) {
+  const first = person.name[0]?.toUpperCase() ?? '#';
+  const key = /[A-Z]/.test(first) ? first : '#';
+  byLetter.get(key)!.push(person);
+}
+const activeLetters = letters.filter((l) => (byLetter.get(l) ?? []).length > 0);
+---
+
+<Base
+  title={`Cast & Crew of Indian Cinema — page ${pageNo}`}
+  description={`Actors, directors, writers and technicians of Indian cinema on ${SITE.name} — page ${pageNo} of ${pages}.`}
+>
+  <section class="mx-auto max-w-7xl px-4 py-12 sm:px-6">
+    <p class="text-xs font-semibold uppercase tracking-[0.3em] text-peacock-400">People</p>
+    <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">The people of Indian cinema</h1>
+
+    <div class="mt-6"><a href="/people" class="focus-ring text-sm text-saffron-300 hover:text-saffron-200">← All people</a></div>
+
+    <p class="mt-6 text-sm text-ivory-600">
+      Showing {slice.length} of {total} people · page {pageNo} of {pages}
+    </p>
+
+    {activeLetters.map((letter) => (
+      <section class="mt-10" aria-labelledby={`letter-${letter === '#' ? 'hash' : letter}`}>
+        <h2 id={`letter-${letter === '#' ? 'hash' : letter}`} class="font-display text-2xl font-bold text-saffron-400">
+          {letter === '#' ? 'Other' : letter}
+        </h2>
+        <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {(byLetter.get(letter) ?? []).map((person) => <PersonCard person={person} />)}
+        </div>
+      </section>
+    ))}
+
+    <Pagination base="/people" pageNo={pageNo} pages={pages} />
+  </section>
+</Base>

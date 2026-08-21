@@ -1,0 +1,42 @@
+---
+interface Props {
+  /** route root, e.g. "/movies" or "/movies/lang/hindi" (no trailing slash) */
+  base: string;
+  pageNo: number;
+  pages: number;
+}
+
+const { base, pageNo, pages } = Astro.props;
+
+const href = (n: number) => (n === 1 ? `${base}` : `${base}/page/${n}`);
+/** window of page numbers around the current page */
+const windowPages: (number | '…')[] = [];
+for (let n = 1; n <= pages; n++) {
+  if (n === 1 || n === pages || Math.abs(n - pageNo) <= 2) windowPages.push(n);
+  else if (windowPages[windowPages.length - 1] !== '…') windowPages.push('…');
+}
+---
+
+{pages > 1 && (
+  <nav class="mt-10 flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+    {pageNo > 1 && (
+      <a href={href(pageNo - 1)} class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm font-semibold text-ivory-300 transition hover:border-saffron-500/40 hover:text-saffron-300">
+        ← Previous
+      </a>
+    )}
+    {windowPages.map((n) =>
+      n === '…' ? (
+        <span class="px-1 text-ivory-700">…</span>
+      ) : n === pageNo ? (
+        <span aria-current="page" class="rounded-full border border-saffron-500/60 bg-saffron-500/10 px-4 py-2 text-sm font-bold text-saffron-300">{n}</span>
+      ) : (
+        <a href={href(n)} class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm font-semibold text-ivory-300 transition hover:border-saffron-500/40 hover:text-saffron-300">{n}</a>
+      ),
+    )}
+    {pageNo < pages && (
+      <a href={href(pageNo + 1)} class="focus-ring rounded-full border border-ink-600 bg-ink-800 px-4 py-2 text-sm font-semibold text-ivory-300 transition hover:border-saffron-500/40 hover:text-saffron-300">
+        Next →
+      </a>
+    )}
+  </nav>
+)}

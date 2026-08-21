@@ -692,3 +692,33 @@ build 7,970 pages; preview restarted; live-verified.
 **Next: Step 5b (discography parser — songs as first-class person data) → Step 6
 (paginate() + JSON chunking + de-2026 the copy) → Step 7 (recursive persons) →
 Step 8 (real-time).**
+
+## Session 15 (cont. — 2026-08-21 evening) — Steps 5b + 6 SHIPPED (223 tests)
+
+- **Step 5b discography**: `extractDiscography` + `findDiscographySubpage` in
+  filmography.ts (WORK_SECTIONS no longer enters discography sections — songs are the
+  work there, films are context; one filmography test updated to the new contract).
+  PersonRecord.discography; DiscographyTable.astro (year/song/film-link/singers rows,
+  collapse after 10). **178 persons, 7,686 song rows** — Tanishk 274 songs across
+  Hindi/Telugu/Tamil/Other sections, films linked to catalogue pages. Filmography
+  persons 2,030→2,011 (the 19 dropped are discography-only persons, correctly).
+- **Step 6 pagination + de-scoping**: data.ts gained INDEX_PAGE_SIZE(200)/sortForIndex/
+  indexPage/indexLanguages/personsSorted; Pagination.astro (windowed numbers). Routes:
+  /movies/page/2..27, /movies/lang/{lang}(+/page/N) (11 languages ≥12 films, 34 routes),
+  /series/page/2 + /series/lang/…, /people/page/2..12 (A–Z buckets re-bucketed per page).
+  Language chips are LINKS now (client filter script deleted). **8,047 pages (+77).**
+  Copy de-2026ed: home strip now "Cataloguing 1975–2026 and growing", index h1s
+  ("Indian movies"), about, llms.txt, SITE.description. stats.years/languages now span
+  ALL records (Tamil 1472 · Hindi 1448 · Malayalam 1056…).
+- **Astro lessons (bit 3×)**: getStaticPaths is hoisted ABOVE frontmatter consts —
+  helpers must live INSIDE getStaticPaths; rest params ([...page], [...slug]) take
+  STRINGS ("2", "hindi/page/2"), not arrays (this Astro version rejects arrays);
+  removing an import breaks body copy referencing it — grep after import edits.
+- JSON chunking NOT triggered (movies 38MB / persons 35MB ≪ 100MB) — activates when
+  Step 7 person waves push payloads near threshold.
+- Verified: 10 pagination/facet routes 200, Tamil facet 1,395 films, "page 1 of 27",
+  Tanishk discography section, home/detail/search regressions clean.
+
+**Next: Step 7 (recursive person expansion — wave fetcher, person-lite/full records,
+Mayasabha's Aadhi Pinisetty first) → Step 8 (real-time: lastrevid refresh + TMDB
+changes + cron/EventStreams).**
