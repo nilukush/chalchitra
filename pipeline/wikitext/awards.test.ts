@@ -187,3 +187,76 @@ describe('extractAwards (rowspan film column — the Shanghai bug)', () => {
     expect(rows.every((r) => r.work === undefined)).toBe(true);
   });
 });
+
+// Title-page awards (Step 3): film/series articles carry "Awards"/"Accolades"
+// sections with their own column shapes — Recipients/Nominee(s) instead of
+// Work, years sometimes wikilinked to the ceremony edition, "Award Ceremony"
+// headers. Verbatim from Arth (film) and Tia Bajpai's pages.
+const titleAwardsArth = `
+==Awards==
+{| class="wikitable plainrowheaders sortable"
+|-
+!scope=col|Year
+!scope=col|Award
+!scope=col|Category
+!scope=col|Nominee(s)
+!scope=col|Result
+|-
+| rowspan="2" |[[30th National Film Awards|1982]]
+| rowspan="2" |[[National Film Awards]]
+|[[National Film Award for Best Actress|Best Actress]]
+|[[Shabana Azmi]]
+|{{Won}}
+|-
+|[[National Film Award for Best Editing|Best Editing]]
+|Keshav Hirani
+|{{Won}}
+|}
+`;
+
+const titleAwardsMirchi = `
+== Accolades ==
+{| class="wikitable"
+! Award Ceremony
+! Category
+! Recipient
+! Result
+! Ref.(s)
+|-
+| [[4th Mirchi Music Awards]]
+| [[Mirchi Music Award for Upcoming Female Vocalist of The Year|Upcoming Female Vocalist of The Year]]
+| "Sheet Leher" from ''[[Lanka (2011 film)|Lanka]]''
+| {{won}}
+|<ref>{{Cite web |url=x}}</ref>
+|}
+`;
+
+describe('extractAwards (title-page shapes)', () => {
+  it('maps Nominee(s) to recipients and reads wikilinked years', () => {
+    const rows = extractAwards(titleAwardsArth);
+    const actress = rows.find((r) => r.category === 'Best Actress');
+    expect(actress).toMatchObject({
+      year: '1982',
+      award: 'National Film Awards',
+      recipients: 'Shabana Azmi',
+      result: 'won',
+    });
+  });
+
+  it('continuation rows carry the rowspan year+award and their own recipient', () => {
+    const rows = extractAwards(titleAwardsArth);
+    const editing = rows.find((r) => r.category === 'Best Editing');
+    expect(editing).toMatchObject({ year: '1982', award: 'National Film Awards', recipients: 'Keshav Hirani', result: 'won' });
+  });
+
+  it('maps Award Ceremony / Recipient headers (no year column)', () => {
+    const rows = extractAwards(titleAwardsMirchi);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      award: '4th Mirchi Music Awards',
+      awardWikiTitle: '4th Mirchi Music Awards',
+      category: 'Upcoming Female Vocalist of The Year',
+      result: 'won',
+    });
+  });
+});

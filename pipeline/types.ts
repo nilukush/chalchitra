@@ -87,6 +87,8 @@ export interface TitleRecord {
   enrichedFrom?: string[];
   episodesList: EpisodeRow[];
   soundtrack?: Soundtrack;
+  /** awards the title itself won/was nominated for (Awards/Accolades section) */
+  awards?: AwardRow[];
   references: ReferenceEntry[];
   cast: CastMember[];
   crew: { name: string; role: string; slug: string | null }[];

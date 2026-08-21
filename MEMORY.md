@@ -658,3 +658,37 @@ plan Step 1 onward after user approval.
 on-page first) → Step 5/5b (soundtracks + discography) → Step 6 (pagination+chunking,
 prereq) → Step 7 (recursive persons) → Step 8 (real-time). Verify-toggles + link-check
 after UI-touching steps as usual.
+
+## Session 15 (cont. — 2026-08-21) — Steps 3/4/5 SHIPPED (217 tests)
+
+All TDD; dataset rebuilt twice (OST subpages 501 fetched paced+cached; TMDB warm);
+build 7,970 pages; preview restarted; live-verified.
+
+- **Step 3 title awards**: AwardRow gained `recipients` (Nominee(s)/Recipient/
+  Award Ceremony headers), wikilinked years ([[30th National Film Awards|1982]]→1982).
+  TitleRecord.awards; raw awards section dropped from articleSections only when
+  structured rows exist. AwardsTable reused on TitleDetail (after Music, +nav).
+  **1,275 titles / 14,839 rows / 5,604 won** (catalogue 3 vs archive 1,272 — 2026
+  films mostly unreleased; expected). Arth verified live.
+- **Step 4 multi-season**: episodes.ts section-aware — every Season/Series N section
+  tags its rows (variants "Season 2 (2024)"/"Season 2: Subtitle"); wikitables now go
+  through the rowspan GRID parser (shared tables.ts; manual header derivation when
+  the keyword-heuristic header misses "No.|Ep." shapes). findEpisodesSubpage follower
+  (5 pointers, 4 parsed). TMDB: per-season merge keyed (season,number) — season/1
+  hardcode gone; synthesizeMissingSeasons unified (empty list→full guide; partial→
+  missing seasons only) and wired into archive-lite too (0 synthesizable — TMDB has
+  no per-episode data for Indian soaps; probes cached). **>1-season series: 1 → 35;
+  Aahat 554 eps in 6 live tabs.**
+- **Step 5 soundtracks**: archive strip + cast(30)/crew(24) caps REMOVED (decision
+  #1); track-wikitable parser; {{Main|X (soundtrack)}} follower (501 pages) + a
+  scope fix: on album subpages a template-free "== Songs ==" section used to shadow
+  the real {{Track listing}}s (section→page fallback now). **150 → 4,216 soundtracks
+  (series 9 → 120; Family Man 21 tracks).** movies.json 33→38MB (budget OK);
+  references/articleSections STILL trimmed for archive until Step 6 chunking.
+- Pre-existing latent tsc errors in build-dataset.ts crew wiring (332-340 at HEAD;
+  runs fine via tsx) — left, noted for cleanup.
+- Emraan regression-checked (Shanghai ✓), home 200.
+
+**Next: Step 5b (discography parser — songs as first-class person data) → Step 6
+(paginate() + JSON chunking + de-2026 the copy) → Step 7 (recursive persons) →
+Step 8 (real-time).**

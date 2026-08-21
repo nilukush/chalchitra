@@ -18,6 +18,31 @@ const IMG = 'https://image.tmdb.org/t/p';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Fetch /tv/{id}/season/N through the caller's paced getter. */
+type PacedGet = (pathAndQuery: string) => Promise<any | null>;
+
+/** Synthesize TMDB episode rows for every season the record claims but the
+ *  Wikipedia tables don't cover (empty list → full guide; partial list → only
+ *  the missing seasons). Stops at the first season TMDB doesn't have. */
+async function synthesizeMissingSeasons(record: TitleRecord, pacedGet: PacedGet): Promise<number> {
+  if (record.kind !== 'series' || !record.tmdbId) return 0;
+  const maxSeasons = Math.min(Math.max(Number(record.seasons) || 1, 1), 50);
+  const covered = new Set(record.episodesList.map((e) => e.season ?? 1));
+  const added: ReturnType<typeof episodesFromTmdbSeason> = [];
+  for (let season = 1; season <= maxSeasons; season++) {
+    if (covered.has(season)) continue;
+    const payload = await pacedGet(`/tv/${record.tmdbId}/season/${season}?language=en-US`);
+    const rows = payload ? episodesFromTmdbSeason(payload, season) : [];
+    if (rows.length === 0) break;
+    added.push(...rows);
+  }
+  if (added.length > 0) {
+    record.episodesList.push(...added);
+    record.enrichedFrom = [...new Set([...(record.enrichedFrom ?? []), 'tmdb'])];
+  }
+  return added.length;
+}
+
 /** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt). */
 function readTmdbCache(pathAndQuery: string): any | undefined {
   const cacheFile = path.join(CACHE_DIR, `${createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20)}.json`);
@@ -102,6 +127,7 @@ export async function enrichTitlesLite(
 
   let matched = 0;
   let enriched = 0;
+  let episodesAdded = 0;
   let cursor = 0;
   const started = Date.now();
 
@@ -147,13 +173,19 @@ export async function enrichTitlesLite(
       // same URL shape as the candidate probes → one cache key per title
       const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos`));
       if (details && applyLiteEnrichment(record, details)) enriched++;
+      // full-fidelity mandate: archive series get episode guides for the
+      // seasons their Wikipedia article doesn't tabulate (paced + cached)
+      if (record.kind === 'series') {
+        const added = await synthesizeMissingSeasons(record, pacedGet);
+        episodesAdded += added;
+      }
     }
   }
 
   await Promise.all(Array.from({ length: Math.min(concurrency, titles.length) }, worker));
 
   const secs = Math.round((Date.now() - started) / 1000);
-  console.log(`→ TMDB archive-lite: ${matched}/${titles.length} matched, ${enriched} records enriched in ${secs}s`);
+  console.log(`→ TMDB archive-lite: ${matched}/${titles.length} matched, ${enriched} records enriched, ${episodesAdded} episodes synthesized in ${secs}s`);
   return { matched, enriched };
 }
 
@@ -247,42 +279,43 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       }
     }
 
-    // episode summaries/runtimes for series with a wiki table
+    // episode summaries/runtimes for series with wiki tables — one season
+    // payload per season the wiki rows actually cover (numbers restart per
+    // season, so each payload only merges into its own season's rows)
     if (record.kind === 'series' && record.episodesList.some((e) => !e.summary || !e.runtime)) {
-      const payload = await tmdbGet(`/tv/${hit.id}/season/1?language=en-US`, apiKey);
-      if (payload?.episodes) {
-        const before = record.episodesList.filter((e) => e.summary).length;
-        record.episodesList = mergeEpisodeSummaries(record.episodesList, payload);
-        const after = record.episodesList.filter((e) => e.summary).length;
-        if (after > before) episodesFilled += after - before;
-        if (!record.enrichedFrom?.includes('tmdb') && after > before) {
+      const wantedSeasons = [...new Set(record.episodesList.map((e) => e.season ?? 1))].sort((a, b) => a - b);
+      let list = record.episodesList;
+      let filled = 0;
+      for (const n of wantedSeasons) {
+        const payload = await tmdbGet(`/tv/${hit.id}/season/${n}?language=en-US`, apiKey);
+        if (!payload?.episodes) continue;
+        const before = list.filter((e) => e.summary).length;
+        list = mergeEpisodeSummaries(list, payload, n);
+        filled += list.filter((e) => e.summary).length - before;
+      }
+      if (filled > 0) {
+        episodesFilled += filled;
+        record.episodesList = list;
+        if (!record.enrichedFrom?.includes('tmdb')) {
           record.enrichedFrom = [...(record.enrichedFrom ?? []), 'tmdb'];
         }
       }
     }
 
-    // series with NO wiki episode table → synthesize the guide from TMDB
+    // seasons the Wikipedia tables DON'T cover → synthesize from TMDB
     // (every season the record claims, with a safety ceiling against bad data)
-    if (record.kind === 'series' && record.episodesList.length === 0) {
-      const maxSeasons = Math.min(Math.max(Number(record.seasons) || 1, 1), 50);
-      const all: ReturnType<typeof episodesFromTmdbSeason> = [];
-      for (let season = 1; season <= maxSeasons; season++) {
-        const payload = await tmdbGet(`/tv/${hit.id}/season/${season}?language=en-US`, apiKey);
-        const rows = payload ? episodesFromTmdbSeason(payload, season) : [];
-        if (rows.length === 0) break;
-        all.push(...rows);
-      }
-      if (all.length > 0) {
-        record.episodesList = all;
-        episodesSynthesized += all.length;
-        record.enrichedFrom = [...new Set([...(record.enrichedFrom ?? []), 'tmdb'])];
-      }
+    if (record.kind === 'series') {
+      const added = await synthesizeMissingSeasons(
+        record,
+        (p) => tmdbGet(p, apiKey),
+      );
+      episodesSynthesized += added;
     }
 
-    if (sources.length > 0) record.enrichedFrom = sources;
+    if (sources.length > 0) record.enrichedFrom = [...new Set([...(record.enrichedFrom ?? []), ...sources])];
   }
 
-  console.log(`→ TMDB enrichment: ${matched}/${titles.length} matched, ${episodesFilled} episode summaries filled, ${episodesSynthesized} episodes synthesized for table-less series, ${backdrops} backdrops`);
+  console.log(`→ TMDB enrichment: ${matched}/${titles.length} matched, ${episodesFilled} episode summaries filled, ${episodesSynthesized} episodes synthesized for uncovered seasons, ${backdrops} backdrops`);
   return { matched, episodesFilled, episodesSynthesized, backdrops };
 }
 

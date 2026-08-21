@@ -81,6 +81,17 @@ describe('mergeEpisodeSummaries', () => {
     expect(merged).toHaveLength(3);
   });
 
+  it('season-aware: a season-2 payload only touches season-2 rows (ep 1 of S2 ≠ ep 1 of S1)', () => {
+    const wiki = [
+      { number: '1', title: 'S1 Pilot', summary: undefined },
+      { number: '1', title: 'S2 Opener', season: 2, summary: undefined },
+    ];
+    const season2 = { episodes: [{ episode_number: 1, overview: 'season two opener' }] };
+    const merged = mergeEpisodeSummaries(wiki, season2, 2);
+    expect(merged[0].summary).toBeUndefined(); // season 1 untouched
+    expect(merged[1].summary).toBe('season two opener');
+  });
+
   it('returns the original array when TMDB has no episodes', () => {
     expect(mergeEpisodeSummaries(wiki, { episodes: [] })).toBe(wiki);
   });

@@ -76,10 +76,14 @@ export function episodesFromTmdbSeason(
       still: ep.still_path ? `${imageUrl}/w300${ep.still_path}` : undefined,
     }));
 }
-/** Fill empty episode summaries AND runtimes from a TMDB season; wiki wins. */
+/** Fill empty episode summaries AND runtimes from a TMDB season; wiki wins.
+ *  `seasonNumber` scopes the payload to the wiki rows of that season — TMDB
+ *  episode numbers restart at 1 per season, so a season-2 "episode 1" must
+ *  never collide with season 1's. */
 export function mergeEpisodeSummaries(
   wikiEpisodes: EpisodeRow[],
   tmdbSeason: { episodes?: TmdbEpisode[] },
+  seasonNumber = 1,
 ): EpisodeRow[] {
   const byNumber = new Map<number, TmdbEpisode>();
   for (const ep of tmdbSeason.episodes ?? []) {
@@ -87,6 +91,7 @@ export function mergeEpisodeSummaries(
   }
   let changed = false;
   const merged = wikiEpisodes.map((ep) => {
+    if ((ep.season ?? 1) !== seasonNumber) return ep;
     const n = Number(ep.number);
     if (!Number.isFinite(n)) return ep;
     const tmdb = byNumber.get(n);

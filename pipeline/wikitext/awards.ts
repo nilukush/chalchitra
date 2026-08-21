@@ -19,6 +19,8 @@ export interface AwardRow {
   category?: string;
   work?: string;
   workWikiTitle?: string;
+  /** title-page tables: the nominee(s)/recipient named in the row */
+  recipients?: string;
   result: AwardResult;
 }
 
@@ -27,11 +29,12 @@ const AWARD_SECTIONS = /^(accolades?|awards?|awards and nominations|honours|hono
 const AWARD_NAME_HINT =
   /(award|awardshistory|honou?r|prize|medal|padam|national film|filmfare|siima|iifa|screen|stardust|zee cine|nandi|karnataka state|kerala state|tamil nadu state|national)/i;
 
-const HEADER_FIELD: Record<string, 'year' | 'award' | 'category' | 'work' | 'result'> = {
+const HEADER_FIELD: Record<string, 'year' | 'award' | 'category' | 'work' | 'result' | 'recipients'> = {
   year: 'year',
   award: 'award',
   awardshow: 'award',
   awardshistory: 'award',
+  'award ceremony': 'award',
   ceremony: 'award',
   festival: 'award',
   category: 'category',
@@ -42,6 +45,11 @@ const HEADER_FIELD: Record<string, 'year' | 'award' | 'category' | 'work' | 'res
   show: 'work',
   serie: 'work',
   series: 'work',
+  nominee: 'recipients',
+  nominees: 'recipients',
+  recipient: 'recipients',
+  recipients: 'recipients',
+  artist: 'recipients',
   result: 'result',
   outcome: 'result',
 };
@@ -97,15 +105,25 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
         let category: string | undefined;
         let work: string | undefined;
         let workWikiTitle: string | undefined;
+        let recipients: string | undefined;
         let result: AwardResult | null = null;
 
         cells.forEach((rawCell, i) => {
           const text = rawCell.trim();
           if (text === '') return;
           const field = aligned ? (fields![i] ?? null) : null;
-          if (YEARISH.test(text) && year === undefined) {
-            year = text;
-            return;
+          // years are sometimes wikilinked to the ceremony edition
+          // ([[30th National Film Awards|1982]]) — read the display text
+          if (year === undefined && (field === 'year' || field === null)) {
+            const display0 = stripWikitext(text).replace(/\s+/g, ' ').trim();
+            if (YEARISH.test(text)) {
+              year = text;
+              return;
+            }
+            if (display0 && YEARISH.test(display0)) {
+              year = display0;
+              return;
+            }
           }
           const parsed = readResult(text);
           if (parsed && (field === 'result' || field === null || result === null)) {
@@ -126,6 +144,8 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
             category = display;
           } else if (field === 'category') {
             category = display;
+          } else if (field === 'recipients') {
+            recipients = display;
           } else if (field === 'work' || field === null) {
             if (/\[\[/.test(text) && work === undefined) {
               const link = extractWikiLinks(text)[0];
@@ -170,7 +190,7 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
 
         // a row must carry substance beyond a bare ceremony name — pure
         // ceremony/fragment rows are table structure, not nominations
-        if (award && (category || work || result || year)) {
+        if (award && (category || work || result || year || recipients)) {
           push({
             year,
             award,
@@ -178,6 +198,7 @@ export function extractAwards(pageWikitext: string, limit = 120): AwardRow[] {
             category,
             work,
             workWikiTitle,
+            recipients,
             result: result ?? '',
           });
         }

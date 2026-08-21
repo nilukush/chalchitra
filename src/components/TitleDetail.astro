@@ -1,5 +1,6 @@
 ---
 import type { TitleRecord } from '../../pipeline/types';
+import AwardsTable from './AwardsTable.astro';
 import Breadcrumbs from './Breadcrumbs.astro';
 import EpisodesTable from './EpisodesTable.astro';
 import ExternalLinks from './ExternalLinks.astro';
@@ -119,6 +120,7 @@ const navItems = [
   (castPeople.length > 0 || crew.length > 0) && { href: '#cast', label: 'Cast & crew', icon: 'users' as const },
   statTiles.length > 0 && { href: '#facts', label: 'Details', icon: 'clapperboard' as const },
   item.soundtrack && item.soundtrack.tracks.length > 0 && { href: '#soundtrack', label: 'Music', icon: 'music' as const },
+  item.awards && item.awards.length > 0 && { href: '#awards', label: 'Awards', icon: 'award' as const },
   ...item.articleSections.slice(0, 4).map((s) => ({ href: `#sec-${s.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, label: s.title, icon: 'film' as const })),
   item.references.length > 0 && { href: '#references', label: 'Sources', icon: 'award' as const },
 ].filter(Boolean) as { href: string; label: string; icon: Parameters<typeof Icon>[0]['name'] }[];
@@ -476,6 +478,17 @@ const jsonLd: Record<string, unknown>[] = [
             </h2>
             <div class="mt-4">
               <TrackList soundtrack={item.soundtrack} query={`${item.title} ${item.musicBy[0] ?? ''}`} />
+            </div>
+          </section>
+        )}
+
+        {item.awards && item.awards.length > 0 && (
+          <section class="mt-10" aria-labelledby="awards">
+            <h2 id="awards" class="font-display text-2xl font-bold text-ivory-50">
+              Awards <span class="text-lg text-ivory-600">({item.awards.length} nominations &amp; wins)</span>
+            </h2>
+            <div class="mt-4">
+              <AwardsTable awards={item.awards} />
             </div>
           </section>
         )}

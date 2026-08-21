@@ -65,6 +65,9 @@ const ordered = [...groups.entries()]
                     <span class="text-xs text-ivory-500">{row.work}</span>
                   )
                 )}
+                {row.recipients && !row.work && (
+                  <span class="block truncate text-xs text-ivory-500" title={row.recipients}>{row.recipients}</span>
+                )}
               </span>
               {row.result === 'won' ? (
                 <span class="rounded-full bg-saffron-500 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-ink-950">Won</span>

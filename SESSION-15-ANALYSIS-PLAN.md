@@ -111,29 +111,34 @@ premise, gated full plot, meta). Coverage: movies 4,866/5,363, series 234/381 �
 remainder genuinely plot-less on Wikipedia. Spoiler gate applies everywhere a plot
 renders (existing TitleDetail behavior).
 
-**Step 3 — Title-page awards (movies + series).**
-TDD: title-mode fixtures (Ceremony|Category|Recipients|Result tables; prose-only → 0
-rows; section leaves articleSections). `TitleRecord.awards`; IMDb-style block on
-TitleDetail (summary line + ceremony groups, reusing AwardsTable). ALL titles
-(decision #1) — awards are compact; measure movies.json delta (<2 MB expected).
+**Step 3 — Title-page awards (movies + series) — ✅ DONE (2026-08-21)**
+217 tests. `TitleRecord.awards` + recipients column (Nominee(s)/Recipient headers),
+wikilinked years ([[30th National Film Awards|1982]] → 1982), AwardsTable reused on
+TitleDetail between Music and The full story (+nav item). **1,275 titles with awards
+(14,839 rows, 5,604 won)** — catalogue/3 vs archive/1,272 is expected (2026 films are
+mostly unreleased; award history lives on older works). Arth verified live: National
+Film Awards rows with Shabana Azmi as recipient. movies.json 33→38 MB (within budget).
 
-**Step 4 — Multi-season episodes (on-page first, then subpages).**
-TDD: (a) parse EVERY `=== Season N ===` section's tables, tag rows `season: N`
-(heading regex from the census: `season n (n)`, `season n: n`, `series n (n)`…);
-(b) `{{Episode table}}`/`{{Episode list}}` season param → row season; (c) TMDB merge
-keyed (season, number); per-season fetch; synthesis when wiki rows cover fewer seasons
-than the infobox claims; (d) episode-subpage follower ({{Main|List of X episodes}}) via
-the paced fetchPages pattern. EpisodesTable tabs already shipped (Session 11) — data
-starts flowing. Acceptance: series with >1 season of rows 1 → ≥30; Aahat + 2 samples
-multi-season.
+**Step 4 — Multi-season episodes (on-page first, then subpages) — ✅ DONE (2026-08-21)**
+episodes.ts rewritten section-aware: every "Season/Series N" section contributes rows
+tagged with its season (heading variants "Season 2 (2024)", "Season 2: Subtitle");
+wikitables parse through the rowspan-grid parser; {{Main|List of X episodes}}
+subpages followed (5 found, 4 fetched+parsed). TMDB: merge keyed by (season, number)
+per-season payloads (was hardcoded /season/1); synthesis unified into
+synthesizeMissingSeasons (full guide when wiki has none, MISSING seasons only
+otherwise) and wired into the archive lite pass too. **Series with >1 season of
+rows: 1 → 35** (Aahat: 554 episodes across 6 rendered season tabs — verified live).
+Archive TMDB season probes returned 0 synthesizable (TMDB lacks per-episode data for
+Indian soaps — data limit, cached).
 
-**Step 5 — Soundtracks everywhere + parser widening. (5b: discography parser.)**
-TDD: plain track wikitables (Track|Singer|Lyricist|Music columns), `== Music ==`
-heading; existing fixtures unchanged. Delete the archive soundtrack strip (decision #1);
-measure size (tracks are compact; if movies.json would pass 45 MB, chunk JSONs now —
-they're needed for Step 7 anyway). 5b: `FilmographySection`-style discography structure
-for song rows (song|film|year|singers), rendered as its own section on person pages —
-recovers the F10 song data as first-class data.
+**Step 5 — Soundtracks everywhere + parser widening — ✅ DONE (2026-08-21)**
+Archive soundtrack strip REMOVED (cast/crew caps removed too); track-wikitable parser
+added (Track|Song|Singer(s)|Lyricist|Length); `{{Main|X (soundtrack)}}` subpage
+follower (501 fetched) with a section→page fallback fix (the "== Songs ==" section on
+album subpages used to shadow the real {{Track listing}}s). **Soundtracks: 150 →
+4,216 titles** (series 9 → 120; The Family Man 21 tracks, verified live).
+
+**Step 5b — discography parser — NEXT (songs as first-class rows on person pages).**
 
 **Step 6 — Pagination + data-shape scaling (approved prerequisite).**
 `paginate()` 200/page on /movies, /series, /people (+ language facet subroutes, bounded

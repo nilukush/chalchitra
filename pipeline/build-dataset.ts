@@ -14,6 +14,8 @@ import {
   extractEpisodes,
   extractExternalLinks,
   extractFilmography,
+  findEpisodesSubpage,
+  findSoundtrackSubpage,
   extractReferences,
   extractSections,
   extractSoundtrack,
@@ -224,6 +226,7 @@ function parseTitlePage(
     gross: cleanValue(box.gross) || undefined,
     episodesList: extractEpisodes(wikitext),
     soundtrack: extractSoundtrack(wikitext) ?? undefined,
+    awards: extractAwards(wikitext),
     references: extractReferences(wikitext),
     cast: [], // filled after person resolution
     crew: [],
@@ -232,6 +235,13 @@ function parseTitlePage(
     external: { imdbId: external.imdbId, official, links: dedupeLinks(external.links).slice(0, 14) },
   };
   void cast;
+  // structured awards replace the raw section (no double render); a prose-only
+  // awards section stays as an article chapter
+  if (record.awards && record.awards.length > 0) {
+    record.articleSections = record.articleSections.filter((s) => !/^(awards?|accolades)/i.test(s.title.trim()));
+  } else {
+    record.awards = undefined;
+  }
   return record;
 }
 
@@ -451,11 +461,12 @@ async function main() {
       const yearFromBox = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
       const year = yearFromBox ? Number(String(yearFromBox).slice(0, 4)) : Number(String(entry.year ?? '').slice(0, 4)) || undefined;
       const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: true });
-      // archive-lite: drop the heavy fields that dominate record size
+      // full-fidelity mandate (2026-08-20): soundtracks stay; references and
+      // article chapters remain trimmed ONLY until the JSON-chunking step
+      // lands (Step 6) — they dominate record size
       record.references = [];
       record.articleSections = [];
       record.reception = undefined;
-      record.soundtrack = undefined;
       record.sections = [];
       record.external = { imdbId: record.external.imdbId, official: record.external.official, links: record.external.links.slice(0, 6) };
       // wire cast/crew to existing catalogue persons only — no new person discovery
@@ -470,8 +481,6 @@ async function main() {
           const final = canonical.get(c.target);
           return { name: c.label || c.target, role: c.as, slug: final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null };
         });
-      record.cast = record.cast.slice(0, 30);
-      record.crew = record.crew.slice(0, 24);
       if (kind === 'movie') { movies.push(record); archiveMovies++; } else { series.push(record); archiveSeries++; }
       seenFinal.add(finalTitle);
       void requested;
@@ -479,6 +488,58 @@ async function main() {
     if (accepted.length > 0) {
       console.log(`→ Archive expansion: +${archiveMovies} films, +${archiveSeries} series from ${accepted.length} fetched works`);
     }
+  }
+
+  // Episode subpages: series whose article only carries {{Main|List of X
+  // episodes}} pointers — follow them (paced, cache-resumable) and parse the
+  // full multi-season tables that live there.
+  const episodeSubpageWanted = new Map<string, string>(); // series wikiTitle → subpage
+  for (const s of series) {
+    if (s.episodesList.length > 0) continue;
+    const wikitext = titlePages.get(s.wikiTitle)?.wikitext;
+    const sub = wikitext ? findEpisodesSubpage(wikitext) : null;
+    if (sub) episodeSubpageWanted.set(s.wikiTitle, sub);
+  }
+  if (episodeSubpageWanted.size > 0) {
+    console.log(`→ Following ${episodeSubpageWanted.size} episode-list subpages…`);
+    const episodePages = await fetchPages([...new Set(episodeSubpageWanted.values())]);
+    let guidesGained = 0;
+    for (const s of series) {
+      const sub = episodeSubpageWanted.get(s.wikiTitle);
+      if (!sub) continue;
+      const page = episodePages.get(sub);
+      const rows = page?.wikitext ? extractEpisodes(page.wikitext) : [];
+      if (rows.length > 0) {
+        s.episodesList = rows;
+        guidesGained++;
+      }
+    }
+    console.log(`  ${guidesGained} series gained episode guides from subpages`);
+  }
+
+  // Soundtrack subpages: == Music == sections that only carry
+  // {{Main|X (soundtrack)}} — follow them for the actual track lists.
+  const ostSubpageWanted = new Map<string, string>(); // title wikiTitle → album subpage
+  for (const t of [...movies, ...series]) {
+    if (t.soundtrack && t.soundtrack.tracks.length > 0) continue;
+    const wikitext = titlePages.get(t.wikiTitle)?.wikitext;
+    const sub = wikitext ? findSoundtrackSubpage(wikitext) : null;
+    if (sub) ostSubpageWanted.set(t.wikiTitle, sub);
+  }
+  if (ostSubpageWanted.size > 0) {
+    console.log(`→ Following ${ostSubpageWanted.size} soundtrack subpages…`);
+    const ostPages = await fetchPages([...new Set(ostSubpageWanted.values())]);
+    let ostsGained = 0;
+    for (const t of [...movies, ...series]) {
+      const sub = ostSubpageWanted.get(t.wikiTitle);
+      if (!sub) continue;
+      const st = extractSoundtrack(ostPages.get(sub)?.wikitext ?? '');
+      if (st && st.tracks.length > 0) {
+        t.soundtrack = st;
+        ostsGained++;
+      }
+    }
+    console.log(`  ${ostsGained} titles gained soundtracks from subpages`);
   }
 
   // Resolve posters/portraits: prop=pageimages skips non-free posters, so fall
