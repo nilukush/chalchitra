@@ -722,3 +722,36 @@ Step 8 (real-time).**
 **Next: Step 7 (recursive person expansion — wave fetcher, person-lite/full records,
 Mayasabha's Aadhi Pinisetty first) → Step 8 (real-time: lastrevid refresh + TMDB
 changes + cron/EventStreams).**
+
+## Session 15 (cont. — 2026-08-21 night) — Step 7 SHIPPED (229 tests, 9,328 pages)
+
+- **classify-person.ts** (6 tests): person/occupation infoboxes + Indian-cinema
+  person categories for infobox-less stubs; rejects disambiguation/films/songs/
+  officeholders. **expand-persons.ts**: wave fetcher mirroring expand-titles —
+  discovery scans ALL 5,744 cached title pages' cast+crew wikilinks (10,313 unknown
+  targets found), ranks by reference count, EXPAND_PERSONS_FOCUS=<title-slug> hoist,
+  paced+cache-resumable, person-frontier.json. `npm run pipeline:persons`.
+- **build-dataset**: wave-accepted persons ingested into finalPersons BEFORE subpage
+  discovery (their filmography/awards subpages auto-followed: 190→309). Exact-name
+  fallback links plain-text cast entries when exactly one person carries that name.
+- **Wave 1 (+1,275 persons, 3,494 total)**: **Aadhi Pinisetty HAS A PAGE** (30
+  filmography rows, 5 awards) and links from /series/mayasabha ✓. Archive-series
+  cast link rate 29.5%→35.4%. Mayasabha 16/28 (57%): remainder = plain-text names
+  (no wikilink — Wikipedia limit), 2 accepted-but-unlinked variant-key edge cases
+  (Prabhavathi/Shankar Mahanthi — frontier keys ≠ cast link targets; chase next
+  session), low-ref pendings (future waves), 2 officeholders (correctly rejected).
+  Filmography rows 121,885→214,577 → next title wave will grow the archive
+  massively. persons.json 58.3MB (budget OK). 8,813 person targets still pending.
+- **KNOWN ISSUE (TMDB persons)**: fresh person-search fetches hang in the
+  long-lived dataset process (loop idle, _getActiveHandles = only WriteStreams,
+  detached promise; the EXACT same request works standalone via tsx/curl —
+  process-state dependent). Mitigations shipped: 15s AbortSignal + shared undici
+  Agent (keepAlive 4s) + per-person 20s race + 10-stall circuit breaker +
+  TMDB_PERSONS=0 gate (used for tonight's runs). Archive-lite/titles phases
+  unaffected (warm cache). Root-cause next session (suspect: undici in tsx/ESM
+  long-runner interplay; try plain node:https or worker-thread isolation).
+- Builds: 9,328 pages (7,970 + 1,281 wave-person pages + 77 pagination routes).
+
+**Next: continue person waves (`npm run pipeline:persons 1500` ×~6) + title waves
+(pipeline:expand — frontier grew via wave persons' filmographies), root-cause the
+TMDB persons hang, then Step 8 (real-time).**

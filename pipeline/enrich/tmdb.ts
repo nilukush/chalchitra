@@ -8,6 +8,12 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { Agent, fetch as undiciFetch } from 'undici';
+
+/** One shared dispatcher with short keep-alive: sockets close after 4s idle,
+ *  so phases that idle (image resolution etc.) never resume on a half-open
+ *  connection — without allocating an Agent per request. */
+const tmdbAgent = new Agent({ keepAliveTimeout: 4_000, keepAliveMaxTimeout: 8_000 });
 import type { TitleRecord } from '../types.js';
 import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
@@ -61,7 +67,14 @@ async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await sleep(1000 * 2 ** attempt);
     try {
-      const res = await fetch(url, { headers: { Accept: 'application/json' } });
+      // undici's own fetch + a short-lived Agent: the global keep-alive pool
+      // can pin requests to a half-open socket that never errors (seen live —
+      // TMDB healthy from fresh connections while pooled fetches hung forever)
+      const res = await undiciFetch(url, {
+        headers: { Accept: 'application/json' },
+        signal: AbortSignal.timeout(15_000),
+        dispatcher: tmdbAgent,
+      });
       if (res.status === 404) return null;
       if (res.status === 429 || res.status >= 500) continue;
       if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
@@ -325,14 +338,37 @@ export async function enrichPersons(
   persons: { slug: string; name: string; image?: string; knownFor?: unknown[]; tmdbId?: number; enrichedFrom?: string[] }[],
 ): Promise<{ matched: number; knownForWorks: number; portraits: number }> {
   const apiKey = process.env.TMDB_API_KEY;
-  if (!apiKey) return { matched: 0, knownForWorks: 0, portraits: 0 };
+  if (!apiKey || process.env.TMDB_PERSONS === '0') {
+    if (process.env.TMDB_PERSONS === '0') console.log('→ TMDB persons: skipped (TMDB_PERSONS=0)');
+    return { matched: 0, knownForWorks: 0, portraits: 0 };
+  }
 
   let matched = 0;
   let knownForWorks = 0;
   let portraits = 0;
 
+  console.log(`→ TMDB persons: matching ${persons.length} (paced, cached)…`);
+  const STALL = Symbol('stall');
+  let done = 0;
+  let consecutiveStalls = 0;
   for (const person of persons) {
-    const search = await tmdbGet(`/search/person?query=${encodeURIComponent(person.name)}&include_adult=false`, apiKey);
+    // hard per-person timeout + circuit breaker: the persons phase once hung
+    // forever on a detached fetch promise (loop idle, no handles — see
+    // session 15 notes); a stall must never block the whole dataset build
+    const result = await Promise.race([
+      tmdbGet(`/search/person?query=${encodeURIComponent(person.name)}&include_adult=false`, apiKey),
+      sleep(20_000).then(() => STALL),
+    ]);
+    if (result === STALL) {
+      if (++consecutiveStalls >= 10) {
+        console.log('  persons tmdb: 10 consecutive stalls — skipping TMDB for the remaining persons this run');
+        break;
+      }
+      continue;
+    }
+    consecutiveStalls = 0;
+    const search = result;
+    if (++done % 200 === 0) console.log(`  persons tmdb ${done}/${persons.length}`);
     const hit = (search?.results ?? []).find(
       (r: any) => (r.name ?? '').toLowerCase().trim() === person.name.toLowerCase().trim(),
     );

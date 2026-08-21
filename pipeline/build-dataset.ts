@@ -302,6 +302,30 @@ async function main() {
   }
   console.log(`→ ${finalPersons.size} person pages resolved`);
 
+  // Recursive person expansion (Step 7): ingest the wave-accepted person pages
+  // — cast/crew discovered on ANY cached title (catalogue + archive alike).
+  // They flow through the same person loop: filmography/awards/discography/
+  // bio/subpages, and the archive cast wiring below resolves against them.
+  const personFrontierPath = path.join(DATA, 'cache', 'person-frontier.json');
+  if (existsSync(personFrontierPath)) {
+    const pf = JSON.parse(readFileSync(personFrontierPath, 'utf8')) as {
+      targets: Record<string, { pageid: number; finalTitle?: string; status: string }>;
+    };
+    let wavePersons = 0;
+    for (const [requested, entry] of Object.entries(pf.targets)) {
+      if (entry.status !== 'accepted' || entry.pageid <= 0) continue;
+      const page = readCachedPage(entry.pageid);
+      if (!page?.wikitext) continue;
+      const finalTitle = entry.finalTitle ?? page.title;
+      canonical.set(requested, finalTitle);
+      if (!finalPersons.has(finalTitle)) {
+        finalPersons.set(finalTitle, page);
+        wavePersons++;
+      }
+    }
+    if (wavePersons > 0) console.log(`→ Person expansion: +${wavePersons} wave persons`);
+  }
+
   // Follow {{Main|X filmography}} / {{Main|List of awards…}} pointers to the
   // dedicated subpages that hold the real tables (Emraan Hashmi et al).
   // Fetched through the same paced, cache-resumable path as everything else.
@@ -325,13 +349,28 @@ async function main() {
     const page = finalPersons.get(finalTitle)!;
     personSlugByFinal.set(finalTitle, personRegistry.slug(page.title, page.pageid));
   }
+  // exact-name fallback for plain-text cast entries (no wikilink on the title
+  // page): link them when EXACTLY ONE person in the universe carries that name
+  const nameCount = new Map<string, number>();
+  for (const finalTitle of finalPersons.keys()) {
+    const name = displayTitle(finalTitle);
+    nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  }
+  const nameToSlug = new Map<string, string>();
+  for (const [finalTitle, slug] of personSlugByFinal) {
+    const name = displayTitle(finalTitle);
+    if (nameCount.get(name) === 1) nameToSlug.set(name, slug);
+  }
 
   // wire cast + crew into title records
   for (const record of [...movies, ...series]) {
     const cast = titleCast.get(record.wikiTitle) ?? [];
     record.cast = cast.map((member) => {
       const final = member.wikiTitle ? canonical.get(member.wikiTitle) : undefined;
-      const slug = final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null;
+      const slug =
+        (final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null) ??
+        (member.wikiTitle ? undefined : nameToSlug.get(member.name)) ??
+        null;
       return { name: member.name, slug, role: member.role };
     });
     const crew = titleCrew.get(record.wikiTitle) ?? [];
@@ -489,10 +528,15 @@ async function main() {
       record.reception = undefined;
       record.sections = [];
       record.external = { imdbId: record.external.imdbId, official: record.external.official, links: record.external.links.slice(0, 6) };
-      // wire cast/crew to existing catalogue persons only — no new person discovery
+      // wire cast/crew to the person universe (catalogue + expansion waves);
+      // plain-text names link via the exact-name fallback
       record.cast = extractCast(page.wikitext).map((member) => {
         const final = member.wikiTitle ? canonical.get(member.wikiTitle) : undefined;
-        return { name: member.name, role: member.role, slug: final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null };
+        const slug =
+          (final && personSlugByFinal.has(final) ? personSlugByFinal.get(final)! : null) ??
+          (member.wikiTitle ? undefined : nameToSlug.get(member.name)) ??
+          null;
+        return { name: member.name, role: member.role, slug };
       });
       const crewLinks = collectPersonLinks(box, [], CREW_FIELDS);
       record.crew = crewLinks
