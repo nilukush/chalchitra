@@ -326,3 +326,40 @@ export async function resolveImageThumbUrls(
   }
   return map;
 }
+
+/** Live lastrevid poll for cached pageids (batches of 50, paced, backoff).
+ *  Deliberately NOT disk-cached — revids must be fresh on every refresh run.
+ *  This is the delta signal for pipeline:refresh (Step 8). */
+export async function fetchLastRevids(pageIds: number[]): Promise<Map<number, number>> {
+  const out = new Map<number, number>();
+  for (let i = 0; i < pageIds.length; i += 50) {
+    const batch = pageIds.slice(i, i + 50);
+    const params = new URLSearchParams({
+      action: 'query',
+      prop: 'info',
+      pageids: batch.join('|'),
+      format: 'json',
+      formatversion: '2',
+    });
+    let json: any = null;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      if (attempt > 0) await sleep(backoffDelayMs(attempt));
+      try {
+        const res = await fetch(`${API_URL}?${params.toString()}`, {
+          headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+        });
+        if (res.status === 429 || res.status >= 500) continue;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        json = await res.json();
+        break;
+      } catch {
+        /* retry */
+      }
+    }
+    for (const page of json?.query?.pages ?? []) {
+      if (page?.pageid && page?.lastrevid) out.set(page.pageid, page.lastrevid);
+    }
+    await sleep(REQUEST_GAP_MS);
+  }
+  return out;
+}

@@ -770,3 +770,23 @@ total episodes 41,491 (was ~1,800). TMDB_PERSONS=0 no longer needed. 229 tests,
 9,328 pages, preview restarted, aadhi+home 200. Lesson: silent catch-blocks around
 refactored scopes are how a one-variable bug masquerades as a network mystery —
 instrument BEFORE theorizing (5 diagnostic cycles wasted on socket theories).
+
+## Session 15 (cont. — 2026-08-22 evening) — wave 2 + Step 8a refresh SHIPPED (233 tests, 10,563 pages)
+
+- **Person wave 2** (+1,401 accepted; 2,830 cumulative, 7,313 pending): dataset now
+  **4,723 persons**; TMDB persons 3,631/4,723 matched, 10,589 known-for, 967 portraits
+  (full speed post-fix). Archive-series cast linking **35.4%→43.4%** after wave 2.
+  persons.json 71.5MB (budget: revisit chunking at ~90MB — wave 3+ may trigger it).
+  Mayasabha unchanged 16/28 (same plain-text/variant-key residue — the two variant-key
+  stragglers still worth chasing).
+- **Step 8a `pipeline:refresh`** (TDD lib): revid poll in 50-id batches via new
+  paced/uncached `fetchLastRevids` (wiki-api.ts); `planRefresh` diff (changed/added,
+  tested ×4); selective cache-file invalidation + paced refetch of ONLY edited pages;
+  snapshot at data/cache/revid-snapshot.json. **Baseline established: 10,592 revids**
+  (of 11,542 cached pages; ~950 return no live revid — deleted/merged articles, they
+  simply never refresh). First diff run happens on the next `npm run pipeline:refresh`.
+  Runbook: refresh → titles → dataset → build.
+- Remaining Step 8: TMDB /changes delta + scheduled cron (GH Actions) + EventStreams
+  consumer decision (host choice with the approved $0–5/mo budget) — next session.
+
+**Next: waves 3+ (person ×5, then title waves — frontier grew again), then Step 8b.**
