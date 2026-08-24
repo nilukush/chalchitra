@@ -65,7 +65,7 @@ function readTmdbCache(pathAndQuery: string): any | undefined {
   }
 }
 
-async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
+export async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
   const cached = readTmdbCache(pathAndQuery);
   if (cached !== undefined) return cached;
   const cacheFile = tmdbCacheFile(pathAndQuery);

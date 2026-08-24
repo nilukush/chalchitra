@@ -1,0 +1,89 @@
+# Daily near-real-time refresh (Step 8b): diff Wikipedia edits via lastrevid,
+# sync TMDB via change lists, pick up new titles, rebuild. Free tier.
+#
+# Secrets required (repo → Settings → Secrets and variables → Actions):
+#   TMDB_API_KEY  — TMDB enrichment (optional: without it TMDB phases skip)
+#   AI_API_KEY    — hooks/moods for catalogue titles (optional; cached anyway)
+#
+# To enable: push this file with the secrets set. The workflow keeps the
+# Wikipedia politeness pacing (it runs the same local scripts) and never
+# force-refreshes. Deployment of dist/ is host-specific and intentionally left
+# as the final step — wire your host's deploy command where marked.
+
+name: Daily refresh
+
+on:
+  schedule:
+    - cron: '15 5 * * *' # daily 05:15 UTC (after TMDB daily exports ~07:00 UTC? no — before; TMDB changes lag gracefully)
+  workflow_dispatch: {} # manual trigger from the Actions tab
+
+concurrency:
+  group: daily-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore pipeline caches
+        uses: actions/cache/restore@v4
+        with:
+          path: data/cache
+          key: pipeline-cache-${{ github.run_id }}
+          restore-keys: |
+            pipeline-cache-
+
+      - name: Refresh Wikipedia (lastrevid diff, paced)
+        run: npm run pipeline:refresh
+
+      - name: Sync TMDB change lists
+        if: env.TMDB_API_KEY != ''
+        run: npm run pipeline:tmdb-changes
+
+      - name: Discover new titles (category crawl, ~10s)
+        run: npm run pipeline:titles
+
+      - name: Rebuild dataset
+        run: npm run pipeline:dataset
+
+      - name: Refresh trends
+        run: npm run pipeline:trends
+
+      - name: Build site
+        run: npm run build
+
+      - name: Save pipeline caches (incremental — pages + api + tmdb + snapshots)
+        uses: actions/cache/save@v4
+        with:
+          path: data/cache
+          key: pipeline-cache-${{ github.run_id }}
+
+      # ── Deploy: wire your host here, e.g. ────────────────────────────────
+      # - name: Deploy
+      #   run: npx wrangler pages deploy dist --project-name chalchitra
+      #   (or rsync dist/ to your host, or commit dist/ to a gh-pages branch)
+
+      - name: Build summary
+        run: |
+          echo "### Refresh summary" >> $GITHUB_STEP_SUMMARY
+          echo "- pages built: $(find dist -name '*.html' | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "- movies: $(node -p "require('./data/site-stats.json').movies")" >> $GITHUB_STEP_SUMMARY
+          echo "- series: $(node -p "require('./data/site-stats.json').series")" >> $GITHUB_STEP_SUMMARY
+          echo "- persons: $(node -p "require('./data/site-stats.json').persons")" >> $GITHUB_STEP_SUMMARY

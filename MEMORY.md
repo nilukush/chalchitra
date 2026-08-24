@@ -790,3 +790,28 @@ instrument BEFORE theorizing (5 diagnostic cycles wasted on socket theories).
   consumer decision (host choice with the approved $0–5/mo budget) — next session.
 
 **Next: waves 3+ (person ×5, then title waves — frontier grew again), then Step 8b.**
+
+## Session 15 (final — 2026-08-22) — wave 3 + Step 8b SHIPPED (236 tests, 11,702 pages)
+
+- **Person wave 3** (+1,364 accepted; 4,194 cumulative, 5,813 pending): **5,856
+  persons**; TMDB persons 4,517/5,856, 13,090 known-for, 1,185 portraits. Archive
+  cast linking 43.4%→**50.5%** (three waves: 29.5→35.4→43.4→50.5). Mayasabha 16/28
+  (residue is plain-text names + the 2 variant-key stragglers — still open).
+  persons.json **81.1MB — chunk BEFORE wave 4** (~+17MB/wave would cross the 100MB
+  cap; split by letter in build-dataset write + data.ts load).
+- **Step 8b TMDB delta** (`pipeline:tmdb-changes`, TDD planTmdbRefresh): /movie+tv
+  /changes window (14d max lookback — run ≥biweekly; last-run file), intersect with
+  tracked tmdbIds, invalidate details+season cache URLs only. Live-validated: window
+  08-10→08-24, 29 tracked titles changed → 48 entries invalidated. Page cap 20×100
+  (TMDB lists are global; fine at 40 requests) — future: stop early when a page has
+  no tracked ids (they're date-desc? not guaranteed — left as-is).
+- **Step 8b cron**: .github/workflows/refresh-daily.yml — daily 05:15 UTC (secrets
+  via job env; step-if uses env.TMDB_API_KEY since `secrets` isn't valid in if:),
+  actions/cache for data/cache (incremental pages+api+tmdb+snapshots across runs),
+  full runbook refresh→tmdb-changes→titles→dataset→trends→build, deploy step left
+  as a marked stub until a host is chosen. Enable = push with secrets set.
+- Step 8 remaining: EventStreams always-on consumer (host decision, $0–5/mo
+  approved) — the only piece needing user input next session.
+
+**Session-15 plan COMPLETE (steps 1–7 + 8a/8b-wiki+tmdb+cron).** Next session:
+persons.json chunking → waves 4+ → title waves → EventStreams → deploy host.
