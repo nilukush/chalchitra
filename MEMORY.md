@@ -755,3 +755,18 @@ changes + cron/EventStreams).**
 **Next: continue person waves (`npm run pipeline:persons 1500` ×~6) + title waves
 (pipeline:expand — frontier grew via wave persons' filmographies), root-cause the
 TMDB persons hang, then Step 8 (real-time).**
+
+## Session 15 (cont. — 2026-08-22) — TMDB ROOT CAUSE FIXED + 37k episodes unlocked
+
+**The "hang" was never a hang**: the F9 cache-first refactor left `writeFileSync(cacheFile,…)`
+referencing a variable that had moved into readTmdbCache → every FRESH TMDB fetch got 200,
+threw ReferenceError, retried ×3 (~7s), returned null silently. Warm caches masked it;
+TMDB_DEBUG=1 instrumentation exposed it in one probe. Fix: shared `tmdbCacheFile()` helper.
+TMDB_DEBUG stays as a permanent diagnostic flag.
+**Unlocked (all previously zeroed by the same bug)**: TMDB persons 2,668/3,494 matched,
+7,761 known-for works, 697 portraits (wave persons now enriched); archive-lite season
+synthesis **37,225 episodes in 35s** — series w/ rows 151→284/381, multi-season 35→70,
+total episodes 41,491 (was ~1,800). TMDB_PERSONS=0 no longer needed. 229 tests,
+9,328 pages, preview restarted, aadhi+home 200. Lesson: silent catch-blocks around
+refactored scopes are how a one-variable bug masquerades as a network mystery —
+instrument BEFORE theorizing (5 diagnostic cycles wasted on socket theories).

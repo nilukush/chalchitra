@@ -49,9 +49,14 @@ async function synthesizeMissingSeasons(record: TitleRecord, pacedGet: PacedGet)
   return added.length;
 }
 
+/** Cache file path for a TMDB request URL. */
+function tmdbCacheFile(pathAndQuery: string): string {
+  return path.join(CACHE_DIR, `${createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20)}.json`);
+}
+
 /** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt). */
 function readTmdbCache(pathAndQuery: string): any | undefined {
-  const cacheFile = path.join(CACHE_DIR, `${createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20)}.json`);
+  const cacheFile = tmdbCacheFile(pathAndQuery);
   if (!existsSync(cacheFile)) return undefined;
   try {
     return JSON.parse(readFileSync(cacheFile, 'utf8'));
@@ -63,6 +68,7 @@ function readTmdbCache(pathAndQuery: string): any | undefined {
 async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
   const cached = readTmdbCache(pathAndQuery);
   if (cached !== undefined) return cached;
+  const cacheFile = tmdbCacheFile(pathAndQuery);
   const url = `${API}${pathAndQuery}${pathAndQuery.includes('?') ? '&' : '?'}api_key=${apiKey}`;
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt > 0) await sleep(1000 * 2 ** attempt);
@@ -75,6 +81,7 @@ async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null
         signal: AbortSignal.timeout(15_000),
         dispatcher: tmdbAgent,
       });
+      if (process.env.TMDB_DEBUG) console.error(`  [tmdb] ${res.status} ${pathAndQuery.slice(0, 80)}`);
       if (res.status === 404) return null;
       if (res.status === 429 || res.status >= 500) continue;
       if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
@@ -83,7 +90,8 @@ async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null
       writeFileSync(cacheFile, JSON.stringify(json));
       await sleep(120);
       return json;
-    } catch {
+    } catch (e) {
+      if (process.env.TMDB_DEBUG) console.error(`  [tmdb] attempt ${attempt} FAILED ${pathAndQuery.slice(0, 80)}:`, (e as Error)?.name, (e as Error)?.message, (e as Error)?.cause ?? '');
       /* retry */
     }
   }
