@@ -4,8 +4,8 @@
 Static website + data pipeline cataloguing **every era of Indian cinema** (movies, series,
 people) from Wikipedia, enriched with TMDB. Product name: **Chalchitra** (चलचित्र).
 Single-tier policy: every title/person gets the full parse — no fidelity tiers.
-Repo: https://github.com/nilukush/chalchitra (public). Deploy target: Render static
-(blueprint in `render.yaml`, free Hobby plan, deploy-hook triggered daily).
+Repo: https://github.com/nilukush/chalchitra (public). Deploy target: **Vercel Hobby**
+(prebuilt CLI deploys from the daily workflow; `render.yaml` kept as the Render fallback).
 
 ## Commands
 - `npm run pipeline:all` — titles → fetch → dataset → trends (idempotent, disk-cached, polite ~1 req/s)
@@ -42,11 +42,12 @@ Repo: https://github.com/nilukush/chalchitra (public). Deploy target: Render sta
 ## Data & deployment invariants
 - `data/*.json`, `data/persons/`, `public/search-index.json` are **generated and gitignored** —
   rebuilt from `data/cache/` by `pipeline:dataset`. CI bootstraps the cache from the
-  `seed` release asset; the daily workflow re-publishes it; Render's build downloads it.
-- GitHub: public repo (free Actions minutes for the daily/hourly workflows). Old dev
-  history preserved locally on `history-v1`; `main` is a fresh single-commit start.
-- Render free tier: 500 build min/month → deploys are DAILY via deploy hook
-  (`RENDER_DEPLOY_HOOK` secret); the hourly workflow refreshes data only.
+  `seed` release asset; the daily workflow re-publishes it.
+- GitHub: public repo (free Actions minutes for the daily/hourly workflows).
+- Vercel deploys are PREBUILT from the daily workflow (`vercel deploy ./dist --prod
+  --archive=tgz`; zero Vercel build minutes). Hobby plan is **non-commercial only**
+  — never add ads/affiliate/donation links, or deployments 503-pause (Render
+  blueprint is the documented fallback).
 - Wikipedia text is CC BY-SA 4.0 → every page carries attribution + source link.
 - Posters hotlink `upload.wikimedia.org`; slugs kebab-case with `-2`/`-3` collisions.
 
