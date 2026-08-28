@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: read
+  contents: write  # release-asset publish (seed cache) needs write
 
 jobs:
   refresh-and-build:
