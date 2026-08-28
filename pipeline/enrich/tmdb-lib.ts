@@ -162,11 +162,14 @@ export interface LiteRecord {
  * pass, minus episode work — record size and call budget stay small.
  * Returns whether anything changed (drives `enrichedFrom` attribution).
  */
-export function applyLiteEnrichment(record: LiteRecord, details: TmdbDetailsLite): boolean {
+export function applyLiteEnrichment(record: LiteRecord, details: TmdbDetailsLite, dirty = false): boolean {
   const sources = new Set(record.enrichedFrom ?? []);
   let changed = false;
+  // fresh TMDB payloads may OVERWRITE these TMDB-native fields when the
+  // change-list delta marked the title dirty; Wikipedia never supplies them
+  const canSet = (isEmpty: boolean) => isEmpty || dirty;
 
-  if (!record.backdrop && details.backdrop_path) {
+  if (canSet(!record.backdrop) && details.backdrop_path) {
     record.backdrop = `https://image.tmdb.org/t/p/w780${details.backdrop_path}`;
     changed = true;
   }
@@ -177,16 +180,16 @@ export function applyLiteEnrichment(record: LiteRecord, details: TmdbDetailsLite
       changed = true;
     }
   }
-  if (!record.tagline && typeof details.tagline === 'string' && details.tagline.trim()) {
+  if (canSet(!record.tagline) && typeof details.tagline === 'string' && details.tagline.trim()) {
     record.tagline = details.tagline.trim();
     changed = true;
   }
   const votes = details.vote_count ?? 0;
-  if (!record.rating && typeof details.vote_average === 'number' && votes >= 3) {
+  if (canSet(!record.rating) && typeof details.vote_average === 'number' && votes >= 1) {
     record.rating = { source: 'tmdb', value: details.vote_average, votes };
     changed = true;
   }
-  if (!record.trailer) {
+  if (canSet(!record.trailer)) {
     const key = pickTmdbTrailer([(details.videos?.results ?? []) as TmdbVideo[]]);
     if (key) {
       record.trailer = `https://www.youtube.com/watch?v=${key}`;

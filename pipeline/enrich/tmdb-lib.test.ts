@@ -155,7 +155,7 @@ describe('applyLiteEnrichment (archive pass)', () => {
     videos: { results: [{ key: 'tr1', type: 'Trailer', site: 'YouTube', official: true, name: 'Official trailer' }] },
   } as any;
 
-  it('fills empty gaps: backdrop, deduped genres, tagline, rating (≥3 votes), trailer', () => {
+  it('fills empty gaps: backdrop, deduped genres, tagline, rating (≥1 vote), trailer', () => {
     const record = {
       kind: 'movie',
       genres: [],
@@ -175,7 +175,7 @@ describe('applyLiteEnrichment (archive pass)', () => {
     expect(record.enrichedFrom).toContain('tmdb');
   });
 
-  it('never overwrites fields Wikipedia already provided', () => {
+  it('never overwrites provided fields when NOT dirty', () => {
     const record = {
       kind: 'movie',
       genres: ['Drama'],
@@ -193,9 +193,26 @@ describe('applyLiteEnrichment (archive pass)', () => {
     expect(record.enrichedFrom).toEqual([]);
   });
 
-  it('ignores ratings with fewer than 3 votes', () => {
+  it('shows ratings from a single vote (vote count is displayed on the page)', () => {
     const record = { kind: 'movie', genres: [], enrichedFrom: [] } as any;
-    applyLiteEnrichment(record, { ...details, vote_count: 2 } as any);
-    expect(record.rating).toBeUndefined();
+    applyLiteEnrichment(record, { ...details, vote_count: 1, vote_average: 6 } as any);
+    expect(record.rating).toEqual({ source: 'tmdb', value: 6, votes: 1 });
+  });
+
+  it('DIRTY titles: fresh TMDB payloads overwrite TMDB-native fields (rating drift, new trailer)', () => {
+    const record = {
+      kind: 'movie',
+      genres: ['Drama'], // wiki-supplied — NEVER overwritten
+      backdrop: '/old.jpg',
+      tagline: 'Old hook',
+      rating: { source: 'tmdb', value: 5.0, votes: 2 },
+      trailer: 'https://www.youtube.com/watch?v=old',
+      enrichedFrom: ['tmdb'],
+    } as any;
+    applyLiteEnrichment(record, details, true);
+    expect(record.rating).toEqual({ source: 'tmdb', value: 6.4, votes: 41 });
+    expect(record.trailer).toBe('https://www.youtube.com/watch?v=tr1');
+    expect(record.backdrop).toContain('/b.jpg');
+    expect(record.genres).toEqual(['Drama']); // wiki field untouched
   });
 });

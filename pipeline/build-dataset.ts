@@ -664,11 +664,21 @@ async function main() {
   // polite 8 req/s gate — the old 12–38h figure was serial-client latency,
   // not a TMDB limit; every response is disk-cached so re-runs are fast.
   // Set TMDB_ARCHIVE_LITE=0 to skip the archive pass on slow links.
+  // ids the TMDB change-list delta invalidated: their TMDB-native fields
+  // (rating/trailer/backdrop/tagline) refresh instead of fill-only-empty
+  const dirtyPath = path.join(DATA, 'cache', 'tmdb-dirty.json');
+  let tmdbDirty = new Set<number>();
+  if (existsSync(dirtyPath)) {
+    try {
+      tmdbDirty = new Set(JSON.parse(readFileSync(dirtyPath, 'utf8')).ids ?? []);
+    } catch { /* ignore */ }
+    rmSync(dirtyPath, { force: true });
+  }
   const catalogueTitles = [...movies, ...series].filter((t) => !t.archive);
-  await enrichTitles(catalogueTitles);
+  await enrichTitles(catalogueTitles, tmdbDirty);
   if (process.env.TMDB_ARCHIVE_LITE !== '0') {
     const archiveTitles = [...movies, ...series].filter((t) => t.archive);
-    await enrichTitlesLite(archiveTitles);
+    await enrichTitlesLite(archiveTitles, { dirty: tmdbDirty });
   }
   await enrichPersons(persons);
   // AI hooks/moods — key-gated; falls back to tagline/first-sentence below

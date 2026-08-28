@@ -130,7 +130,7 @@ function startGate(minIntervalMs: number) {
  */
 export async function enrichTitlesLite(
   titles: TitleRecord[],
-  opts: { rps?: number; concurrency?: number; candidates?: number } = {},
+  opts: { rps?: number; concurrency?: number; candidates?: number; dirty?: Set<number> } = {},
 ): Promise<{ matched: number; enriched: number }> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey || titles.length === 0) return { matched: 0, enriched: 0 };
@@ -193,7 +193,7 @@ export async function enrichTitlesLite(
       record.tmdbId = hit.id;
       // same URL shape as the candidate probes → one cache key per title
       const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos`));
-      if (details && applyLiteEnrichment(record, details)) enriched++;
+      if (details && applyLiteEnrichment(record, details, opts.dirty?.has(hit.id) ?? false)) enriched++;
       // full-fidelity mandate: archive series get episode guides for the
       // seasons their Wikipedia article doesn't tabulate (paced + cached)
       if (record.kind === 'series') {
@@ -213,7 +213,7 @@ export async function enrichTitlesLite(
 /**
  * Enrich title records in place. Returns stats. No-op without TMDB_API_KEY.
  */
-export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: number; episodesFilled: number; episodesSynthesized: number; backdrops: number }> {
+export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = new Set()): Promise<{ matched: number; episodesFilled: number; episodesSynthesized: number; backdrops: number }> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey) {
     console.log('→ TMDB enrichment: TMDB_API_KEY not set — skipping (set it to enable episode summaries, backdrops, ratings, trailers)');
@@ -262,7 +262,7 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
     const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US&append_to_response=videos`, apiKey);
     if (!details) continue;
 
-    if (!record.backdrop && details.backdrop_path) {
+    if ((!record.backdrop || dirty.has(hit.id)) && details.backdrop_path) {
       record.backdrop = `${IMG}/w780${details.backdrop_path}`;
       backdrops++;
       if (!sources.includes('tmdb')) sources.push('tmdb');
@@ -272,19 +272,19 @@ export async function enrichTitles(titles: TitleRecord[]): Promise<{ matched: nu
       record.genres = details.genres.map((g: any) => g.name).filter(Boolean).slice(0, 4);
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
-    if (!record.tagline && typeof details.tagline === 'string' && details.tagline.trim()) {
+    if ((!record.tagline || dirty.has(hit.id)) && typeof details.tagline === 'string' && details.tagline.trim()) {
       record.tagline = details.tagline.trim();
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
     const votes = details.vote_count ?? 0;
-    if (!record.rating && typeof details.vote_average === 'number' && votes >= 3) {
+    if ((!record.rating || dirty.has(hit.id)) && typeof details.vote_average === 'number' && votes >= 1) {
       record.rating = { source: 'tmdb', value: details.vote_average, votes };
       if (!sources.includes('tmdb')) sources.push('tmdb');
     }
     // Trailer: show-level videos first; for series, season-level pools often
     // hold the only trailers — merge them before the tiered YouTube-only pick.
     let trailerKey: string | undefined;
-    if (!record.trailer) {
+    if (!record.trailer || dirty.has(hit.id)) {
       const videoPools: TmdbVideo[][] = [(details.videos?.results ?? []) as TmdbVideo[]];
       if (record.kind === 'series' && (details.videos?.results ?? []).length === 0) {
         const seasons = Math.min(Number((details as any).number_of_seasons) || 1, 2);

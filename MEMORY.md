@@ -913,3 +913,25 @@ Pipeline fully automated: daily 05:15 UTC + hourly data runs + on-demand.
 Project URL note: per-deployment URLs are unique; production alias = newest deploy.
 Next session: waves 5+ (4,307 pending persons), title waves (24,233), optionally set a
 custom domain, and consider the orphan history slimming.
+
+## Session 16 (cont. — 2026-08-28 evening) — user bug round: 4 fixes SHIPPED (241 tests)
+
+User reported on live site; all root-caused:
+1. **/people "0 of 5860, page undefined"** — Astro does NOT deliver getStaticPaths
+   props on static index routes → pageNo undefined → slice(NaN) = empty. FIXED:
+   hardcoded pageNo=1. (Lesson: verify CONTENT not just HTTP 200.)
+2. **Stale rating/trailer (bethlehem-kudumba-unit class)** — THREE stacked causes,
+   all fixed: (a) change-list fetch was page-capped at 20 pages (2,000 global ids)
+   → now 100 pages: 10k ids → 143 tracked titles caught vs ~25; (b) enrichment was
+   fill-only-empty → dirty-update mechanism: tmdb-changes writes tmdb-dirty.json,
+   build-dataset passes the set to BOTH enrichment passes, TMDB-native fields
+   (rating/trailer/backdrop/tagline) OVERWRITE when dirty (wiki fields never);
+   (c) rating gate ≥3 votes → **≥1** (vote count displayed; +662 titles rated
+   instantly; i-nobody 6.0(1v) now shows). Unit tests for dirty mode + gate.
+   NOTE: entries changed >14d ago are unreachable (TMDB lookback cap) — one-off
+   manual cache invalidation for stragglers (bethlehem done this way).
+3. **"Random" index order** — it IS year-desc then A–Z, but year was hover-only
+   → PosterCard now shows a persistent year chip (bottom-left).
+4. **"Square boxes" on title pages** — cast rail's portrait-less tiles (dark box
+   + one faint letter) → IMDb-style monogram tiles (initials + CAST label).
+Deploy: chalchitra-c7t1ysj0u… live; bethlehem fix deploying (run21).

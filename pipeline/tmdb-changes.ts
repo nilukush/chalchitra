@@ -27,8 +27,9 @@ const isoDate = (d: Date) => d.toISOString().slice(0, 10);
 
 async function fetchChangedIds(kind: 'movie' | 'tv', start: string, end: string, apiKey: string): Promise<number[]> {
   const ids: number[] = [];
-  for (let page = 1; page <= 20; page++) {
-    const json = await tmdbGet(`/${kind}/changes?start_date=${start}&end_date=${end}&page=${page}`, apiKey);
+  let json: any = null;
+  for (let page = 1; page <= 100; page++) {
+    json = await tmdbGet(`/${kind}/changes?start_date=${start}&end_date=${end}&page=${page}`, apiKey);
     const results = json?.results ?? [];
     for (const r of results) if (r?.id) ids.push(r.id);
     if (page >= (json?.total_pages ?? 1)) break;
@@ -90,6 +91,9 @@ async function main() {
   }
 
   const plan = planTmdbRefresh(changedMovies, changedTv, tracked);
+  // dirty ids: the next dataset run may OVERWRITE TMDB-owned fields for these
+  // (rating/trailer/backdrop/tagline) instead of fill-only-empty
+  writeFileSync(path.join(DATA, 'cache', 'tmdb-dirty.json'), JSON.stringify({ ids: plan.map((p) => p.tmdbId) }));
   let removed = 0;
   for (const entry of plan) {
     for (const url of entry.urls) {

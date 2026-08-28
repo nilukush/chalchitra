@@ -4,11 +4,9 @@ import Pagination from '../../components/Pagination.astro';
 import PersonCard from '../../components/PersonCard.astro';
 import { INDEX_PAGE_SIZE, SITE, personsSorted } from '../../lib/data';
 
-export async function getStaticPaths() {
-  return [{ params: {}, props: { pageNo: 1 } }];
-}
-
-const { pageNo } = Astro.props;
+// page 1 — getStaticPaths props are NOT delivered on static index routes
+// (pageNo arrived undefined → slice(NaN) rendered zero cards)
+const pageNo = 1;
 const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#'.split('');
 
 /** paginate the alphabetical list, then re-bucket THIS page's slice by letter */

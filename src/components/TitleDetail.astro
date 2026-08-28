@@ -11,7 +11,7 @@ import ReferenceList from './ReferenceList.astro';
 import StatTiles from './StatTiles.astro';
 import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
-import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, titles } from '../lib/data';
+import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, personInitials, titles } from '../lib/data';
 import { extractTimelineDates } from '../lib/dates';
 import { formatRuntime, splitLongParagraphs, splitLeadSentence } from '../lib/format';
 
@@ -404,8 +404,7 @@ const jsonLd: Record<string, unknown>[] = [
                           {person?.image ? (
                             <img src={person.image} alt={member.name} loading="lazy" width="185" height="278" class="h-full w-full object-cover" />
                           ) : (
-                            <div class="flex h-full items-center justify-center grain">
-                              <span class="font-display text-3xl text-ivory-600">{member.name.slice(0, 1)}</span>
+                            <div class="flex h-full flex-col items-center justify-center gap-1.5 bg-gradient-to-b from-ink-800 to-ink-850 grain">                              <span class="font-display text-2xl font-bold tracking-wide text-ivory-300">{personInitials(member.name)}</span>                              <span class="text-[10px] uppercase tracking-[0.2em] text-ivory-600">Cast</span>
                             </div>
                           )}
                         </div>
