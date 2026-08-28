@@ -41,11 +41,16 @@ npm run pipeline:tmdb-changes  # TMDB change-list delta → invalidate stale ent
 npm run build                  # verify page count in output
 ```
 
-## Deployment (Render + GitHub)
+## Deployment (Vercel primary + Render fallback, via GitHub)
 - Repo: github.com/nilukush/chalchitra (public — free Actions minutes).
-- Workflows: refresh-daily (05:15 UTC: refresh → dataset → build → publish seed →
-  Render deploy hook) and refresh-hourly (data only, no deploy — Render free tier
-  caps at 500 build minutes/month).
-- Render static site builds from the repo + downloads the `seed` release cache.
-- Secrets needed: TMDB_API_KEY, AI_API_KEY (Actions), RENDER_DEPLOY_HOOK (Actions,
-  from the Render dashboard once the site is created).
+- **Vercel (primary)**: the daily workflow deploys the PREBUILT dist/ via
+  `vercel deploy ./dist --prod --archive=tgz` — zero Vercel build minutes, no
+  data-in-repo problem, 100GB/month bandwidth. Hobby plan is NON-COMMERCIAL:
+  no ads/affiliate/donations allowed, else deployments pause (503).
+- Workflows: refresh-daily (05:15 UTC: refresh → dataset → build → publish seed
+  → Vercel deploy) and refresh-hourly (data only).
+- **Render (fallback)**: render.yaml static blueprint (rebuilds from repo +
+  seed release; 500 build-min/month ⇒ daily-only). Keep dist/ portable.
+- Secrets needed: TMDB_API_KEY, AI_API_KEY, VERCEL_TOKEN, VERCEL_ORG_ID,
+  VERCEL_PROJECT_ID (Actions). Create the Vercel project WITHOUT git sync
+  (vercel.json sets github.enabled=false; deploys come from the workflow).

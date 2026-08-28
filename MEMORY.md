@@ -858,3 +858,26 @@ blobs — all <100MB, secret-scanned clean, CC BY-SA data: benign but heavy clon
 Data is untracked from 09d9188 onward. OPTIONAL next session: orphan-reset main to a
 single commit (`git checkout --orphan fresh && git add -A && git commit && git push -f`)
 to slim clones; not urgent.
+
+## Session 16 (cont. — 2026-08-28) — DEPLOY SWITCHED TO VERCEL (user-instigated, research-backed)
+
+**User asked "Render for website or backend? Vercel is good for website."** Analyzer
+research (vercel.com/docs/limits etc.) verdict: Vercel Hobby + PREBUILT CLI deploys
+strictly beats Render for this static site:
+- 100GB/mo bandwidth (vs Render 5GB; overage = features pause, softer cliff)
+- ZERO Vercel build minutes: GH Action builds dist/, `vercel deploy ./dist --prod
+  --archive=tgz` uploads the artifact — kills both the seed-tarball-in-build problem
+  AND the 500-build-min/month daily-only ceiling (up to 100 deploys/day allowed)
+- 15,000-file CLI upload cap (30k-page growth would hit it) has the official
+  --archive workaround (split-tgz now default); 1M edge-requests/mo guideline fine
+- CAVEAT: Hobby = non-commercial personal use ONLY — no ads/affiliate/donations
+  ever, else deployments 503-pause → Render blueprint kept as documented fallback
+Answer to the user's framing: there is NO backend; GitHub Actions is the "backend"
+(refresh/build); Render could host a future tiny API on its 750 free web-service
+hours if ever needed.
+Shipped: vercel.json (github.enabled=false + cache/security headers), daily-workflow
+deploy step swapped (VERCEL_TOKEN/ORG_ID/PROJECT_ID secrets; npx vercel deploy
+./dist --prod --archive=tgz), AGENTS/CLAUDE updated, render.yaml retained as fallback.
+**USER STEPS (Vercel): create Hobby account → new project (NO git connect) →
+create token → set 3 repo secrets (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID)
++ TMDB/AI keys → run refresh-daily once.**
