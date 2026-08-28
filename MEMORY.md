@@ -851,3 +851,10 @@ Verifier frontier+size measurements), then execution:
 
 **Next: waves 5-8 (4,307 pending ≈ 3 waves) → title waves (24,233 pending, grew via
 wave persons) → Render site creation (user) → first daily deploy.**
+
+**Session-16 correction**: the orphan `symbolic-ref` accidentally reattached to the
+EXISTING old main, so the remote carries the full 29-commit history (incl. old data
+blobs — all <100MB, secret-scanned clean, CC BY-SA data: benign but heavy clone).
+Data is untracked from 09d9188 onward. OPTIONAL next session: orphan-reset main to a
+single commit (`git checkout --orphan fresh && git add -A && git commit && git push -f`)
+to slim clones; not urgent.
