@@ -894,3 +894,12 @@ Emraan+Shanghai ✓). All 5 repo secrets set (VERCEL_TOKEN extracted from CLI au
 store w/o printing; ORG/PROJECT ids; TMDB/AI from .env). First CI daily-refresh run
 triggered (workflow_dispatch). .gitignore += .vercel/, .env.local (vercel link
 creates it). Non-commercial reminder: never add ads/affiliate/donations (Hobby ToS).
+
+**CI fix (run 33176174501 failed)**: tmdb-changes.ts read data/movies.json which
+doesn't exist in CI before the rebuild (data gitignored) → tracked TMDB ids now
+persist to **data/cache/tmdb-tracked.json** (written by build-dataset, carried by
+actions/cache); tmdb-changes prefers it, falls back to local data/*.json, skips
+gracefully when neither exists (first post-seed run only). Fix verified locally
+(22 titles → 32 invalidations via tracked.json). Rerun 33180000373 triggered;
+first-diff refresh is slow (~40 min: baseline is 6 days old + failed run's
+refetches weren't cache-saved). Live site unaffected (local deploy active).
