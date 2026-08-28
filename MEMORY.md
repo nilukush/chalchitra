@@ -935,3 +935,9 @@ User reported on live site; all root-caused:
 4. **"Square boxes" on title pages** — cast rail's portrait-less tiles (dark box
    + one faint letter) → IMDb-style monogram tiles (initials + CAST label).
 Deploy: chalchitra-c7t1ysj0u… live; bethlehem fix deploying (run21).
+
+**Release-date ordering (user decision)**: /movies + /series (and facets/pages) now
+sort by RELEASE DATE DESC (undated/TBA last, then year desc, A–Z) — sortForIndex
+rewritten. 5,064/5,363 movies + 379/381 series carry releaseDate. Bethlehem fully
+resolved live: 8.4★(9v)+trailer (wrong-variant cache deletion was the last blocker —
+lite-pass details use append_to_response=credits,videos, catalogue uses =videos).

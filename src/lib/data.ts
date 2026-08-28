@@ -231,8 +231,17 @@ export interface IndexPage<T> {
   total: number;
 }
 
-export function sortForIndex<T extends { year: number; title: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) => b.year - a.year || a.title.localeCompare(b.title));
+export function sortForIndex<T extends { year: number; title: string; releaseDate?: string }>(items: T[]): T[] {
+  // newest release date first; undated (TBA/upcoming) titles after all dated
+  // ones, then year desc, then A–Z — the user-facing contract for the indexes
+  return [...items].sort((a, b) => {
+    const ad = a.releaseDate ?? '';
+    const bd = b.releaseDate ?? '';
+    if (ad && bd && ad !== bd) return bd.localeCompare(ad);
+    if (bd && !ad) return 1;
+    if (ad && !bd) return -1;
+    return b.year - a.year || a.title.localeCompare(b.title);
+  });
 }
 
 export function indexPage<T>(sorted: T[], pageNo: number, pageSize = INDEX_PAGE_SIZE): IndexPage<T> {
