@@ -1,0 +1,36 @@
+# Render blueprint — static site on the free Hobby plan.
+#
+# Generated data (data/, data/cache/) is NOT in git; the build downloads the
+# pipeline cache seed from the repo's GitHub release (public URL, no auth),
+# rebuilds the dataset from it, then builds the site.
+#
+# Setup (one-time):
+#   1. Push this repo to GitHub (public).
+#   2. New Static Site in dashboard.render.com → connect the repo → Blueprint
+#      detects this file (or set build/publish manually from these values).
+#   3. Auto-Deploy: OFF — deploys happen via the deploy hook (fired by the
+#      daily GitHub workflow after it publishes a fresh seed). Render free
+#      plan: 500 build minutes/month ≈ 31 daily builds of ~10 min.
+#      Hourly rebuilds would exceed the free tier — do not enable auto-deploy.
+services:
+  - type: web
+    name: chalchitra
+    runtime: static
+    buildCommand: >
+      curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz -o /tmp/seed.tgz
+      && tar -xzf /tmp/seed.tgz
+      && npm ci
+      && npm run pipeline:dataset
+      && npm run build
+    staticPublishPath: ./dist
+    pullRequestPreviewsEnabled: false
+    headers:
+      - path: /_astro/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

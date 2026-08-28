@@ -1,14 +1,19 @@
 import moviesJson from '../../data/movies.json';
 import seriesJson from '../../data/series.json';
-import personsJson from '../../data/persons.json';
 import statsJson from '../../data/site-stats.json';
 import trendsJson from '../../data/trends.json';
 import type { PersonRecord, SiteStats, TitleRecord } from '../../pipeline/types';
 import type { TrendsPayload } from '../../pipeline/trends-lib';
 
+// persons live as first-letter chunks (data/persons/A.json … _.json) — the
+// monolith would cross the 100MB runtime + git per-file limit as waves grow
+const personChunks = import.meta.glob<{ default: PersonRecord[] }>('../../data/persons/*.json', { eager: true });
+
 export const movies = moviesJson as TitleRecord[];
 export const series = seriesJson as TitleRecord[];
-export const persons = personsJson as PersonRecord[];
+export const persons: PersonRecord[] = Object.values(personChunks)
+  .flatMap((mod) => mod.default)
+  .sort((a, b) => a.name.localeCompare(b.name));
 export const stats = statsJson as SiteStats;
 export const trends = trendsJson as TrendsPayload;
 

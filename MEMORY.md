@@ -815,3 +815,39 @@ instrument BEFORE theorizing (5 diagnostic cycles wasted on socket theories).
 
 **Session-15 plan COMPLETE (steps 1–7 + 8a/8b-wiki+tmdb+cron).** Next session:
 persons.json chunking → waves 4+ → title waves → EventStreams → deploy host.
+
+## Session 16 — 2026-08-28 — chunking + GitHub live + Render wired + wave 4 (240 tests)
+
+**3-agent consensus** (Analyzer Render/GitHub research / Debugger chunking design /
+Verifier frontier+size measurements), then execution:
+
+- **persons.json chunked** (TDD bucketKeyForName/chunkPersons): data/persons/<L>.json
+  ('#'→_.json), 25 chunks, largest S.json 16MB ≪ 100MB limits. Writer in build-dataset
+  (monolith deleted); pipeline readers via new persons-store.ts (expand-persons/
+  expand-titles/fetch-trends); site loads via import.meta.glob eager + flatMap(mod.default)
+  + re-sort (**gotcha: glob returns {default:[…]} namespaces — .flat() crashed the build**).
+  Build 11,702 pages green (192s — glob+sort costs ~90s; acceptable).
+- **Generated data gitignored** (data/*.json, data/persons/, public/search-index.json):
+  CI/Render rebuild from data/cache. Bootstrap = `seed` release asset (197MB gz,
+  published: releases/tag/seed); daily workflow re-publishes it; CI downloads on
+  actions/cache miss.
+- **Interwiki fix**: expand-persons filters `:xx:`-prefixed targets + swept 3,589 poisoned
+  pendings → rejected('interwiki'). Pending pool 10,313→6,724 targets (5,697 pending).
+- **GitHub LIVE**: github.com/nilukush/chalchitra — PUBLIC (free Actions minutes; private
+  would burn 3,600 of 2,000 free min/mo), fresh single-commit main (old history on local
+  branch history-v1; tree secret-scanned clean; .idea untracked).
+- **Render wired** (user's choice, research-validated): render.yaml static blueprint —
+  build downloads seed + dataset + build (~10 min/build; 500 free build-min/month ⇒
+  DAILY deploys only). Analyzer found Render-free EventStreams consumer infeasible
+  (spin-down + outbound-volume suspension risk) ⇒ Step 8 architecture final: hourly GH
+  workflow (data refresh only, keeps cache warm) + daily workflow (full rebuild +
+  seed publish + RENDER_DEPLOY_HOOK secret → Render deploy). Render static: no file-count
+  cap (CF would break at 20k), 5GB/mo bandwidth, overage = suspension not billing.
+  **USER NEXT STEPS: (1) create Render static site from the repo (blueprint detected),
+  auto-deploy OFF; (2) copy deploy hook URL → Actions secret RENDER_DEPLOY_HOOK;
+  (3) add TMDB_API_KEY/AI_API_KEY as Actions secrets; (4) run refresh-daily manually once.**
+- **Wave 4**: +1,267 accepted (5,461 cumulative; 4,307 pending) — final dataset/build
+  numbers below after run17. AGENTS.md/CLAUDE.md rewritten (compact, current).
+
+**Next: waves 5-8 (4,307 pending ≈ 3 waves) → title waves (24,233 pending, grew via
+wave persons) → Render site creation (user) → first daily deploy.**

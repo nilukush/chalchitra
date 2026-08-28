@@ -187,3 +187,40 @@ describe('computeKnownFor', () => {
     expect(ranked[0]?.slug).toBe('rated-high');
   });
 });
+
+// ── persons chunking (session 16): keep every data file well under the 100MB
+// runtime + GitHub limits as person waves grow the universe ──────────────
+import { bucketKeyForName, chunkPersons } from './dataset-lib.js';
+
+describe('bucketKeyForName', () => {
+  it('maps plain initials to their letter', () => {
+    expect(bucketKeyForName('Aadhi Pinisetty')).toBe('A');
+    expect(bucketKeyForName('tanishk bagchi')).toBe('T');
+  });
+
+  it('folds digits, accents and empty names to # (mirrors the people index A–Z buckets)', () => {
+    expect(bucketKeyForName('13th Lancers')).toBe('#');
+    expect(bucketKeyForName('Éanna')).toBe('#');
+    expect(bucketKeyForName('')).toBe('#');
+  });
+});
+
+describe('chunkPersons', () => {
+  it('buckets persons by name initial and keeps records intact', () => {
+    const chunks = chunkPersons([
+      { name: 'Aadhi Pinisetty', slug: 'a' },
+      { name: 'Ananya', slug: 'b' },
+      { name: 'Bobby', slug: 'c' },
+      { name: '13th Lancers', slug: 'd' },
+    ] as any);
+    expect(chunks.get('A')).toHaveLength(2);
+    expect(chunks.get('B')).toHaveLength(1);
+    expect(chunks.get('#')).toHaveLength(1);
+  });
+
+  it('never emits an empty bucket', () => {
+    const chunks = chunkPersons([{ name: 'Zoya', slug: 'z' }] as any);
+    expect(chunks.has('A')).toBe(false);
+    expect(chunks.get('Z')).toHaveLength(1);
+  });
+});

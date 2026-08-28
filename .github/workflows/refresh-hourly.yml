@@ -1,0 +1,71 @@
+# Hourly freshness loop (Step 8c): pull Wikipedia edits + TMDB changes into
+# the pipeline cache so the DAILY deploy is current. Does NOT deploy — Render
+# free tier caps builds at 500 min/month (~31 builds); this loop only keeps
+# data/cache warm (actions/cache evicts after 7 idle days) and pre-fetches
+# changes made during the day.
+#
+# Needs: TMDB_API_KEY secret (optional), no deploy secrets.
+
+name: Hourly data refresh
+
+on:
+  schedule:
+    - cron: '25 * * * *'
+  workflow_dispatch: {}
+
+concurrency:
+  group: hourly-refresh
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Restore pipeline caches
+        uses: actions/cache/restore@v4
+        with:
+          path: data/cache
+          key: pipeline-cache-${{ github.run_id }}
+          restore-keys: |
+            pipeline-cache-
+
+      - name: Bootstrap cache from seed release (cache miss only)
+        run: |
+          if [ ! -d data/cache/pages ]; then
+            curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz | tar -xz
+          fi
+
+      - name: Refresh Wikipedia (lastrevid diff, paced)
+        run: npm run pipeline:refresh
+
+      - name: Sync TMDB change lists
+        if: env.TMDB_API_KEY != ''
+        run: npm run pipeline:tmdb-changes
+
+      - name: Save pipeline caches
+        uses: actions/cache/save@v4
+        with:
+          path: data/cache
+          key: pipeline-cache-${{ github.run_id }}
+
+      - name: Summary
+        run: |
+          CHANGED=$(node -e "try{const s=require('./data/cache/revid-snapshot.json');console.log(Object.keys(s).length)}catch(e){console.log(0)}")
+          echo "### Hourly refresh" >> $GITHUB_STEP_SUMMARY
+          echo "- snapshot covers $CHANGED pages; changes pre-fetched for the next daily deploy" >> $GITHUB_STEP_SUMMARY

@@ -4,7 +4,7 @@
  *   data/search-index.json, data/site-stats.json
  * Persons are discovered from cast/crew links and fetched (cache-aware).
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -41,7 +41,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, buildSearchDocuments, computeKnownFor, displayTitle, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, buildSearchDocuments, chunkPersons, computeKnownFor, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -718,12 +718,20 @@ async function main() {
   mkdirSync(PUBLIC_DIR, { recursive: true });
   writeFileSync(path.join(DATA, 'movies.json'), JSON.stringify(movies));
   writeFileSync(path.join(DATA, 'series.json'), JSON.stringify(series));
-  writeFileSync(path.join(DATA, 'persons.json'), JSON.stringify(persons));
+  // persons by first-letter chunks: the single file would cross the 100MB
+  // runtime + GitHub per-file limit as waves grow ('#' bucket → _.json)
+  rmSync(path.join(DATA, 'persons.json'), { force: true });
+  const personsDir = path.join(DATA, 'persons');
+  rmSync(personsDir, { recursive: true, force: true });
+  mkdirSync(personsDir, { recursive: true });
+  for (const [bucket, records] of chunkPersons(persons)) {
+    writeFileSync(path.join(personsDir, `${bucket === '#' ? '_' : bucket}.json`), JSON.stringify(records));
+  }
   writeFileSync(path.join(DATA, 'search-index.json'), JSON.stringify({ generatedAt: stats.generatedAt, docs: searchDocs }));
   writeFileSync(path.join(PUBLIC_DIR, 'search-index.json'), JSON.stringify({ generatedAt: stats.generatedAt, docs: searchDocs }));
   writeFileSync(path.join(DATA, 'site-stats.json'), JSON.stringify(stats, null, 2));
 
-  console.log(`✓ Dataset complete: ${movies.length} movies, ${series.length} series, ${persons.length} persons`);
+  console.log(`✓ Dataset complete: ${movies.length} movies, ${series.length} series, ${persons.length} persons (${chunkPersons(persons).size} chunk files)`);
   console.log(`  Languages: ${stats.languages.slice(0, 8).map((l) => `${l.language} (${l.movies + l.series})`).join(', ')}`);
 }
 

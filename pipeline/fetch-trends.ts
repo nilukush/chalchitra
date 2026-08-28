@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildTrendsPayload } from './trends-lib.js';
+import { loadPersons } from './persons-store.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -59,7 +60,7 @@ async function fetchTopOfDay(day: string): Promise<{ article: string; views: num
 async function main() {
   const movies = JSON.parse(readFileSync(path.join(DATA, 'movies.json'), 'utf8'));
   const series = JSON.parse(readFileSync(path.join(DATA, 'series.json'), 'utf8'));
-  const persons = JSON.parse(readFileSync(path.join(DATA, 'persons.json'), 'utf8'));
+  const persons = loadPersons(DATA);
 
   // Our catalogue keyed by the pageviews API's underscore form
   const oursByUnderscore = new Map<string, string>(); // 'Matka_King' → 'Matka King'

@@ -17,6 +17,7 @@ import { loadEnv } from './env.js';
 loadEnv();
 import { fetchPages } from './wiki-api.js';
 import { classifyTitlePage } from './classify-title.js';
+import { loadPersons } from './persons-store.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -49,7 +50,7 @@ function loadFrontier(): Frontier {
 async function main() {
   const waveSize = Number(process.argv[2] ?? process.env.EXPAND_WAVE ?? 500);
 
-  const persons = JSON.parse(readFileSync(path.join(DATA, 'persons.json'), 'utf8'));
+  const persons = loadPersons(DATA);
   const movies = JSON.parse(readFileSync(path.join(DATA, 'movies.json'), 'utf8'));
   const series = JSON.parse(readFileSync(path.join(DATA, 'series.json'), 'utf8'));
   const catalogue = new Set<string>([...movies, ...series].map((t: any) => t.wikiTitle));

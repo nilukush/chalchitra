@@ -31,6 +31,7 @@ jobs:
     env:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,6 +50,16 @@ jobs:
           key: pipeline-cache-${{ github.run_id }}
           restore-keys: |
             pipeline-cache-
+
+      # bootstrap: first-ever run has no actions/cache — pull the seed release
+      - name: Bootstrap cache from seed release (cache miss only)
+        run: |
+          if [ ! -d data/cache/pages ]; then
+            echo "no actions/cache hit — downloading seed release"
+            curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz | tar -xz
+          else
+            echo "cache restored — seed not needed"
+          fi
 
       - name: Refresh Wikipedia (lastrevid diff, paced)
         run: npm run pipeline:refresh
@@ -74,6 +85,22 @@ jobs:
         with:
           path: data/cache
           key: pipeline-cache-${{ github.run_id }}
+
+      # publish the refreshed cache as the seed release — Render's static
+      # build (and any future cache-miss CI run) downloads it anonymously
+      - name: Publish cache seed release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tar -czf /tmp/pipeline-cache.tar.gz data/cache
+          gh release create seed --title "Pipeline cache seed" --notes "Auto-refreshed pipeline cache (data/cache) — consumed by the Render static build and CI bootstrap." --latest 2>/dev/null || true
+          gh release upload seed /tmp/pipeline-cache.tar.gz --clobber
+
+      # deploy: Render rebuilds from this repo + the fresh seed. Free plan
+      # allows ~31 such builds/month (500 build minutes) — keep it daily.
+      - name: Trigger Render deploy hook
+        if: env.RENDER_DEPLOY_HOOK != ''
+        run: curl -fsS -X POST "$RENDER_DEPLOY_HOOK" || echo "deploy hook failed — check RENDER_DEPLOY_HOOK secret"
 
       # ── Deploy: wire your host here, e.g. ────────────────────────────────
       # - name: Deploy

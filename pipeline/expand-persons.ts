@@ -21,6 +21,7 @@ import { loadEnv } from './env.js';
 loadEnv();
 import { fetchPages, readCachedPage } from './wiki-api.js';
 import { classifyPersonPage } from './classify-person.js';
+import { loadPersons } from './persons-store.js';
 import { extractCast, collectPersonLinks, parseInfobox } from './wikitext/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -58,13 +59,15 @@ function loadFrontier(): Frontier {
 function discoverPersonTargets(): Map<string, number> {
   const movies = JSON.parse(readFileSync(path.join(DATA, 'movies.json'), 'utf8'));
   const series = JSON.parse(readFileSync(path.join(DATA, 'series.json'), 'utf8'));
-  const persons = JSON.parse(readFileSync(path.join(DATA, 'persons.json'), 'utf8'));
+  const persons = loadPersons(DATA);
   const knownTitles = new Set<string>([...movies, ...series].map((t: any) => t.wikiTitle));
   const knownPersons = new Set<string>(persons.map((p: any) => p.wikiTitle));
 
   const targets = new Map<string, number>();
   const bump = (wikiTitle: string | undefined) => {
-    if (!wikiTitle || knownTitles.has(wikiTitle) || knownPersons.has(wikiTitle)) return;
+    // interwiki-prefixed links (":ml:…", ":te::…") point at other-language
+    // wikis — not fetchable on en.wikipedia; they pollute the pending pool
+    if (!wikiTitle || /^:[a-z]{2,3}:/i.test(wikiTitle) || knownTitles.has(wikiTitle) || knownPersons.has(wikiTitle)) return;
     targets.set(wikiTitle, (targets.get(wikiTitle) ?? 0) + 1);
   };
 
@@ -86,6 +89,13 @@ async function main() {
 
   const targets = discoverPersonTargets();
   const frontier = loadFrontier();
+  // sweep: retire interwiki-prefixed pendings from before the filter existed
+  for (const [name, entry] of Object.entries(frontier.targets)) {
+    if (entry.status === 'pending' && /^:[a-z]{2,3}:/i.test(name)) {
+      entry.status = 'rejected';
+      entry.reason = 'interwiki';
+    }
+  }
   const names = [...targets.keys()].sort();
   for (const name of names) {
     if (!frontier.targets[name]) {

@@ -149,3 +149,26 @@ export function computeKnownFor(
   candidates.sort((a, b) => (b.score ?? 0) - (a.score ?? 0) || Number(b.year ?? 0) - Number(a.year ?? 0) || a.title.localeCompare(b.title));
   return candidates.slice(0, 6);
 }
+
+// ── persons chunking (session 16) ─────────────────────────────────────────
+// data/persons.json would cross 100MB (runtime + GitHub per-file limit) as
+// person waves grow; persons are written as data/persons/<LETTER>.json
+// instead, bucketed exactly like the people index A–Z (# for everything else).
+
+export type PersonsBucket = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z' | '#';
+
+export function bucketKeyForName(name: string): PersonsBucket {
+  const first = (name ?? '')[0]?.toUpperCase() ?? '#';
+  return /^[A-Z]$/.test(first) ? (first as PersonsBucket) : '#';
+}
+
+export function chunkPersons<T extends { name: string }>(persons: T[]): Map<string, T[]> {
+  const chunks = new Map<string, T[]>();
+  for (const person of persons) {
+    const key = bucketKeyForName(person.name);
+    const bucket = chunks.get(key);
+    if (bucket) bucket.push(person);
+    else chunks.set(key, [person]);
+  }
+  return chunks;
+}
