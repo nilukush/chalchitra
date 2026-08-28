@@ -67,6 +67,7 @@ export function buildSearchDocuments(
     for (const member of item.cast ?? []) if (member.slug) linkedNames.add(member.name);
     for (const name of [...(item.directedBy ?? []), ...(item.createdBy ?? [])]) linkedNames.add(name);
     docs.push({
+      id: `${item.kind}:${item.slug}`, // MiniSearch requires an id; kind-qualified (slug collides across movie/series)
       s: item.slug,
       k: item.kind,
       t: item.title,
@@ -80,6 +81,7 @@ export function buildSearchDocuments(
     const titles = new Set<string>();
     for (const credit of person.credits ?? []) titles.add(credit.title);
     docs.push({
+      id: `person:${person.slug}`,
       s: person.slug,
       k: 'person',
       t: person.name,

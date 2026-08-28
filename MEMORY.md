@@ -941,3 +941,17 @@ sort by RELEASE DATE DESC (undated/TBA last, then year desc, A–Z) — sortForI
 rewritten. 5,064/5,363 movies + 379/381 series carry releaseDate. Bethlehem fully
 resolved live: 8.4★(9v)+trailer (wrong-variant cache deletion was the last blocker —
 lite-pass details use append_to_response=credits,videos, catalogue uses =videos).
+
+## Session 16 (cont. — night) — search FIXED + persistent ratings + full TMDB sweep
+
+1. **Search was broken** (reproduced): buildSearchDocuments emitted no MiniSearch
+   `id` → "document does not have ID field" → zero results. Fixed with kind-qualified
+   ids (`movie:x`/`series:x`/`person:y`, TDD, slugs collide across kinds). Search
+   worked before ONLY because verification was page-load, not query.
+2. **Ratings now permanently visible** on every PosterCard (★ chip top-right under
+   language badge; year chip bottom-left; old hover overlay removed).
+3. **Full TMDB re-validation sweep** (the "numerous titles" fix — delta can't see
+   >14d-old changes): ALL 20,176 TMDB cache files deleted + all 5,382 tracked ids
+   staged dirty → complete refetch (~15-20k paced requests ≈ 45-60 min) with the
+   new ≥1-vote gate + overwrite-on-dirty rules. Chain self-completes: dataset →
+   build → deploy. Results land in run23 log.

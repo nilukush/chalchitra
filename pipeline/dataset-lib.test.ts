@@ -56,6 +56,18 @@ describe('wikiUrlFor', () => {
 });
 
 describe('buildSearchDocuments', () => {
+  it('gives every doc a unique MiniSearch id (kind-qualified slug)', () => {
+    const docs = buildSearchDocuments(
+      [{ slug: 'x', kind: 'movie', title: 'X', year: 2026, language: 'Hindi', cast: [], directedBy: [] }],
+      [{ slug: 'x', kind: 'series', title: 'X', year: 2026, language: 'Hindi', cast: [], createdBy: [] }],
+      [{ slug: 'y', name: 'Y Person', credits: [] }],
+    );
+    const ids = docs.map((d: any) => d.id);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3); // movie:x vs series:x must not collide
+    expect(ids).toContain('movie:x');
+  });
+
   const movies = [
     {
       slug: 'matka-king',

@@ -38,8 +38,13 @@ const hasHoverInfo = Boolean(item.year || item.rating);
           {item.year}
         </span>
       )}
+      {item.rating && (
+        <span class="absolute right-2 top-9 rounded-full bg-ink-950/80 px-2 py-0.5 text-[11px] font-semibold text-saffron-300 backdrop-blur-sm">
+          ★ {item.rating.value.toFixed(1)}
+        </span>
+      )}
       {hasHoverInfo && (
-        <span class="pointer-events-none absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 bg-gradient-to-t from-ink-950/95 via-ink-950/70 to-transparent px-2.5 pb-2 pt-8 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+        <span class="pointer-events-none absolute inset-x-0 bottom-0 sr-only" aria-hidden="true">
           <span class="text-[11px] text-ivory-300">{item.year}</span>
           {item.rating && <span class="text-[11px] font-semibold text-saffron-300">★ {item.rating.value.toFixed(1)}</span>}
         </span>
