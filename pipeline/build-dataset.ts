@@ -731,6 +731,19 @@ async function main() {
   writeFileSync(path.join(PUBLIC_DIR, 'search-index.json'), JSON.stringify({ generatedAt: stats.generatedAt, docs: searchDocs }));
   writeFileSync(path.join(DATA, 'site-stats.json'), JSON.stringify(stats, null, 2));
 
+  // tracked TMDB ids for the change-list delta (lives in data/cache so CI's
+  // actions/cache carries it across runs — data/*.json don't exist there yet
+  // when pipeline:tmdb-changes runs before the rebuild)
+  const trackedPath = path.join(DATA, 'cache', 'tmdb-tracked.json');
+  mkdirSync(path.dirname(trackedPath), { recursive: true });
+  writeFileSync(
+    trackedPath,
+    JSON.stringify({
+      movies: movies.filter((t) => t.tmdbId).map((t) => t.tmdbId),
+      series: series.filter((t) => t.tmdbId).map((t) => ({ tmdbId: t.tmdbId, seasons: t.seasons })),
+    }),
+  );
+
   console.log(`✓ Dataset complete: ${movies.length} movies, ${series.length} series, ${persons.length} persons (${chunkPersons(persons).size} chunk files)`);
   console.log(`  Languages: ${stats.languages.slice(0, 8).map((l) => `${l.language} (${l.movies + l.series})`).join(', ')}`);
 }

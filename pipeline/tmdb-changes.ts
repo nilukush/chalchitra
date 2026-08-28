@@ -62,9 +62,32 @@ async function main() {
   ]);
   console.log(`  TMDB reports ${changedMovies.length} changed movies, ${changedTv.length} changed series`);
 
-  const movies = JSON.parse(readFileSync(path.join(DATA, 'movies.json'), 'utf8'));
-  const series = JSON.parse(readFileSync(path.join(DATA, 'series.json'), 'utf8'));
-  const tracked: TrackedTitle[] = [...movies, ...series].map((t: any) => ({ tmdbId: t.tmdbId, kind: t.kind, seasons: t.seasons }));
+  // tracked ids: prefer the cache-carried list (CI has no data/*.json yet);
+  // fall back to the local dataset files
+  let tracked: TrackedTitle[] | null = null;
+  const trackedPath = path.join(DATA, 'cache', 'tmdb-tracked.json');
+  if (existsSync(trackedPath)) {
+    try {
+      const t = JSON.parse(readFileSync(trackedPath, 'utf8'));
+      tracked = [
+        ...((t.movies ?? []) as number[]).map((id) => ({ tmdbId: id, kind: 'movie' as const })),
+        ...((t.series ?? []) as { tmdbId: number; seasons?: string }[]).map((s) => ({ tmdbId: s.tmdbId, kind: 'series' as const, seasons: s.seasons })),
+      ];
+    } catch {
+      /* fall through */
+    }
+  }
+  if (tracked === null) {
+    try {
+      const movies = JSON.parse(readFileSync(path.join(DATA, 'movies.json'), 'utf8'));
+      const series = JSON.parse(readFileSync(path.join(DATA, 'series.json'), 'utf8'));
+      tracked = [...movies, ...series].map((t: any) => ({ tmdbId: t.tmdbId, kind: t.kind, seasons: t.seasons }));
+    } catch {
+      console.log('  no tracked-id list yet (data/cache/tmdb-tracked.json and data/*.json both missing) — skipping invalidation this run.');
+      writeFileSync(LAST_RUN_PATH, JSON.stringify({ date: end }));
+      return;
+    }
+  }
 
   const plan = planTmdbRefresh(changedMovies, changedTv, tracked);
   let removed = 0;
