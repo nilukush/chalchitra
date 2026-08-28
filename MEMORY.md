@@ -903,3 +903,13 @@ gracefully when neither exists (first post-seed run only). Fix verified locally
 (22 titles → 32 invalidations via tracked.json). Rerun 33180000373 triggered;
 first-diff refresh is slow (~40 min: baseline is 6 days old + failed run's
 refetches weren't cache-saved). Live site unaffected (local deploy active).
+
+**CI END-TO-END SUCCESS (run 33184891830)**: 3rd run green after two fixes —
+(1) tmdb-tracked.json for the CI delta, (2) workflow permissions contents:write for
+release assets. Full chain verified: cache bootstrap/restore → refresh → tmdb delta →
+titles → dataset (5,860 persons, 25 chunks) → build → save cache → seed republish →
+**CI Vercel deploy** https://chalchitra-nbul21joy-nilukushs-projects.vercel.app (200 ✓).
+Pipeline fully automated: daily 05:15 UTC + hourly data runs + on-demand.
+Project URL note: per-deployment URLs are unique; production alias = newest deploy.
+Next session: waves 5+ (4,307 pending persons), title waves (24,233), optionally set a
+custom domain, and consider the orphan history slimming.
