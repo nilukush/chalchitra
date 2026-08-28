@@ -881,3 +881,16 @@ deploy step swapped (VERCEL_TOKEN/ORG_ID/PROJECT_ID secrets; npx vercel deploy
 **USER STEPS (Vercel): create Hobby account → new project (NO git connect) →
 create token → set 3 repo secrets (VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID)
 + TMDB/AI keys → run refresh-daily once.**
+
+## Session 16 (cont.) — SITE IS LIVE ON VERCEL ✓
+
+User supplied Vercel infra (team nilukushs-projects, team_ESjn8Fy4BBbh1gZ86oI4wRo5;
+CLI authed — NOTE: /usr/local/bin/vercel is a STALE 44.5 with an invalid token, use
+`npx vercel@latest`). Executed: project **chalchitra** created + linked (watch out:
+`vercel link --yes` without --project creates a DUPLICATE named after the dir —
+removed it), **production deployed from local**: https://chalchitra-3ay2t99zw-nilukushs-projects.vercel.app
+(prebuilt ./dist --prod --archive=tgz; smoke tests 200 on /, /movies, Aadhi, Aahat,
+Emraan+Shanghai ✓). All 5 repo secrets set (VERCEL_TOKEN extracted from CLI auth
+store w/o printing; ORG/PROJECT ids; TMDB/AI from .env). First CI daily-refresh run
+triggered (workflow_dispatch). .gitignore += .vercel/, .env.local (vercel link
+creates it). Non-commercial reminder: never add ads/affiliate/donations (Hobby ToS).

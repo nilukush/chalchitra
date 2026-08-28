@@ -12,3 +12,6 @@ data/*.json
 data/persons/
 public/search-index.json
 .idea/
+.vercel/
+.vercel
+.env*
