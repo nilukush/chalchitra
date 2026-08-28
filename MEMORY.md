@@ -955,3 +955,12 @@ lite-pass details use append_to_response=credits,videos, catalogue uses =videos)
    staged dirty → complete refetch (~15-20k paced requests ≈ 45-60 min) with the
    new ≥1-vote gate + overwrite-on-dirty rules. Chain self-completes: dataset →
    build → deploy. Results land in run23 log.
+
+**SWEEP COMPLETE + live-verified (2026-08-29)**: full TMDB re-validation deployed
+(chalchitra-pcs1xxlt6; production alias current). Final coverage: **rated 4,762/5,744
+(83%, was 73% pre-gate/sweep)**, trailers 2,225 (39% — TMDB's genuine ceiling for
+Indian titles; ~360 unmatched + non-YouTube + zero-video titles account for the rest).
+Bethlehem 8.4★(9v)+trailer live ✓. Search live-verified (index carries ids,
+movie:29 first doc) ✓. ★ chips visible on /movies grid ✓. Persons re-matched fresh:
+5,310/6,877, 15,261 known-for, 1,380 portraits. Tomorrow's daily delta maintains all
+of this. NEXT: person waves 5+, title waves (24,233 pending), backlog.
