@@ -41,6 +41,17 @@ npm run pipeline:tmdb-changes  # TMDB change-list delta → invalidate stale ent
 npm run build                  # verify page count in output
 ```
 
+**After ANY local wave/refresh that fetched new pages** (persons/expand/fetch):
+CI rebuilds from ITS cache, not yours — a local-only wave gets silently reverted by
+the next daily run. Publish the local cache and evict the stale CI caches:
+```bash
+tar -czf /tmp/pipeline-cache.tar.gz data/cache
+gh release upload seed /tmp/pipeline-cache.tar.gz --clobber
+gh api repos/nilukush/chalchitra/actions/caches --paginate \
+  --jq '.actions_caches[] | select(.key|startswith("pipeline-cache")) | .id' |
+  while read id; do gh api -X DELETE repos/nilukush/chalchitra/actions/caches/$id; done
+```
+
 ## Deployment (Vercel primary + Render fallback, via GitHub)
 - Repo: github.com/nilukush/chalchitra (public — free Actions minutes).
 - **Vercel (primary)**: the daily workflow deploys the PREBUILT dist/ via

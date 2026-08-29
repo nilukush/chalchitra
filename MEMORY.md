@@ -1073,3 +1073,23 @@ Deploy to Vercel step SUCCESS, run conclusion success**. Scheduled 05:15 UTC dep
 are self-sufficient again. CAVEAT: this token is the local CLI session token — if the
 user runs `vercel logout` or revokes sessions it dies again; a token created in
 Vercel → Settings → Tokens is the sturdier long-term form.
+
+## Session 19 — daily-refresh regression (stale CI cache) + permanent fix
+
+**Incident**: after the nightly run, production showed 5,363 films/381 series/5,860
+persons instead of 8,013/638/9,279. CAUSE: the expansion waves (5,090 persons + 3,000
+works) ran LOCALLY — those pages exist only in the local data/cache (1.2GB). The daily
+workflow rebuilds from ITS actions/cache (206MB, pre-expansion seed) and deployed the
+smaller build OVER the local 18,082-page deploy, then republished the regressed cache
+as the seed. Any local wave without a seed republish = guaranteed silent revert.
+
+**Fix (3 steps)**: (1) published the local cache as the seed (309MB tgz, --clobber);
+(2) deleted all 7 pipeline-cache-* actions caches (forces seed bootstrap); (3)
+redeployed local dist. VERIFIED end-to-end: dispatched a fresh daily run — it
+bootstrapped from the new seed, rebuilt 8,013/638/9,281, deployed green, production
+stats match local. **Runbook rule added to AGENTS.md**: after any local wave that
+fetched new pages → tar+upload seed + purge pipeline-cache-* (exact commands there).
+
+**Token answer (user asked)**: the rotated VERCEL_TOKEN is the local CLI session
+token, NOT a never-expiring one — it dies on `vercel logout`/session revoke. For a
+durable token: Vercel → Settings → Tokens → create "Never expires" → gh secret set.
