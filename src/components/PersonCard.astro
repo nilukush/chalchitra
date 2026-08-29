@@ -8,9 +8,18 @@ interface Props {
   meta?: string;
 }
 const { person, meta } = Astro.props;
+// fallback subtitle: count ALL known works (filmography rows + cast/crew hits),
+// not just credits on cached title pages — that undercounted archive-heavy
+// careers (Kamal Haasan showed "Credits: 0" next to a 478-row filmography)
+const workCount = new Set<string>([
+  ...person.credits.map((c) => c.title),
+  ...(person.filmography ?? []).flatMap((s) => s.rows.map((r) => r.title)),
+]).size;
 const subtitle = meta ?? (person.occupations.length > 0
   ? person.occupations.slice(0, 2).join(', ')
-  : `Credits: ${person.credits.length}`);
+  : workCount > 0
+    ? `${workCount} screen works`
+    : 'Indian cinema');
 ---
 
 <article>

@@ -55,6 +55,10 @@ export interface LiveCandidate {
   y: number;
   /** '1' = released at build time; a date = not yet released */
   r?: string;
+  /** TMDB rating value — ★ chip bottom-right on the live-rendered card */
+  rt?: number;
+  /** release date ISO — drives the live-rendered Upcoming chip */
+  rd?: string;
 }
 
 /**
@@ -73,6 +77,8 @@ export function liveTrendingCandidates(count: number): LiveCandidate[] {
     k: t.kind,
     y: t.year,
     r: isReleased(t) ? '1' : t.releaseDate,
+    rt: t.rating?.value,
+    rd: t.releaseDate,
     s: trends.scores[t.slug] ?? 0,
   }));
   return scored

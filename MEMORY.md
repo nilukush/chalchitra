@@ -1021,3 +1021,43 @@ titles only — filmography rows are the page's real content for archive-heavy p
 (3) person pages for rescued politicians show facts=0 (officeholder infobox field names
 differ) — summary + TMDB portrait carry the page; FACT_FIELDS could learn officeholder
 aliases later.
+
+## Session 18 — cast-subsection bug, language gap, trending chips, truthful person cards, waves 5-6 (persons exhausted + titles)
+
+User round: (1) trailer languages beyond hi/ta/te; (2) no rating chips on "What India is
+watching"; (3) 108-base-hospital-uri cast missing + those persons' pages/filmographies
+missing ("several titles"); (4) why do person pages link out to Wikipedia for titles;
+(5) people cards show incorrect credits.
+
+1. **CAST SUBSECTION BUG (the big one)**: extractSections is flat — `== Cast ==`
+   immediately followed by `=== Main ===`/`=== Recurring ===` leaves the Cast section
+   BODY EMPTY, so series with subsectioned casts parsed 0 cast members AND their actors
+   never entered the person frontier (double loss). Fix (TDD, 108 pattern fixture):
+   extractCast merges the matched section + following DEEPER-level sections until the
+   next same-or-higher heading. 108 → 9 cast, all linked. Frontier targets jumped
+   5,754 → 6,589 from the newly visible casts.
+2. **VIDEO_LANGS += gu,or,as** (Gujarati/Odia/Assamese; ml/kn/bn/mr/pa/ur were already
+   in). Rotated cache again; absolute trailers 3,174 → 3,755. NOTE: % dipped 55→43
+   ONLY because the corpus grew +2,907 titles this session (many unrated/untrailed
+   deep-archive works); no regression.
+3. **Trending rail**: the rail is re-rendered CLIENT-SIDE from #live-trending-data —
+   that cardHtml had no rating/year/upcoming. Candidates now carry rt (rating value) +
+   rd (release date); cardHtml mirrors PosterCard chips (★ bottom-right, year/Upcoming
+   bottom-left).
+4. **PersonCard credits lie**: fallback was `Credits: N` = cast/crew hits on cached
+   titles only (Kamal: "Credits: 0" next to 478 rows). Now `N screen works` counting
+   unique titles across credits + filmography rows.
+5. **Waves (one paced chain, ~3h)**: dataset(cast fix) → `pipeline:persons 9000` →
+   **8,495 accepted persons** (+2,929; 1,641 rejected genuine non-persons, 960 missing,
+   150 pending edge) → `pipeline:expand 3000` → final dataset+build.
+   RESULT: 8,651 titles (+2,907), 9,279 persons, 18,082 pages (was 12,808). Plot links
+   3,420 → 5,046. Kamal filmography 36% internal (172/478), Erica Fernandes 44 rows,
+   /people/erica-fernandes live. FilmographyTable resolves internal-vs-Wikipedia at
+   RENDER time by wikiTitle (rows carry no stored slug — my "0% internal" first check
+   was against a nonexistent field).
+6. **Why Wikipedia links remain on person pages**: filmography rows for works we
+   haven't fetched yet link out as fallback; the expansion frontier (ranked by refs)
+   still has ~21k pending works — each wave converts the most-referenced first. This
+   IS the unbounded-recursion mandate in progress, budget-paced at ~1 wave/session.
+Deployed: chalchitra-dkhv95i06 (alias live). Tests 247. CI VERCEL_TOKEN still expired —
+deployed locally with --scope.

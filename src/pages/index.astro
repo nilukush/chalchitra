@@ -207,21 +207,32 @@ const buzzSlugs = new Set(anticipated.map((t) => t.slug));
   // Near-real-time trending: intersect the freshest Wikipedia "top viewed per
   // day" data with our catalogue and re-render the titles grid. Static build
   // output stays as the fallback when the API is unreachable.
-  interface Candidate { a: string; u: string; t: string; p?: string; l?: string; k: string; y: number; r?: string; }
+  interface Candidate { a: string; u: string; t: string; p?: string; l?: string; k: string; y: number; r?: string; rt?: number; rd?: string; }
 
   const CACHE_KEY = 'chalchitra-live-trending';
   const CACHE_TTL_MS = 30 * 60 * 1000;
+  const TODAY_STR = new Date().toISOString().slice(0, 10);
 
   function cardHtml(c: Candidate, rank: number): string {
     const img = c.p
       ? `<img src="${c.p}" alt="" loading="lazy" decoding="async" class="h-full w-full object-cover">`
       : '<span class="font-display text-3xl text-ivory-600">च</span>';
-    // mirrors PosterCard's rank variant: outline numeral + title, language pill top-right
+    // mirrors PosterCard's rank variant: outline numeral + title, language pill
+    // top-right, year/Upcoming bottom-left, ★ rating bottom-right
+    const upcoming = Boolean(c.rd && c.rd > TODAY_STR);
+    const leftChip = upcoming
+      ? '<span class="absolute bottom-2 left-2 rounded-full bg-saffron-500 px-2 py-0.5 font-display text-[11px] font-semibold text-ink-950 shadow-sm">Upcoming</span>'
+      : `<span class="absolute bottom-2 left-2 rounded-full bg-ink-950/80 px-2 py-0.5 font-display text-[11px] font-semibold tabular-nums text-ivory-200 backdrop-blur-sm">${c.y ?? ''}</span>`;
+    const ratingChip = (typeof c.rt === 'number' && c.rt > 0)
+      ? `<span class="absolute bottom-2 right-2 rounded-full bg-ink-950/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-saffron-300 backdrop-blur-sm">★ ${c.rt.toFixed(1)}</span>`
+      : '';
     return `<article class="w-[172px] shrink-0 snap-start">
       <a href="${c.u}" class="focus-ring group block">
         <div class="relative aspect-[2/3] overflow-hidden rounded-xl border border-ink-700/70 bg-ink-800 shadow-lg shadow-black/30 transition duration-300 group-hover:-translate-y-1 group-hover:border-saffron-500/40">
           <div class="flex h-full w-full items-center justify-center">${img}</div>
           <span class="absolute right-2 top-2 rounded-full bg-ink-700 px-2 py-0.5 text-[11px] font-medium text-ivory-300 ring-1 ring-inset ring-ink-600 backdrop-blur-sm">${c.l ?? ''}</span>
+          ${leftChip}
+          ${ratingChip}
         </div>
         <div class="mt-2 flex items-start gap-2">
           <span aria-label="Rank ${rank}" class="font-display text-3xl font-black leading-none text-transparent" style="-webkit-text-stroke:1.5px #f4a72c">${rank}</span>

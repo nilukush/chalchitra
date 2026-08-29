@@ -75,4 +75,33 @@ describe('extractCast', () => {
     expect(dual[0].role).toBe("Dual role: Raya, Rumi's biological father Rumi / Ticket, Raya's son");
     expect(dual[1].role).toBe('Nadia');
   });
+
+  it('includes cast subsections (=== Main === / === Recurring ===) when the Cast section itself is empty', () => {
+    const subsectioned = extractCast(
+      [
+        '== Plot ==',
+        'Story text.',
+        '== Cast ==',
+        '=== Main ===',
+        '* [[Erica Fernandes]] as Dr. Major Naina Sanwal',
+        '* [[Gashmeer Mahajani]] as Dr. Major Anirudh Jaiswal',
+        '=== Recurring ===',
+        '* [[Nikhil Khurana]] as Captain Vishal Rathore',
+        '== Production ==',
+        '* [[Not A Cast Member]] must not leak from later sections',
+      ].join('\n'),
+    );
+    expect(subsectioned.map((c) => c.name)).toEqual([
+      'Erica Fernandes',
+      'Gashmeer Mahajani',
+      'Nikhil Khurana',
+    ]);
+  });
+
+  it('keeps direct bullets in the Cast section itself alongside subsections', () => {
+    const mixed = extractCast(
+      ['== Cast ==', '* [[A]] as Lead', '=== Supporting ===', '* [[B]] as Second'].join('\n'),
+    );
+    expect(mixed.map((c) => c.name)).toEqual(['A', 'B']);
+  });
 });

@@ -26,8 +26,9 @@ const IMG = 'https://image.tmdb.org/t/p';
  *  or nothing at all — the API returns ONLY en-US videos without this filter,
  *  hiding most official trailers (verified: movie 1408162 returns 0 videos
  *  under language=en-US but 5 YouTube trailers with this list appended).
- *  `null` = untagged uploads. Rotating this string rotates the disk cache. */
-const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur';
+ *  `null` = untagged uploads. All Wikipedia-recognized Indian film languages
+ *  (hi ta te ml kn bn mr pa ur gu or as). Rotating this string rotates the cache. */
+const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur,gu,or,as';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

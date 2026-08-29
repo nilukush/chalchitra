@@ -14,13 +14,20 @@ const CAST_TITLES =
   /^((main|principal|lead|starring)\s+)?cast(\s+(and|&)\s+(characters|crew|members))?$/i;
 
 /** Parse the Cast section bullets into structured entries.
- *  `**` sub-bullets (e.g. dual roles) append to the previous entry's role. */
+ *  `**` sub-bullets (e.g. dual roles) append to the previous entry's role.
+ *  The section's SUBSECTIONS (=== Main ===, === Recurring === …) count too —
+ *  many series cast lists put every bullet under subsection headings, leaving
+ *  the == Cast == body itself empty (108 Base Hospital – Uri pattern). */
 export function extractCast(pageWikitext: string): CastEntry[] {
-  const section = extractSections(pageWikitext).find((s) => CAST_TITLES.test(s.title.trim()));
-  if (!section) return [];
-
+  const sections = extractSections(pageWikitext);
+  const castIndex = sections.findIndex((s) => CAST_TITLES.test(s.title.trim()));
+  if (castIndex < 0) return [];
+  let body = sections[castIndex].body + '\n';
+  for (let i = castIndex + 1; i < sections.length && sections[i].level > sections[castIndex].level; i++) {
+    body += sections[i].body + '\n';
+  }
   const entries: CastEntry[] = [];
-  for (const rawLine of section.body.split('\n')) {
+  for (const rawLine of body.split('\n')) {
     const line = rawLine.trim();
     // top-level bullets only ("*" not "**")
     const bullet = /^\*(?!\*)\s*(.+)$/.exec(line);
