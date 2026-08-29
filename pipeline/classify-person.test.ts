@@ -16,6 +16,23 @@ const stubActorNoInfobox = `'''X Y''' is an Indian film director.
 const disambiguation = `{{Disambiguation}}
 * '''X Y''' may refer to a person or a film.`;
 
+const officeholderActor = `{{Infobox officeholder
+| honorific_prefix = Dr.
+| office = Member of Parliament, Lok Sabha
+| term_start = 2024
+| occupation = {{hlist|Actor|Film director|Screenwriter|Politician}}
+}}
+'''Kamal Haasan''' is an Indian actor, filmmaker and politician.
+[[Category:Indian male film actors]]
+[[Category:Tamil film directors]]`;
+
+const officeholderNonCinema = `{{Infobox officeholder
+| office = Minister of Finance
+| term_start = 2019
+}}
+A career civil servant with no film credits.
+[[Category:Government ministers of India]]`;
+
 const filmPage = `{{Infobox film | name = Something | starring = [[Aadhi Pinisetty]]}}
 A film article, not a person.`;
 
@@ -41,6 +58,14 @@ describe('classifyPersonPage', () => {
 
   it('rejects disambiguation pages', () => {
     expect(classifyPersonPage(disambiguation)).toEqual({ reject: 'disambiguation' });
+  });
+
+  it('accepts officeholder infoboxes when Indian-cinema categories prove a film person (actor-politicians)', () => {
+    expect(classifyPersonPage(officeholderActor)).toEqual({ ok: true });
+  });
+
+  it('rejects officeholders with no cinema markers (pure politicians)', () => {
+    expect(classifyPersonPage(officeholderNonCinema)).toMatchObject({ reject: expect.stringContaining('wrong-type') });
   });
 
   it('rejects title/song pages (wrong infobox type)', () => {

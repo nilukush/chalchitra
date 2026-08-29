@@ -68,6 +68,26 @@ describe('buildSearchDocuments', () => {
     expect(ids).toContain('movie:x');
   });
 
+  it('carries display fields for rich result rows (poster, rating, release date, person image)', () => {
+    const docs = buildSearchDocuments(
+      [{
+        slug: 'm', kind: 'movie', title: 'M', year: 2026, language: 'Tamil',
+        cast: [], directedBy: [],
+        poster: 'https://img/p.jpg',
+        rating: { source: 'tmdb', value: 8.1, votes: 9 },
+        releaseDate: '2026-12-25',
+      }] as any,
+      [] as any,
+      [{ slug: 'p', name: 'P Person', credits: [], image: 'https://img/i.jpg' }] as any,
+    );
+    const movie = docs.find((d: any) => d.id === 'movie:m');
+    expect(movie.p).toBe('https://img/p.jpg');
+    expect(movie.r).toBe(8.1);
+    expect(movie.rd).toBe('2026-12-25');
+    const person = docs.find((d: any) => d.id === 'person:p');
+    expect(person.i).toBe('https://img/i.jpg');
+  });
+
   const movies = [
     {
       slug: 'matka-king',

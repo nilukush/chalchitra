@@ -22,6 +22,13 @@ const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
 
+/** Indian-cinema trailers are tagged with their audio language (ta, te, hi…)
+ *  or nothing at all — the API returns ONLY en-US videos without this filter,
+ *  hiding most official trailers (verified: movie 1408162 returns 0 videos
+ *  under language=en-US but 5 YouTube trailers with this list appended).
+ *  `null` = untagged uploads. Rotating this string rotates the disk cache. */
+const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur';
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Fetch /tv/{id}/season/N through the caller's paced getter. */
@@ -174,7 +181,7 @@ export async function enrichTitlesLite(
       let hitDetails: any = null;
       let bestScore = -1;
       for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, maxCandidates)) {
-        const det = await pacedGet(`/${kind}/${candidate.id}?language=en-US&append_to_response=credits,videos`);
+        const det = await pacedGet(`/${kind}/${candidate.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`);
         const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
         const score = scoreNameOverlap(credits, wikiNames);
         if (score > bestScore) {
@@ -192,7 +199,7 @@ export async function enrichTitlesLite(
       matched++;
       record.tmdbId = hit.id;
       // same URL shape as the candidate probes → one cache key per title
-      const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos`));
+      const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`));
       if (details && applyLiteEnrichment(record, details, opts.dirty?.has(hit.id) ?? false)) enriched++;
       // full-fidelity mandate: archive series get episode guides for the
       // seasons their Wikipedia article doesn't tabulate (paced + cached)
@@ -259,7 +266,7 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
 
     const sources: string[] = record.enrichedFrom ?? [];
 
-    const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US&append_to_response=videos`, apiKey);
+    const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US&append_to_response=videos&${VIDEO_LANGS}`, apiKey);
     if (!details) continue;
 
     if ((!record.backdrop || dirty.has(hit.id)) && details.backdrop_path) {
@@ -289,7 +296,7 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
       if (record.kind === 'series' && (details.videos?.results ?? []).length === 0) {
         const seasons = Math.min(Number((details as any).number_of_seasons) || 1, 2);
         for (let season = 1; season <= seasons; season++) {
-          const sv = await tmdbGet(`/tv/${hit.id}/season/${season}/videos?language=en-US`, apiKey);
+          const sv = await tmdbGet(`/tv/${hit.id}/season/${season}/videos?language=en-US&${VIDEO_LANGS}`, apiKey);
           if (sv?.results?.length) videoPools.push(sv.results as TmdbVideo[]);
         }
       }

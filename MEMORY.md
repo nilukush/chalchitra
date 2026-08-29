@@ -964,3 +964,42 @@ Bethlehem 8.4★(9v)+trailer live ✓. Search live-verified (index carries ids,
 movie:29 first doc) ✓. ★ chips visible on /movies grid ✓. Persons re-matched fresh:
 5,310/6,877, 15,261 known-for, 1,380 portraits. Tomorrow's daily delta maintains all
 of this. NEXT: person waves 5+, title waves (24,233 pending), backlog.
+
+## Session 17 — the five user-reported fixes (trailer languages, Kamal Haasan, ratings position, Upcoming, search UI)
+
+User round: (1) vishwanath-and-sons has a TMDB trailer but our page doesn't — "case
+with thousands of titles"; (2) searching "yash" results were plain text rows ("did you
+UI UX Graphic Design Research using skills?"); (3) Vikram links Kamal Haasan but no
+person page exists; (4) rating chips only on some cards and at TOP not bottom-right;
+(5) future-dated titles/episodes must show "Upcoming".
+
+1. **TRAILER LANGUAGE BUG (root cause found via curl)**: TMDB details with
+   `language=en-US` return ONLY en-tagged videos — Indian trailers are tagged ta/te/hi
+   or null, invisible to us (movie 1408162: 0 videos en-US vs 5 YouTube trailers with
+   the filter). Fix: `include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur` on all
+   4 video-bearing URLs (lite probes+details, catalogue details, season videos).
+   URL change rotates sha1 cache keys → natural full refetch (~11 min lite in run24).
+   **Trailers 2,225 (39%) → 3,174 (55.3%), +949.** vishwanath-and-sons + Mirzapur live
+   with trailers. 39%→55% not 100%: remaining gap = titles TMDB has no videos for /
+   unmatched / non-YouTube-hosted.
+2. **Kamal Hausan-class actor-politicians**: classifier rejected
+   `wrong-type:Infobox officeholder` (66 refs!). Fix (TDD): officeholder + Indian-cinema
+   categories → accept. Added a RE-CLASSIFICATION SWEEP to pipeline:persons — rejected
+   entries with cached pages re-judged locally, no network (`npm run pipeline:persons 0`
+   = sweep only). **105 rescued**, Kamal accepted → page built: 478 filmography rows
+   (233 as actor from his filmography subpage), portrait, summary, TMDB knownFor.
+   Vikram's cast links him via exact-name fallback (his plot has no wikilink — checked).
+3. **plotHtml for archive records**: removed the `record.archive` skip in the plotHtml
+   loop (one-tier mandate). Plot links 89 → **3,420**.
+4. **Rating chip bottom-right** on PosterCard (was top-9); dead sr-only hover block
+   removed; caption fallback year (no more false "Upcoming" on undated archive rows).
+5. **Upcoming badge** (saffron chip): PosterCard bottom-left (replaces year chip),
+   TitleDetail hero chip, EpisodesTable row chip — all `releaseDate > TODAY` (ISO
+   compare; TODAY now exported from data.ts).
+6. **Search redesigned** (web-design-guidelines skill loaded; rows follow its rules —
+   real <a> rows, lazy thumbs with reserved w/h, tabular-nums, aria-live, monogram
+   fallbacks): poster/portrait thumbnails, kind chips with inline SVG icons, language
+   + year + ★ right-aligned column, Upcoming tags, person rows show first credited
+   works. search-index docs now carry p/r/rd/i (TDD); index 3.56MB.
+Tests 245 (+3). Build 12,808 pages (+80 rescued persons). Deployed via workflow
+dispatch (local vercel CLI auth expired — CI holds VERCEL_TOKEN).

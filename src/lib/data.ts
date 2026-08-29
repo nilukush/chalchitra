@@ -87,7 +87,9 @@ export const titles: TitleRecord[] = [...movies, ...series];
 export const catalogueMovies: TitleRecord[] = movies.filter((m) => !m.archive);
 export const catalogueSeries: TitleRecord[] = series.filter((s) => !s.archive);
 
-const TODAY = new Date().toISOString().slice(0, 10);
+/** ISO date (YYYY-MM-DD) for "today" — ISO strings compare lexicographically,
+ *  so `date > TODAY` means a strictly future release. */
+export const TODAY = new Date().toISOString().slice(0, 10);
 
 export function isReleased(item: TitleRecord): boolean {
   return Boolean(item.releaseDate && item.releaseDate <= TODAY);

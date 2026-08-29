@@ -1,6 +1,6 @@
 ---
 import type { TitleRecord } from '../../pipeline/types';
-import { languageBadgeClass } from '../lib/data';
+import { isReleased, languageBadgeClass } from '../lib/data';
 
 interface Props {
   item: TitleRecord;
@@ -10,7 +10,7 @@ interface Props {
 }
 const { item, eager = false, rank } = Astro.props;
 const href = item.kind === 'movie' ? `/movies/${item.slug}` : `/series/${item.slug}`;
-const hasHoverInfo = Boolean(item.year || item.rating);
+const upcoming = Boolean(item.releaseDate && !isReleased(item));
 ---
 
 <article>
@@ -33,20 +33,18 @@ const hasHoverInfo = Boolean(item.year || item.rating);
       <span class={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset backdrop-blur-sm ${languageBadgeClass(item.language)}`}>
         {item.language}
       </span>
-      {item.year && (
+      {upcoming ? (
+        <span class="absolute bottom-2 left-2 rounded-full bg-saffron-500 px-2 py-0.5 font-display text-[11px] font-semibold text-ink-950 shadow-sm">
+          Upcoming
+        </span>
+      ) : item.year && (
         <span class="absolute bottom-2 left-2 rounded-full bg-ink-950/80 px-2 py-0.5 font-display text-[11px] font-semibold tabular-nums text-ivory-200 backdrop-blur-sm">
           {item.year}
         </span>
       )}
       {item.rating && (
-        <span class="absolute right-2 top-9 rounded-full bg-ink-950/80 px-2 py-0.5 text-[11px] font-semibold text-saffron-300 backdrop-blur-sm">
+        <span class="absolute bottom-2 right-2 rounded-full bg-ink-950/80 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-saffron-300 backdrop-blur-sm">
           ★ {item.rating.value.toFixed(1)}
-        </span>
-      )}
-      {hasHoverInfo && (
-        <span class="pointer-events-none absolute inset-x-0 bottom-0 sr-only" aria-hidden="true">
-          <span class="text-[11px] text-ivory-300">{item.year}</span>
-          {item.rating && <span class="text-[11px] font-semibold text-saffron-300">★ {item.rating.value.toFixed(1)}</span>}
         </span>
       )}
     </div>
@@ -57,7 +55,7 @@ const hasHoverInfo = Boolean(item.year || item.rating);
         </span>
         <span class="min-w-0">
           <span class="block line-clamp-2 text-[15px] font-semibold leading-snug text-ivory-100 group-hover:text-saffron-300">{item.title}</span>
-          <span class="block text-xs text-ivory-600">{item.releaseDate ?? 'Upcoming'} · {item.kind === 'movie' ? 'Film' : 'Series'}</span>
+          <span class="block text-xs text-ivory-600">{item.releaseDate ?? item.year} · {item.kind === 'movie' ? 'Film' : 'Series'}</span>
         </span>
       </div>
     ) : (
@@ -66,7 +64,7 @@ const hasHoverInfo = Boolean(item.year || item.rating);
           {item.title}
         </h3>
         <p class="text-xs text-ivory-600">
-          {item.releaseDate ?? 'Upcoming'} · {item.kind === 'movie' ? 'Film' : 'Series'}
+          {item.releaseDate ?? item.year} · {item.kind === 'movie' ? 'Film' : 'Series'}
         </p>
       </>
     )}

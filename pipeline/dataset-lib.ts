@@ -51,6 +51,14 @@ export interface SearchDoc {
   y?: number;
   /** language (titles only) */
   l?: string;
+  /** poster URL (titles only) — search result thumbnails */
+  p?: string;
+  /** rating value (titles only) — star chip on result rows */
+  r?: number;
+  /** release date ISO (titles only) — drives the Upcoming tag */
+  rd?: string;
+  /** portrait URL (persons only) — search result thumbnails */
+  i?: string;
   /** extra searchable terms */
   q: string[];
 }
@@ -73,6 +81,9 @@ export function buildSearchDocuments(
       t: item.title,
       y: item.year,
       l: item.language,
+      p: item.poster,
+      r: item.rating?.value,
+      rd: item.releaseDate,
       q: [...linkedNames],
     });
   }
@@ -85,6 +96,7 @@ export function buildSearchDocuments(
       s: person.slug,
       k: 'person',
       t: person.name,
+      i: person.image,
       q: [...titles],
     });
   }

@@ -22,6 +22,9 @@ export function classifyPersonPage(wikitext: string): PersonClassifyResult {
   const infobox = findTemplates(wikitext, /^infobox/i)[0];
   if (infobox) {
     if (PERSON_INFOBOX.test(infobox.name)) return { ok: true };
+    // Actor-politicians (Kamal Haasan et al.) lead with {{Infobox officeholder}}
+    // once elected; Indian-cinema categories still prove the film career.
+    if (/^infobox\s+officeholder$/i.test(infobox.name) && PERSON_CATEGORY.test(wikitext)) return { ok: true };
     return { reject: `wrong-type:${infobox.name}` };
   }
   if (PERSON_CATEGORY.test(wikitext)) return { ok: true };

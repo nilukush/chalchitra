@@ -96,6 +96,25 @@ async function main() {
       entry.reason = 'interwiki';
     }
   }
+  // sweep: classifier fixes can rescue previously-rejected people (e.g.
+  // actor-politicians whose articles lead with {{Infobox officeholder}}) —
+  // re-run classification on rejected entries whose pages are already
+  // cached; purely local, no network involved.
+  let rescued = 0;
+  for (const entry of Object.values(frontier.targets)) {
+    if (entry.status !== 'rejected' || entry.pageid <= 0) continue;
+    const page = readCachedPage(entry.pageid);
+    if (!page?.wikitext) continue;
+    if ('ok' in classifyPersonPage(page.wikitext)) {
+      entry.status = 'accepted';
+      delete entry.reason;
+      rescued++;
+    }
+  }
+  if (rescued > 0) {
+    console.log(`  re-classification sweep: ${rescued} rejected → accepted (cached pages only)`);
+    writeFileSync(FRONTIER_PATH, JSON.stringify(frontier));
+  }
   const names = [...targets.keys()].sort();
   for (const name of names) {
     if (!frontier.targets[name]) {

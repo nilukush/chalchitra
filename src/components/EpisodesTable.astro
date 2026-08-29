@@ -1,5 +1,6 @@
 ---
 import type { EpisodeRow } from '../../pipeline/wikitext/episodes.js';
+import { TODAY } from '../lib/data';
 
 interface Props {
   episodes: EpisodeRow[];
@@ -57,6 +58,9 @@ const groups = (multiSeason ? seasonNumbers : [1]).map((season) => ({
               <span class="flex items-center gap-3 text-xs text-ivory-600">
                 {ep.runtime && <span>{ep.runtime}</span>}
                 {ep.airDate && <time>{ep.airDate}</time>}
+                {ep.airDate && ep.airDate > TODAY && (
+                  <span class="rounded-full bg-saffron-500 px-2 py-0.5 font-semibold text-ink-950">Upcoming</span>
+                )}
               </span>
             </div>
             {ep.summary && (

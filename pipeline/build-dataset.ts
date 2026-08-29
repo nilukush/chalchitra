@@ -650,7 +650,8 @@ async function main() {
   }
   let plotLinkCount = 0;
   for (const record of [...movies, ...series]) {
-    if (record.archive) continue; // archive records keep plain plots — linked HTML doubles record size
+    // archive plots get linked HTML too (one-tier mandate — Vikram's plot must
+    // link Kamal Haasan-class names, not just catalogue titles)
     const wikitext = titlePages.get(record.wikiTitle)?.wikitext ?? '';
     const rawPlot = findPlotSection(wikitext);
     if (!rawPlot) continue;

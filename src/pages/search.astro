@@ -7,14 +7,17 @@ import { SITE, stats } from '../lib/data';
   title="Search"
   description={`Search ${stats.movies} movies, ${stats.series} series and ${stats.persons} people on ${SITE.name} by title or cast name.`}
 >
-  <section class="mx-auto max-w-5xl px-4 py-12 sm:px-6">
+  <section class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
     <p class="text-xs font-semibold uppercase tracking-[0.3em] text-saffron-500">Search</p>
     <h1 class="mt-2 font-display text-4xl font-bold tracking-tight text-ivory-50">Find any title or person</h1>
     <p class="mt-3 text-ivory-500">
       Type a film or series name — or an actor, director, writer, musician — and results appear as you type.
     </p>
 
-    <div class="mt-8">
+    <div class="relative mt-8">
+      <svg class="pointer-events-none absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-ivory-600" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="9" cy="9" r="6" /><path d="m13.5 13.5 4 4" stroke-linecap="round" />
+      </svg>
       <label for="q" class="sr-only">Search query</label>
       <input
         id="q"
@@ -22,13 +25,29 @@ import { SITE, stats } from '../lib/data';
         placeholder="e.g. Matka King, Vijay Varma, Malayalam…"
         autocomplete="off"
         autofocus
-        class="w-full rounded-2xl border border-ink-600 bg-ink-800 px-6 py-4 text-lg text-ivory-50 placeholder:text-ivory-600 shadow-inner focus:border-saffron-500/60 focus:outline-none"
+        class="w-full rounded-2xl border border-ink-600 bg-ink-800 py-4 pl-13 pr-6 text-lg text-ivory-50 placeholder:text-ivory-600 shadow-inner focus:border-saffron-500/60 focus:outline-none"
       />
     </div>
 
     <p id="search-status" class="mt-4 text-sm text-ivory-600" aria-live="polite">Loading search index…</p>
 
     <div id="results" class="mt-6 space-y-10"></div>
+
+    <template id="row-template">
+      <a class="focus-ring group flex items-center gap-3.5 rounded-xl border border-ink-700 bg-ink-850/60 p-3 transition duration-200 hover:border-saffron-500/40 hover:bg-ink-800">
+        <span class="thumb relative h-[69px] w-[46px] shrink-0 overflow-hidden rounded-lg border border-ink-700/70 bg-ink-800 text-center" style="display:flex;align-items:center;justify-content:center"></span>
+        <span class="min-w-0 flex-1">
+          <span class="flex flex-wrap items-center gap-2">
+            <span class="row-title min-w-0 truncate text-[15px] font-semibold text-ivory-100 group-hover:text-saffron-300"></span>
+            <span class="upcoming hidden rounded-full bg-saffron-500 px-2 py-0.5 text-[11px] font-semibold text-ink-950">Upcoming</span>
+          </span>
+          <span class="row-meta mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-ivory-500"></span>
+        </span>
+        <span class="row-rating ml-2 hidden shrink-0 items-center gap-1 rounded-full bg-ink-950/80 px-2.5 py-1 text-sm font-semibold text-saffron-300 tabular-nums backdrop-blur-sm">
+          <span class="text-[11px]" aria-hidden="true">★</span><span class="rating-num"></span>
+        </span>
+      </a>
+    </template>
   </section>
 </Base>
 
@@ -41,12 +60,17 @@ import { SITE, stats } from '../lib/data';
     t: string;
     y?: number;
     l?: string;
+    p?: string;
+    r?: number;
+    rd?: string;
+    i?: string;
     q: string[];
   }
 
   const input = document.getElementById('q') as HTMLInputElement;
   const status = document.getElementById('search-status')!;
   const results = document.getElementById('results')!;
+  const rowTemplate = document.getElementById('row-template') as HTMLTemplateElement;
 
   // populate the query immediately so the box is never empty after a header search
   const initialQuery = new URLSearchParams(location.search).get('q') ?? '';
@@ -61,13 +85,116 @@ import { SITE, stats } from '../lib/data';
     { kind: 'person', label: 'People', href: (s) => `/people/${s}` },
   ];
 
+  const KIND_ICON: Record<string, string> = {
+    movie:
+      '<svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M2.5 5.25h11v8.25h-11z"/><path d="m2.5 5.25 1.2-3h8.6l1.2 3"/><path d="M6.2 2.55 5.4 5.25M10.2 2.55l.8 2.7" /></svg>',
+    series:
+      '<svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="2.5" y="4.5" width="11" height="7"/><path d="M6 14h4M8 11.5V14M5.5 1.5 8 4l2.5-2.5"/></svg>',
+    person:
+      '<svg class="h-3.5 w-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="8" cy="5" r="2.5"/><path d="M3 14c.8-3 2.7-4.5 5-4.5S12.2 11 13 14"/></svg>',
+  };
+
   const miniSearch = new MiniSearch<Doc>({
     fields: ['t', 'q'],
-    storeFields: ['s', 'k', 't', 'y', 'l'],
+    storeFields: ['s', 'k', 't', 'y', 'l', 'p', 'r', 'rd', 'i'],
     searchOptions: { prefix: true, fuzzy: 0.2, boost: { t: 3 } },
   });
 
-  function render(query: string, docs: Doc[]) {
+  const TODAY = new Date().toISOString().slice(0, 10);
+
+  function initials(name: string): string {
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
+  }
+
+  /** poster / portrait thumbnail with monogram fallback, dimensions reserved (no CLS) */
+  function buildThumb(hit: any): HTMLElement {
+    const thumb = document.createElement('span');
+    thumb.className = hit.k === 'person'
+      ? 'flex h-[46px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-ink-700/70 bg-ink-800'
+      : 'relative flex h-[69px] w-[46px] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-ink-700/70 bg-ink-800';
+    const src = hit.k === 'person' ? hit.i : hit.p;
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = '';
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      if (hit.k === 'person') {
+        img.width = 46;
+        img.height = 46;
+        img.className = 'h-full w-full object-cover';
+      } else {
+        img.width = 46;
+        img.height = 69;
+        img.className = 'h-full w-full object-cover';
+      }
+      thumb.appendChild(img);
+    } else {
+      const span = document.createElement('span');
+      if (hit.k === 'person') {
+        span.className = 'font-display text-sm font-semibold text-ivory-500';
+        span.textContent = initials(hit.t);
+      } else {
+        span.className = 'font-display text-lg text-ivory-600';
+        span.textContent = 'च';
+      }
+      thumb.appendChild(span);
+    }
+    return thumb;
+  }
+
+  function buildMeta(hit: any): HTMLElement {
+    const meta = document.createElement('span');
+    meta.className = 'mt-1 flex flex-wrap items-center gap-x-2 gap-y-1';
+
+    // kind chip: icon + label
+    const kind = document.createElement('span');
+    kind.className = 'inline-flex items-center gap-1 rounded-full bg-ink-700/80 px-2 py-0.5 font-medium text-ivory-300';
+    kind.innerHTML = KIND_ICON[hit.k] ?? '';
+    const kindLabel = document.createElement('span');
+    kindLabel.textContent = hit.k === 'movie' ? 'Film' : hit.k === 'series' ? 'Series' : 'Person';
+    kind.appendChild(kindLabel);
+    meta.appendChild(kind);
+
+    if (hit.l) {
+      const lang = document.createElement('span');
+      lang.textContent = hit.l;
+      meta.appendChild(lang);
+    }
+    if (hit.y) {
+      const year = document.createElement('span');
+      year.className = 'tabular-nums';
+      year.textContent = String(hit.y);
+      meta.appendChild(year);
+    }
+
+    // person subtitle: first credited works — instant "which one is this?"
+    if (hit.k === 'person' && hit.q?.length) {
+      const known = document.createElement('span');
+      known.className = 'truncate text-ivory-600';
+      known.textContent = hit.q.slice(0, 2).join(' · ');
+      meta.appendChild(known);
+    }
+    return meta;
+  }
+
+  function buildRow(hit: any, hrefFor: (slug: string) => string): HTMLElement {
+    const row = rowTemplate.content.firstElementChild!.cloneNode(true) as HTMLElement;
+    (row as HTMLAnchorElement).href = hrefFor(hit.s);
+    row.querySelector('.thumb')!.replaceWith(buildThumb(hit));
+    row.querySelector('.row-title')!.textContent = hit.t;
+    if (hit.k !== 'person' && hit.rd && hit.rd > TODAY) row.querySelector('.upcoming')!.classList.remove('hidden');
+    row.querySelector('.row-meta')!.replaceWith(buildMeta(hit));
+    const ratingWrap = row.querySelector('.row-rating') as HTMLElement;
+    if (typeof hit.r === 'number' && hit.r > 0) {
+      ratingWrap.style.display = 'flex'; // beats the template's `hidden` class regardless of CSS order
+      row.querySelector('.rating-num')!.textContent = hit.r.toFixed(1);
+    } else {
+      ratingWrap.remove();
+    }    return row;
+  }
+
+  function render(query: string) {
     if (!query) {
       status.textContent = 'Type to search — titles, cast names, directors…';
       results.innerHTML = '';
@@ -80,8 +207,8 @@ import { SITE, stats } from '../lib/data';
       list.push(hit);
       byKind.set(hit.k, list);
     }
-    const total = found.length;
-    status.textContent = total === 0 ? `No matches for “${query}”.` : `${total} result${total === 1 ? '' : 's'} for “${query}”`;
+    status.textContent =
+      found.length === 0 ? `No matches for “${query}”.` : `${found.length} result${found.length === 1 ? '' : 's'} for “${query}”`;
     results.innerHTML = '';
     for (const group of GROUPS) {
       const hits = byKind.get(group.kind) ?? [];
@@ -91,24 +218,10 @@ import { SITE, stats } from '../lib/data';
       h2.className = 'font-display text-xl font-bold text-ivory-50';
       h2.textContent = `${group.label} (${hits.length})`;
       const ul = document.createElement('ul');
-      ul.className = 'mt-3 grid gap-2 sm:grid-cols-2';
+      ul.className = 'mt-3 grid gap-2';
       for (const hit of hits) {
         const li = document.createElement('li');
-        const a = document.createElement('a');
-        a.href = group.href(hit.s);
-        a.className = 'focus-ring block rounded-xl border border-ink-700 bg-ink-850/60 px-4 py-3 text-sm hover:border-saffron-500/40';
-        const strong = document.createElement('span');
-        strong.className = 'font-semibold text-ivory-100';
-        strong.textContent = hit.t;
-        a.appendChild(strong);
-        const meta = hit.k === 'person' ? '' : ` — ${hit.l ?? ''} · ${hit.y ?? ''}`;
-        if (meta) {
-          const span = document.createElement('span');
-          span.className = 'text-ivory-600';
-          span.textContent = meta;
-          a.appendChild(span);
-        }
-        li.appendChild(a);
+        li.appendChild(buildRow(hit, group.href));
         ul.appendChild(li);
       }
       section.appendChild(h2);
@@ -142,12 +255,12 @@ import { SITE, stats } from '../lib/data';
       }
       miniSearch.addAll(index.docs);
       status.textContent = `Ready — ${index.docs.length} pages searchable.`;
-      render(initialQuery, index.docs);
+      render(initialQuery);
     });
 
   let timer: ReturnType<typeof setTimeout> | undefined;
   input.addEventListener('input', () => {
     clearTimeout(timer);
-    timer = setTimeout(() => render(input.value.trim(), []), 120);
+    timer = setTimeout(() => render(input.value.trim()), 120);
   });
 </script>

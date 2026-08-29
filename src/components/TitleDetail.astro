@@ -11,7 +11,7 @@ import ReferenceList from './ReferenceList.astro';
 import StatTiles from './StatTiles.astro';
 import TrackList from './TrackList.astro';
 import Base from '../layouts/Base.astro';
-import { SITE, getPersonBySlug, genreChipClass, languageBadgeClass, imdbTitleUrl, personInitials, titles } from '../lib/data';
+import { SITE, getPersonBySlug, genreChipClass, isReleased, languageBadgeClass, imdbTitleUrl, personInitials, titles } from '../lib/data';
 import { extractTimelineDates } from '../lib/dates';
 import { formatRuntime, splitLongParagraphs, splitLeadSentence } from '../lib/format';
 
@@ -242,6 +242,9 @@ const jsonLd: Record<string, unknown>[] = [
               <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{kindWord}</span>
               {item.releaseDate && (
                 <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{item.releaseDate}</span>
+              )}
+              {item.releaseDate && !isReleased(item) && (
+                <span class="rounded-full bg-saffron-500 px-3 py-1 text-xs font-semibold text-ink-950">Upcoming</span>
               )}
               {item.runtime && (
                 <span class="rounded-full bg-ink-700 px-3 py-1 text-xs font-medium text-ivory-300 ring-1 ring-inset ring-ink-600">{formatRuntime(item.runtime)}</span>
