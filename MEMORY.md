@@ -1003,3 +1003,21 @@ person page exists; (4) rating chips only on some cards and at TOP not bottom-ri
    works. search-index docs now carry p/r/rd/i (TDD); index 3.56MB.
 Tests 245 (+3). Build 12,808 pages (+80 rescued persons). Deployed via workflow
 dispatch (local vercel CLI auth expired — CI holds VERCEL_TOKEN).
+
+**Session 17 close-out (all five fixes LIVE on chalchitra-pied.vercel.app, deploy
+chalchitra-h8spsshy3)**: vishwanath-and-sons trailer ✓ (watch?v=ejX6MHgKAlM),
+/people/kamal-haasan 200 with 478-row filmography ✓, rating chips bottom-right (85 on
+/movies) ✓, Upcoming badges (home 8, /movies 19, hero chip on /movies/king 2026-12-24) ✓,
+search index p/r/rd/i live (12,701 docs) ✓. CI run 33242480487: data pipeline + seed
+publish SUCCEEDED, but **VERCEL_TOKEN secret has EXPIRED** ("token provided via --token
+argument is not valid") — deploy step failed; deployed locally instead: local CLI auth
+works but needs `--scope nilukushs-projects` (project is under the team; bare deploy =
+"Not authorized"). **USER ACTION NEEDED: rotate VERCEL_TOKEN in repo secrets** or
+tomorrow's 05:15 UTC daily deploy step will fail (data/seed steps still fine).
+
+Gotchas this session: (1) Tailwind `hidden`+`flex` class order is unstable — use inline
+`style.display` for JS toggles; (2) `credits` on a person = cast/crew hits on CACHED
+titles only — filmography rows are the page's real content for archive-heavy persons;
+(3) person pages for rescued politicians show facts=0 (officeholder infobox field names
+differ) — summary + TMDB portrait carry the page; FACT_FIELDS could learn officeholder
+aliases later.
