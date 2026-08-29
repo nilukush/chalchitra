@@ -1093,3 +1093,17 @@ fetched new pages → tar+upload seed + purge pipeline-cache-* (exact commands t
 **Token answer (user asked)**: the rotated VERCEL_TOKEN is the local CLI session
 token, NOT a never-expiring one — it dies on `vercel logout`/session revoke. For a
 durable token: Vercel → Settings → Tokens → create "Never expires" → gh secret set.
+
+## Session 19b — "trending people/collage revert" explained: local trends snapshot was stale
+
+User reported trending people + hero collage "going back to old" on production after
+daily refresh. TWO separate things were conflated:
+1. This morning's corpus regression (5,363 films) — the cache incident, fixed+verified
+   (session 19); it will NOT recur: CI caches now descend from the expanded seed.
+2. Trending people/hero collage changing on production = BY DESIGN — the daily workflow
+   runs `npm run pipeline:trends` (Wikipedia pageviews) before every build. The twist:
+   `pipeline:dataset` does NOT regenerate trends.json, and locally it hadn't been run
+   since **2026-08-16** — localhost:4730 was the stale side (13-day-old snapshot), not
+   production. Ran pipeline:trends + rebuild locally → local trending now IDENTICAL to
+   production (geetu-mohandas, kuku-kohli, yash-actor, rukmini-vasanth…). Runbook now
+   documents pipeline:trends (was missing from AGENTS.md list).

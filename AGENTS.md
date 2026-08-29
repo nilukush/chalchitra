@@ -38,6 +38,9 @@ npm run pipeline:persons <n>   # person wave: fetch cast/crew pages discovered o
 npm run pipeline:expand <n>    # title wave: filmography works → title pages
 npm run pipeline:refresh       # lastrevid diff → refetch ONLY edited pages
 npm run pipeline:tmdb-changes  # TMDB change-list delta → invalidate stale entries
+npm run pipeline:trends        # Wikipedia pageviews → data/trends.json (trending rails
+                               # + hero collage). NOT part of pipeline:dataset — run it
+                               # before local builds or localhost shows stale selections.
 npm run build                  # verify page count in output
 ```
 
