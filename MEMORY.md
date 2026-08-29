@@ -1061,3 +1061,15 @@ missing ("several titles"); (4) why do person pages link out to Wikipedia for ti
    IS the unbounded-recursion mandate in progress, budget-paced at ~1 wave/session.
 Deployed: chalchitra-dkhv95i06 (alias live). Tests 247. CI VERCEL_TOKEN still expired —
 deployed locally with --scope.
+
+## Session 18b — VERCEL_TOKEN fixed (daily refresh deploys again)
+
+The failing daily-refresh deploy was the expired VERCEL_TOKEN repo secret (flagged in
+session 17). FIX: pushed the working local CLI token (`~/Library/Application Support/
+com.vercel.cli/auth.json`) into the secret via `gh secret set VERCEL_TOKEN` (stdin pipe,
+never argv). Verified `vercel whoami --token …` → nilukush with the workflow's env-var
+pattern, then re-ran the failed workflow (run 33250636961): **full pipeline green —
+Deploy to Vercel step SUCCESS, run conclusion success**. Scheduled 05:15 UTC deploys
+are self-sufficient again. CAVEAT: this token is the local CLI session token — if the
+user runs `vercel logout` or revokes sessions it dies again; a token created in
+Vercel → Settings → Tokens is the sturdier long-term form.
