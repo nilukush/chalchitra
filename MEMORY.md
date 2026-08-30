@@ -1146,3 +1146,26 @@ daily refresh. TWO separate things were conflated:
    npm && chain masked it. Lesson: grep logs for ReferenceError before reading
    "results" from a crashed chain.
 Tests 256. Pages 18,121. Deployed chalchitra-mm44zna5n. All six live-verified.
+
+## Session 21 — persistence hardening + hourly refresh retired + squares explained
+
+1. **Will the fixes persist?** Code fixes are pushed (CI rebuilds with them); the
+   DATA deltas (renamed pages, new shows, corrected frontier, slug-map baseline)
+   are locked in by republishing the SEED (353MB) + purging pipeline caches —
+   per the session-19 runbook rule, done after this session's local runs. The
+   daily workflow ALSO now runs `pipeline:expand 0` (re-classification sweep)
+   after trends, so classifier fixes (kind flips, rescued rejects) self-heal in
+   CI with a one-day lag even without local runs.
+2. **Hourly refresh retired (cron removed, manual dispatch kept)**: at the 20k-page
+   corpus the refresh blew its 30-min timeout — EVERY cron run since yesterday
+   evening died cancelled (06:46, 01:18, 22:41, 19:25, 15:39 — all ~30m20s
+   "cancelled" = timeout) and a cancelled job saves no cache: pure waste.
+   Scheduling was never truly hourly either (GitHub throttles short-interval
+   cron: observed 3-7h gaps). Intraday freshness already comes from the
+   client-side live-trending rail; data freshness is daily.
+3. **"Squares came back" — transient, not a regression**: the screenshot showed
+   8 identical "Khalifa: Part 1" poster-less tiles from ONE of midday's
+   intermediate deploys (rename churn + 13-lang TMDB era). Current build scanned:
+   ZERO pages with duplicated card captions; only one "Khalifa: Part 1" string
+   exists (a news headline link). Prithviraj's filmography is clean (single row).
+   The cast monogram fix from session 15 is intact.

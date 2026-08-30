@@ -77,6 +77,12 @@ jobs:
       - name: Refresh trends
         run: npm run pipeline:trends
 
+      # classifier fixes propagate without a local run: re-judge cached
+      # frontier entries (kind flips like the Mandela OTT-film fix, rescued
+      # rejects); wave size 0 = purely local, no fetching
+      - name: Re-classify frontier (local sweep)
+        run: npm run pipeline:expand 0
+
       - name: Build site
         run: npm run build
 

@@ -8,9 +8,11 @@
 
 name: Hourly data refresh
 
+# Schedule REMOVED (2026-08-30): at the 20k-page corpus the refresh exceeded
+# the 30-min job timeout — every cron run died cancelled and saved nothing
+# (see run history). Intraday freshness is covered by the client-side live
+# trending rail; the daily run refreshes everything else. Manual dispatch only.
 on:
-  schedule:
-    - cron: '25 * * * *'
   workflow_dispatch: {}
 
 concurrency:
