@@ -1177,3 +1177,12 @@ trailers 4,594 (+563), rated 8,537, plot links 6,428. Kamal filmography internal
 226/478 (47%, was 36%). Frontier: 11,129 accepted / 50,744 pending (waves continue;
 ~55 min per 3k). Homepage live shows 10,411 films. Seed republished + caches purged
 in the same chain (runbook) — tomorrow's daily run inherits everything.
+
+## Session 23 — expansion wave 8 (chain5 green)
+
+Another 3,000 works → **14,205 titles** (+2,729), 23,707 pages (Astro build now
+24 min at this size — approaching CI budget ceilings; watch it), trailers 5,229,
+rated 10,009 (first time past 10k), plot links 7,479. Frontier 13,926 accepted /
+47,744 pending. Seed republished + caches purged in-chain. NOTE for scale:
+build minutes are the next constraint if waves continue (Vercel unaffected —
+prebuilt deploy; GitHub Actions public-repo free; Render daily-only fallback).
