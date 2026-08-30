@@ -24,3 +24,17 @@ export function planRefresh(
   }
   return { changed, added };
 }
+
+/** Pageids whose LIVE title differs from the cached title — Wikipedia page
+ *  moves don't bump lastrevid, so renames are invisible to planRefresh. */
+export function planRenames(
+  cachedTitles: Record<string, string>,
+  liveTitles: Record<string, string>,
+): string[] {
+  const renamed: string[] = [];
+  for (const [pageid, live] of Object.entries(liveTitles)) {
+    const cached = cachedTitles[pageid];
+    if (cached !== undefined && cached !== live) renamed.push(pageid);
+  }
+  return renamed;
+}

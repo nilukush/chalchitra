@@ -18,8 +18,17 @@ describe('classifyTitlePage', () => {
     expect(classifyTitlePage(film())).toMatchObject({ kind: 'movie' });
   });
 
-  it('accepts Infobox television as a series', () => {
-    const page = film().replace('Infobox film', 'Infobox television').replace('| released', '| first_aired');
+  it('accepts episodic Infobox television as a series', () => {
+    const page = `
+{{Infobox television
+| name = Some Show
+| creator = X
+| num_episodes = 40
+| original_run = {{Start date|2020|1|1}}
+| country = India
+| language = Hindi
+}}
+`;
     expect(classifyTitlePage(page)).toMatchObject({ kind: 'series' });
   });
 
@@ -56,5 +65,30 @@ describe('classifyTitlePage', () => {
 }}
 `;
     expect(classifyTitlePage(bare)).toMatchObject({ kind: 'movie', unverified: true });
+  });
+
+  it('treats {{Infobox television}} pages with director/runtime and no episodes as direct-to-TV/OTT FILMS (Mandela pattern)', () => {
+    const ottFilm = `
+{{Infobox television
+| director = Madonne Ashwin
+| runtime = 140 minutes
+| released = {{Start date|2021|04|04|df=y}}
+| country = India
+| language = Tamil
+}}
+`;
+    expect(classifyTitlePage(ottFilm)).toMatchObject({ kind: 'movie' });
+  });
+
+  it('keeps episodic {{Infobox television}} pages as series', () => {
+    const episodic = `
+{{Infobox television
+| num_episodes = 42
+| original_run = {{Start date|2020|01|01}}
+| country = India
+| language = Hindi
+}}
+`;
+    expect(classifyTitlePage(episodic)).toMatchObject({ kind: 'series' });
   });
 });

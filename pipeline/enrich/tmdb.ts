@@ -15,7 +15,7 @@ import { Agent, fetch as undiciFetch } from 'undici';
  *  connection — without allocating an Agent per request. */
 const tmdbAgent = new Agent({ keepAliveTimeout: 4_000, keepAliveMaxTimeout: 8_000 });
 import type { TitleRecord } from '../types.js';
-import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
+import { applyLiteEnrichment, episodesFromTmdbSeason, languageBonus, languageIsoFor, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -26,9 +26,11 @@ const IMG = 'https://image.tmdb.org/t/p';
  *  or nothing at all — the API returns ONLY en-US videos without this filter,
  *  hiding most official trailers (verified: movie 1408162 returns 0 videos
  *  under language=en-US but 5 YouTube trailers with this list appended).
- *  `null` = untagged uploads. All Wikipedia-recognized Indian film languages
- *  (hi ta te ml kn bn mr pa ur gu or as). Rotating this string rotates the cache. */
-const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur,gu,or,as';
+ *  `null` = untagged uploads. NOTE: extending this list to 13 entries
+ *  (+gu,or,as) trips a TMDB cache bug — the video append returns EMPTY for
+ *  the whole 13-entry URL class (live: trailers fell 3755→1791). Stay at 11;
+ *  gu/or/as titles are covered by the short per-title /videos fallback. */
+const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -142,7 +144,7 @@ export async function enrichTitlesLite(
 ): Promise<{ matched: number; enriched: number }> {
   const apiKey = process.env.TMDB_API_KEY;
   if (!apiKey || titles.length === 0) return { matched: 0, enriched: 0 };
-  const { rps = 8, concurrency = 6, candidates: maxCandidates = 2 } = opts;
+  const { rps = 8, concurrency = 6, candidates: maxCandidates = 4 } = opts;
   const gate = startGate(Math.round(1000 / rps));
 
   async function pacedGet(pathAndQuery: string): Promise<any | null> {
@@ -184,7 +186,9 @@ export async function enrichTitlesLite(
       for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, maxCandidates)) {
         const det = await pacedGet(`/${kind}/${candidate.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`);
         const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
-        const score = scoreNameOverlap(credits, wikiNames);
+        // language concordance: a short Indian title ("Om") must not match a
+        // same-year foreign film (Thai "OM" beat the Tamil original once)
+        const score = scoreNameOverlap(credits, wikiNames) + languageBonus(det?.original_language, record.language);
         if (score > bestScore) {
           bestScore = score;
           hit = candidate;
@@ -201,6 +205,17 @@ export async function enrichTitlesLite(
       record.tmdbId = hit.id;
       // same URL shape as the candidate probes → one cache key per title
       const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`));
+      // TMDB intermittently serves CACHE-EMPTY video appends for an exact URL
+      // (verified live: same movie, short list → 2 videos, our list → 0). The
+      // dedicated /videos endpoint is a different cache entry — refill the
+      // pool through it when the append came back empty.
+      if (details && (details.videos?.results ?? []).length === 0) {
+        // short per-title list (en + null + the record's own language) — long
+        // lists hit the poisoned-URL behavior far more often
+        const iso = languageIsoFor(record.language) ?? 'hi';
+        const alt = await pacedGet(`/${kind}/${hit.id}/videos?language=en-US&include_video_language=en,null,${iso}`);
+        if (alt?.results?.length) details.videos = alt;
+      }
       if (details && applyLiteEnrichment(record, details, opts.dirty?.has(hit.id) ?? false)) enriched++;
       // full-fidelity mandate: archive series get episode guides for the
       // seasons their Wikipedia article doesn't tabulate (paced + cached)
@@ -247,10 +262,10 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
     const wikiNames = [...record.directedBy, ...record.createdBy, ...record.cast.slice(0, 6).map((c) => c.name)];
     let hit: TmdbSearchResult | null = null;
     let bestScore = -1;
-    for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, 3)) {
+    for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, 4)) {
       const det = await tmdbGet(`/${kind}/${candidate.id}?append_to_response=credits`, apiKey);
       const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
-      const score = scoreNameOverlap(credits, wikiNames);
+      const score = scoreNameOverlap(credits, wikiNames) + languageBonus(det?.original_language, record.language);
       if (score > bestScore) {
         bestScore = score;
         hit = candidate;
@@ -293,6 +308,11 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
     // hold the only trailers — merge them before the tiered YouTube-only pick.
     let trailerKey: string | undefined;
     if (!record.trailer || dirty.has(hit.id)) {
+      if ((details.videos?.results ?? []).length === 0) {
+        const iso = languageIsoFor(record.language) ?? 'hi';
+        const alt = await tmdbGet(`/${kind}/${hit.id}/videos?language=en-US&include_video_language=en,null,${iso}`, apiKey);
+        if (alt?.results?.length) details.videos = alt;
+      }
       const videoPools: TmdbVideo[][] = [(details.videos?.results ?? []) as TmdbVideo[]];
       if (record.kind === 'series' && (details.videos?.results ?? []).length === 0) {
         const seasons = Math.min(Number((details as any).number_of_seasons) || 1, 2);

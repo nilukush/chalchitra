@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSearchDocuments, slugify, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { buildSearchDocuments, computeSlugRedirects, slugify, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -254,5 +254,31 @@ describe('chunkPersons', () => {
     const chunks = chunkPersons([{ name: 'Zoya', slug: 'z' }] as any);
     expect(chunks.has('A')).toBe(false);
     expect(chunks.get('Z')).toHaveLength(1);
+  });
+});
+
+describe('computeSlugRedirects (Wikipedia renames)', () => {
+  it('emits old→new redirect when a pageid slug changes and records the new one', () => {
+    const records = [
+      { pageid: 1, slug: 'khalifa-the-ruler', kind: 'movie' as const },
+      { pageid: 2, slug: 'stable-slug', kind: 'series' as const },
+    ];
+    const prev = { '1': { slug: 'khalifa-the-intro', kind: 'movie' }, '2': { slug: 'stable-slug', kind: 'series' } };
+    const { redirects, next } = computeSlugRedirects(records as any, prev);
+    expect(redirects).toEqual([{ from: '/movies/khalifa-the-intro', to: '/movies/khalifa-the-ruler' }]);
+    expect(next).toEqual({ '1': { slug: 'khalifa-the-ruler', kind: 'movie' }, '2': { slug: 'stable-slug', kind: 'series' } });
+  });
+
+  it('redirects on a KIND flip even when the slug string is identical (Mandela /series→/movies)', () => {
+    const records = [{ pageid: 3, slug: 'mandela', kind: 'movie' as const }];
+    const prev = { '3': { slug: 'mandela', kind: 'series' } };
+    const { redirects } = computeSlugRedirects(records as any, prev);
+    expect(redirects).toEqual([{ from: '/series/mandela', to: '/movies/mandela' }]);
+  });
+
+  it('no redirects on first run (empty previous map)', () => {
+    const { redirects, next } = computeSlugRedirects([{ pageid: 7, slug: 'x', kind: 'movie' }] as any, {});
+    expect(redirects).toEqual([]);
+    expect(next).toEqual({ '7': { slug: 'x', kind: 'movie' } });
   });
 });

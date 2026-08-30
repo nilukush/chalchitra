@@ -124,10 +124,14 @@ export interface TmdbVideo {
  */
 export function pickTmdbTrailer(pools: TmdbVideo[][]): string | undefined {
   const videos = pools.flat().filter((v) => v?.site === 'YouTube' && v.key);
+  // TYPE outranks the official flag: a full Trailer with official=false (very
+  // common for Indian titles — Haiwaan) is the better, longer video than an
+  // official Teaser.
   const tiers: Array<(v: TmdbVideo) => boolean> = [
     (v) => v.type === 'Trailer' && v.official === true,
-    (v) => (v.type === 'Trailer' || v.type === 'Teaser') && v.official === true,
-    (v) => v.type === 'Trailer' || v.type === 'Teaser',
+    (v) => v.type === 'Trailer',
+    (v) => v.type === 'Teaser' && v.official === true,
+    (v) => v.type === 'Teaser',
     () => true,
   ];
   for (const tier of tiers) {
@@ -135,6 +139,32 @@ export function pickTmdbTrailer(pools: TmdbVideo[][]): string | undefined {
     if (hit) return hit.key;
   }
   return undefined;
+}
+
+
+/** Wikipedia language name → TMDB original_language ISO code. Used to keep a
+ *  short/generic Indian title ("Om") from matching a same-year foreign film
+ *  (a Thai "OM" beat the Tamil original before this existed). */
+const LANGUAGE_TO_ISO: Record<string, string> = {
+  hindi: 'hi', urdu: 'ur', punjabi: 'pa', bengali: 'bn', marathi: 'mr',
+  gujarati: 'gu', odia: 'or', assamese: 'as', tamil: 'ta', telugu: 'te',
+  kannada: 'kn', malayalam: 'ml', tulu: 'tcy', konkani: 'kok', sanskrit: 'sa',
+  maithili: 'mai', santali: 'sat', nepali: 'ne', sindhi: 'sd', dogri: 'doi',
+  bhojpuri: 'bho', rajasthani: 'raj', chhattisgarhi: 'hne',
+};
+
+export function languageIsoFor(language: string | undefined): string | undefined {
+  if (!language) return undefined;
+  const first = language.split(/[,\/]/)[0]?.trim().toLowerCase();
+  return first ? LANGUAGE_TO_ISO[first] : undefined;
+}
+
+/** Scoring bonus for a TMDB candidate's original_language vs the Wikipedia
+ *  record's language: concordant +3, discordant −3, unknown 0. */
+export function languageBonus(originalLanguage: string | undefined, recordLanguage: string | undefined): number {
+  const iso = languageIsoFor(recordLanguage);
+  if (!originalLanguage || !iso) return 0;
+  return originalLanguage === iso ? 3 : -3;
 }
 
 export interface TmdbDetailsLite {

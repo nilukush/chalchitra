@@ -5,7 +5,7 @@
  * - disk cache of page payloads (data/cache/pages) and API responses (data/cache/api)
  */
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
+import { mkdirSync, readFileSync, statSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -55,7 +55,10 @@ export function resolveTitle(title: string, chains: TitleMapping[]): string {
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function apiGet(params: Record<string, string | number>): Promise<any> {
+async function apiGet(
+  params: Record<string, string | number>,
+  opts: { ttlMs?: number } = {},
+): Promise<any> {
   const query = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) query.set(k, String(v));
   query.set('format', 'json');
@@ -64,14 +67,22 @@ async function apiGet(params: Record<string, string | number>): Promise<any> {
   const cacheFile = path.join(CACHE_API_DIR, `${cacheKey}.json`);
 
   if (existsSync(cacheFile)) {
-    try {
-      return JSON.parse(readFileSync(cacheFile, 'utf8'));
-    } catch {
-      console.warn(`  ! corrupt cache entry ${cacheFile}, refetching`);
+    // Listing-type queries (category members) go stale silently: members added
+    // on Wikipedia after the cache write are invisible forever. ttlMs bounds
+    // their age; page-content queries stay cached forever (they have their own
+    // lastrevid refresh path).
+    if (opts.ttlMs !== undefined && Date.now() - statSync(cacheFile).mtimeMs > opts.ttlMs) {
+      /* expired → fall through to refetch (overwrites the file) */
+    } else {
       try {
-        rmSync(cacheFile);
+        return JSON.parse(readFileSync(cacheFile, 'utf8'));
       } catch {
-        /* ignore */
+        console.warn(`  ! corrupt cache entry ${cacheFile}, refetching`);
+        try {
+          rmSync(cacheFile);
+        } catch {
+          /* ignore */
+        }
       }
     }
   }
@@ -130,14 +141,17 @@ export async function fetchCategoryPages(
   let continueKey: string | undefined;
 
   do {
-    const data = await apiGet({
-      action: 'query',
-      list: 'categorymembers',
-      cmtitle: categoryTitle,
-      cmlimit: 500,
-      cmtype: 'page|subcat',
-      ...(continueKey ? { cmcontinue: continueKey } : {}),
-    });
+    const data = await apiGet(
+      {
+        action: 'query',
+        list: 'categorymembers',
+        cmtitle: categoryTitle,
+        cmlimit: 500,
+        cmtype: 'page|subcat',
+        ...(continueKey ? { cmcontinue: continueKey } : {}),
+      },
+      { ttlMs: 6 * 60 * 60 * 1000 }, // re-list categories every 6h: new members must surface
+    );
     for (const member of data.query?.categorymembers ?? []) {
       if (member.title.startsWith('Category:')) {
         if (!SKIP_CATEGORY.test(member.title)) subcategories.push(member.title);
@@ -330,7 +344,9 @@ export async function resolveImageThumbUrls(
 /** Live lastrevid poll for cached pageids (batches of 50, paced, backoff).
  *  Deliberately NOT disk-cached — revids must be fresh on every refresh run.
  *  This is the delta signal for pipeline:refresh (Step 8). */
-export async function fetchLastRevids(pageIds: number[]): Promise<Map<number, number>> {
+export async function fetchLastRevids(
+  pageIds: number[],
+): Promise<Map<number, { revid: number; title: string }>> {
   const out = new Map<number, number>();
   for (let i = 0; i < pageIds.length; i += 50) {
     const batch = pageIds.slice(i, i + 50);
@@ -357,7 +373,7 @@ export async function fetchLastRevids(pageIds: number[]): Promise<Map<number, nu
       }
     }
     for (const page of json?.query?.pages ?? []) {
-      if (page?.pageid && page?.lastrevid) out.set(page.pageid, page.lastrevid);
+      if (page?.pageid && page?.lastrevid) out.set(page.pageid, { revid: page.lastrevid, title: page.title });
     }
     await sleep(REQUEST_GAP_MS);
   }

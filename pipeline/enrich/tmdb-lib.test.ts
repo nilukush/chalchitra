@@ -115,7 +115,7 @@ describe('episodesFromTmdbSeason', () => {
   });
 });
 
-import { pickTmdbTrailer } from './tmdb-lib.js';
+import { languageBonus, languageIsoFor, pickTmdbTrailer } from './tmdb-lib.js';
 
 describe('pickTmdbTrailer', () => {
   const yt = (key: string, type: string, official = true): { key: string; site: string; type: string; official: boolean } => ({
@@ -137,7 +137,11 @@ describe('pickTmdbTrailer', () => {
 
   it('merges season-level pools with show-level pools', () => {
     expect(pickTmdbTrailer([[], [yt('se1', 'Trailer', false)]])).toBe('se1');
-    expect(pickTmdbTrailer([[yt('s1', 'Teaser')], [yt('se1', 'Trailer', false)]])).toBe('s1');
+  });
+
+  it('a full Trailer outranks an official Teaser (Haiwaan pattern: unofficial trailer is the longer video)', () => {
+    expect(pickTmdbTrailer([[yt('s', 'Teaser', true), yt('t', 'Trailer', false)]])).toBe('t');
+    expect(pickTmdbTrailer([[yt('s1', 'Teaser')], [yt('t1', 'Trailer', false)]])).toBe('t1');
   });
 
   it('returns undefined for empty pools', () => {
@@ -214,5 +218,20 @@ describe('applyLiteEnrichment (archive pass)', () => {
     expect(record.trailer).toBe('https://www.youtube.com/watch?v=tr1');
     expect(record.backdrop).toContain('/b.jpg');
     expect(record.genres).toEqual(['Drama']); // wiki field untouched
+  });
+});
+
+describe('languageIsoFor / languageBonus (TMDB concordance)', () => {
+  it('maps Wikipedia language names to TMDB ISO codes, multi-language takes the first', () => {
+    expect(languageIsoFor('Tamil')).toBe('ta');
+    expect(languageIsoFor('Malayalam')).toBe('ml');
+    expect(languageIsoFor('Tamil, Telugu')).toBe('ta');
+    expect(languageIsoFor('Korean')).toBeUndefined();
+  });
+
+  it('rewards original-language concordance and punishes mismatch', () => {
+    expect(languageBonus('ta', 'Tamil')).toBeGreaterThan(0);
+    expect(languageBonus('th', 'Tamil')).toBeLessThan(0);
+    expect(languageBonus(undefined, 'Tamil')).toBe(0);
   });
 });

@@ -41,7 +41,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, buildSearchDocuments, chunkPersons, computeKnownFor, displayTitle, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -509,10 +509,12 @@ async function main() {
     let archiveSeries = 0;
     const seenFinal = new Set<string>([...movies, ...series].map((t) => t.wikiTitle));
     for (const [requested, entry] of accepted) {
-      const finalTitle = entry.finalTitle ?? requested;
-      if (seenFinal.has(finalTitle)) continue;
       const page = readCachedPage(entry.pageid);
       if (!page?.wikitext) continue;
+      // page.title is authoritative (Wikipedia renames update it via refresh);
+      // the frontier's stored finalTitle can lag a move
+      const finalTitle = page.title ?? entry.finalTitle ?? requested;
+      if (seenFinal.has(finalTitle)) continue;
       titlePages.set(finalTitle, page); // poster resolution + plot-link lookup
       const kind = entry.kind!;
       const slug = kind === 'movie' ? movieRegistry.slug(finalTitle, page.pageid) : seriesRegistry.slug(finalTitle, page.pageid);
@@ -754,6 +756,40 @@ async function main() {
       series: series.filter((t) => t.tmdbId).map((t) => ({ tmdbId: t.tmdbId, seasons: t.seasons })),
     }),
   );
+
+  // slug stability across Wikipedia renames: diff current slugs against the
+  // previous build's pageid→slug map; moved titles keep working via redirects
+  const slugMapPath = path.join(DATA, 'cache', 'slug-map.json');
+  let prevSlugs: Record<string, { slug: string; kind: 'movie' | 'series' }> = {};
+  if (existsSync(slugMapPath)) {
+    try {
+      prevSlugs = JSON.parse(readFileSync(slugMapPath, 'utf8'));
+    } catch {
+      prevSlugs = {};
+    }
+  }
+  const { redirects: slugRedirects, next: nextSlugs } = computeSlugRedirects(
+    [...movies, ...series].map((t) => ({ pageid: t.pageid, slug: t.slug, kind: t.kind })),
+    prevSlugs,
+  );
+  writeFileSync(slugMapPath, JSON.stringify(nextSlugs));
+  // redirects are CUMULATIVE: an old URL must keep redirecting forever, not
+  // just in the build that noticed the rename — merge with what's on disk,
+  // then prune entries whose FROM path is live again (slug flip-flops)
+  const redirectsPath = path.join(DATA, 'redirects.json');
+  let redirectMap: Record<string, string> = {};
+  try {
+    redirectMap = JSON.parse(readFileSync(redirectsPath, 'utf8'));
+  } catch {
+    redirectMap = {};
+  }
+  for (const r of slugRedirects) redirectMap[r.from] = r.to;
+  const livePaths = new Set([...movies, ...series].map((t) => `/${t.kind === 'movie' ? 'movies' : 'series'}/${t.slug}`));
+  for (const from of Object.keys(redirectMap)) {
+    if (livePaths.has(from)) delete redirectMap[from];
+  }
+  writeFileSync(redirectsPath, JSON.stringify(redirectMap, null, 2));
+  if (slugRedirects.length > 0) console.log(`→ ${slugRedirects.length} slug redirect(s) emitted (renamed articles; ${Object.keys(redirectMap).length} total)`);
 
   console.log(`✓ Dataset complete: ${movies.length} movies, ${series.length} series, ${persons.length} persons (${chunkPersons(persons).size} chunk files)`);
   console.log(`  Languages: ${stats.languages.slice(0, 8).map((l) => `${l.language} (${l.movies + l.series})`).join(', ')}`);

@@ -40,6 +40,37 @@ export function wikiUrlFor(title: string): string {
   return `https://en.wikipedia.org/wiki/${encodeURIComponent((title ?? '').replace(/ /g, '_'))}`;
 }
 
+
+/** Diff current record slugs against the previous build's slug map (keyed by
+ *  Wikipedia pageid): a renamed article changes its slug, so emit old→new
+ *  redirects and persist the new mapping for the next diff. */
+export interface SlugMapEntry {
+  slug: string;
+  kind: 'movie' | 'series';
+}
+
+export function computeSlugRedirects(
+  records: { pageid: number; slug: string; kind: 'movie' | 'series' }[],
+  previous: Record<string, SlugMapEntry>,
+): { redirects: { from: string; to: string }[]; next: Record<string, SlugMapEntry> } {
+  const redirects: { from: string; to: string }[] = [];
+  const next: Record<string, SlugMapEntry> = {};
+  for (const record of records) {
+    if (!record.pageid || !record.slug) continue;
+    const before = previous[String(record.pageid)];
+    // a kind flip (Mandela: television-infobox film was /series/x) moves the
+    // path even when the slug string is identical — the FROM path needs the
+    // PREVIOUS kind, not the current one
+    if (before && (before.slug !== record.slug || before.kind !== record.kind)) {
+      const from = `/${before.kind === 'movie' ? 'movies' : 'series'}/${before.slug}`;
+      const to = `/${record.kind === 'movie' ? 'movies' : 'series'}/${record.slug}`;
+      if (from !== to) redirects.push({ from, to });
+    }
+    next[String(record.pageid)] = { slug: record.slug, kind: record.kind };
+  }
+  return { redirects, next };
+}
+
 export interface SearchDoc {
   /** slug */
   s: string;

@@ -25,7 +25,15 @@ export function classifyTitlePage(wikitext: string): ClassifyResult {
   const infobox = findTemplates(wikitext, /^infobox/i)[0];
   if (!infobox) return { reject: 'no-infobox' };
   if (FILM_INFOBOX.test(infobox.name)) return indianCheck(wikitext, 'movie');
-  if (SERIES_INFOBOX.test(infobox.name)) return indianCheck(wikitext, 'series');
+  if (SERIES_INFOBOX.test(infobox.name)) {
+    // Indian direct-to-streaming/TV films often carry {{Infobox television}}
+    // (Mandela 2021, Pulikkuthi Pandi) — a director + runtime + single release
+    // date and NO episode count marks a FILM, not a series.
+    const box = parseInfobox(wikitext) ?? {};
+    const filmish = Boolean(box.director || box.runtime);
+    const episodic = Boolean(box.num_episodes || box.original_run || box.num_seasons);
+    return indianCheck(wikitext, filmish && !episodic ? 'movie' : 'series');
+  }
   return { reject: `wrong-type:${infobox.name}` };
 }
 

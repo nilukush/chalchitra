@@ -15,7 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from './env.js';
 
 loadEnv();
-import { fetchPages } from './wiki-api.js';
+import { fetchPages, readCachedPage } from './wiki-api.js';
 import { classifyTitlePage } from './classify-title.js';
 import { loadPersons } from './persons-store.js';
 
@@ -81,6 +81,31 @@ async function main() {
       frontier.targets[name].refs = targets.get(name)!.refs;
     }
   }
+
+  // sweep: classifier fixes can flip kinds (television-infobox OTT films were
+  // series until the Mandela fix) or rescue rejects — re-judge every entry
+  // whose page is already cached; purely local, no network.
+  let reclassified = 0;
+  for (const entry of Object.values(frontier.targets)) {
+    if (entry.pageid <= 0 || (entry.status !== 'accepted' && entry.status !== 'rejected')) continue;
+    const page = readCachedPage(entry.pageid);
+    if (!page?.wikitext) continue;
+    const verdict = classifyTitlePage(page.wikitext);
+    if ('reject' in verdict) {
+      if (entry.status === 'accepted') {
+        entry.status = 'rejected';
+        entry.reason = verdict.reject;
+        reclassified++;
+      }
+    } else if (entry.status !== 'accepted' || entry.kind !== verdict.kind) {
+      entry.status = 'accepted';
+      entry.kind = verdict.kind;
+      delete entry.reason;
+      reclassified++;
+    }
+  }
+  if (reclassified > 0) console.log(`  re-classification sweep: ${reclassified} entries updated (cached pages only)`);
+  writeFileSync(FRONTIER_PATH, JSON.stringify(frontier));
 
   const pending = names.filter((n) => frontier.targets[n].status === 'pending');
   const stats = { accepted: 0, rejected: 0, missing: 0, pending: pending.length };

@@ -20,7 +20,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, fetchLastRevids } from './wiki-api.js';
-import { planRefresh } from './refresh-lib.js';
+import { planRefresh, planRenames } from './refresh-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAGES_DIR = path.join(ROOT, 'data', 'cache', 'pages');
@@ -55,7 +55,26 @@ async function main() {
   console.log(`  ${live.size} revids resolved`);
 
   const current: Record<string, number> = {};
-  for (const [pageid, revid] of live) current[String(pageid)] = revid;
+  const liveTitles: Record<string, string> = {};
+  for (const [pageid, info] of live) {
+    current[String(pageid)] = info.revid;
+    if (info.title) liveTitles[String(pageid)] = info.title;
+  }
+  // Wikipedia page MOVES don't bump lastrevid — diff live titles against the
+  // cached titles to catch renames (Khalifa: The Intro → Khalifa: The Ruler).
+  const cachedTitles: Record<string, string> = {};
+  for (const entry of index) cachedTitles[String(entry.pageid)] = entry.title;
+  const renamedIds = new Set(planRenames(cachedTitles, liveTitles));
+  if (renamedIds.size > 0) {
+    console.log(`→ ${renamedIds.size} pages renamed on Wikipedia — invalidating for refetch under new titles`);
+    for (const id of renamedIds) {
+      const entry = index.find((e) => String(e.pageid) === id);
+      if (entry) rmSync(path.join(PAGES_DIR, entry.file), { force: true });
+    }
+  }
+  const renamedTitles = [...renamedIds]
+    .map((id) => liveTitles[id])
+    .filter((t): t is string => Boolean(t));
 
   let previous: Record<string, number> | null = null;
   if (existsSync(SNAPSHOT_PATH)) {
@@ -78,20 +97,22 @@ async function main() {
   const changedTitles = plan.changed
     .map((id) => byPageid.get(Number(id))?.title)
     .filter((t): t is string => Boolean(t));
+  // renamed pages were invalidated above; fetch them under their NEW titles
+  const refetchTitles = [...new Set([...changedTitles, ...renamedTitles])];
   const addedTitles = plan.added
     .map((id) => byPageid.get(Number(id))?.title)
     .filter((t): t is string => Boolean(t));
 
   console.log(`→ Plan: ${plan.changed.length} changed, ${plan.added.length} newly cached since snapshot`);
 
-  if (plan.changed.length > 0) {
+  if (refetchTitles.length > 0) {
     // invalidate only the changed pages, then refetch through the paced path
     for (const id of plan.changed) {
       const entry = byPageid.get(Number(id));
       if (entry) rmSync(path.join(PAGES_DIR, entry.file), { force: true });
     }
-    console.log(`→ Refetching ${changedTitles.length} edited pages (paced)…`);
-    const pages = await fetchPages(changedTitles);
+    console.log(`→ Refetching ${refetchTitles.length} edited/renamed pages (paced)…`);
+    const pages = await fetchPages(refetchTitles);
     const recovered = [...pages.values()].filter((p) => p && !p.missing && p.wikitext).length;
     console.log(`  ${recovered} pages refreshed`);
   } else {

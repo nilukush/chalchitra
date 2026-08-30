@@ -1107,3 +1107,42 @@ daily refresh. TWO separate things were conflated:
    production. Ran pipeline:trends + rebuild locally → local trending now IDENTICAL to
    production (geetu-mohandas, kuku-kohli, yash-actor, rukmini-vasanth…). Runbook now
    documents pipeline:trends (was missing from AGENTS.md list).
+
+## Session 20 — six-issue round: category staleness, kind flips, teaser pick, TMDB concordance, renames
+
+1. **CATEGORY LISTINGS CACHED FOREVER** (why new category members never appeared):
+   apiGet cached EVERYTHING unconditionally — the category walk served a frozen
+   member list, so user-added shows (Adarsh Baal Vidyalaya*, Musafir Cafe, Super
+   Subbu) were invisible to every daily/hourly run. Fix: apiGet opts.ttlMs;
+   categorymembers re-lists every 6h. Subcategory recursion already existed
+   (depth 2, cmtype=subcat) and covers films the same way (2026 Indian films
+   walked recursively). *Actual article spelling is "Adarsh BAAL Vidyalaya".
+2. **{{Infobox television}} OTT films classified as series** (Mandela 2021,
+   Pulikkuthi Pandi + ~19 more): direct-to-streaming films carry the TV infobox.
+   Classifier now treats director/runtime + no num_episodes/original_run as a
+   FILM. expand-titles gained a re-classification sweep (mirror of persons):
+   20 frontier kinds flipped. Old URLs 301 via redirects.json → astro redirects.
+3. **TEASER PICKED OVER TRAILER** (haiwaan): tiers let official-flag outrank
+   type; Indian full trailers are often official:false. New order: Trailer
+   (official) > Trailer > Teaser (official) > Teaser > any.
+4. **WRONG TMDB MATCH** (om → Thai OM): added languageBonus (original_language
+   vs Wikipedia language, ±3) to candidate scoring + probe depth 2→4 (the
+   Tamil original sat at index 3). om now → 1384528 ✓.
+5. **WIKIPEDIA RENAMES INVISIBLE**: page MOVES don't bump lastrevid. refresh
+   now diffs live titles vs cached (planRenames), invalidates + refetches
+   under new titles; dataset prefers cached page.title; slug changes emit
+   CUMULATIVE redirects (data/redirects.json ← pageid-keyed slug-map.json in
+   cache; kind flips emit /series→/movies paths). Khalifa: The Intro → /movies/
+   khalifa-the-ruler live with TMDB 1036081 + 6.8 + trailer ✓.
+6. **TMDB include_video_language QUIRK (deep)**: 13-entry lists (+gu,or,as)
+   make the video append return EMPTY for the whole URL class — live-tested
+   (same movie: short list → 2 videos; 13-entry → 0, consistently; the /videos
+   endpoint flaky too; even 11-entry flip-flopped across cache nodes).
+   Trailers fell 3,755→1,791 when the 13-entry URL era cached empties. Final:
+   11-entry list (proven cache restored) + SHORT per-title /videos fallback
+   (en,null,<record's iso>) when the append pool is empty → trailers 4,031
+   (highest ever, on 8,677 titles). NOTE run28/30 crashed ReferenceError
+   (languageIsoFor unimported) — stale outputs looked like regressions; the
+   npm && chain masked it. Lesson: grep logs for ReferenceError before reading
+   "results" from a crashed chain.
+Tests 256. Pages 18,121. Deployed chalchitra-mm44zna5n. All six live-verified.
