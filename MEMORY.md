@@ -1169,3 +1169,11 @@ Tests 256. Pages 18,121. Deployed chalchitra-mm44zna5n. All six live-verified.
    ZERO pages with duplicated card captions; only one "Khalifa: Part 1" string
    exists (a news headline link). Prithviraj's filmography is clean (single row).
    The cast monogram fix from session 15 is intact.
+
+## Session 22 — expansion wave 7 (chain4: wave→dataset→build→deploy→seed, all green)
+
+3,000 more filmography works fetched → **11,476 titles** (+2,799), **20,948 pages**,
+trailers 4,594 (+563), rated 8,537, plot links 6,428. Kamal filmography internal
+226/478 (47%, was 36%). Frontier: 11,129 accepted / 50,744 pending (waves continue;
+~55 min per 3k). Homepage live shows 10,411 films. Seed republished + caches purged
+in the same chain (runbook) — tomorrow's daily run inherits everything.
