@@ -86,6 +86,9 @@ jobs:
         run: npm run pipeline:expand 0
 
       - name: Build site
+        # 28k+ pages exceed Node's default ~4GB old-space on the 7GB runner
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
         run: npm run build
 
       - name: Save pipeline caches (incremental — pages + api + tmdb + snapshots)
