@@ -68,3 +68,9 @@ gh api repos/nilukush/chalchitra/actions/caches --paginate \
 - Secrets needed: TMDB_API_KEY, AI_API_KEY, VERCEL_TOKEN, VERCEL_ORG_ID,
   VERCEL_PROJECT_ID (Actions). Create the Vercel project WITHOUT git sync
   (vercel.json sets github.enabled=false; deploys come from the workflow).
+
+**After any local `vercel deploy`**: the CLI rotates its session token, killing
+the `VERCEL_TOKEN` repo secret (daily-refresh deploys then fail with "token not
+valid"). Re-sync it: `./scripts-sync-vercel-secret.sh` (the chain scripts do
+this automatically). A truly non-expiring token can only be created in the
+Vercel dashboard (Settings → Tokens) — the API refuses programmatic creation.
