@@ -1221,3 +1221,21 @@ Two MORE ceilings surfaced during verification (corpus growth):
    (a3d4104). If pages keep growing, next lever: split the build or trim the
    eager import.meta.glob dataset per route.
 Verification run in flight after both fixes.
+
+## Session 26 close-out — VERCEL_TOKEN: definitive diagnosis, automation impossible
+
+**The real mechanism** (found in auth.json): the Vercel CLI now stores an
+EXPIRING access token (token + refreshToken + expiresAt, ~8-12h life) that it
+silently refreshes locally. Any token copied into the repo secret dies at its
+expiresAt — the Aug-29 copy worked one day, then died; today's copy died the
+same way. My earlier "rotation on deploy" theory was wrong; it's plain expiry.
+**Programmatic creation is refused** (v2/v3 user/tokens → "Cannot create tokens
+for this app"). Conclusion: a permanent CI token is DASHBOARD-ONLY — user must
+create one at vercel.com/account/tokens ("Never Expires") and set repo secret
+VERCEL_TOKEN (or hand it to the agent to set). Until then the nightly workflow
+ships data+seed fine and fails only its final deploy step; production stays
+current via local chain deploys (CLI refreshes its own token).
+Also fixed this session while verifying: daily timeout 120→300 min (runs were
+cancelled at 2h pre-deploy), build OOM → NODE_OPTIONS 6GB heap (28,788 pages).
+scripts-sync-vercel-secret.sh retained — it becomes the right tool for keeping
+ANY long-lived token synced; useless for expiring session tokens.
