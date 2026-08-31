@@ -1194,3 +1194,10 @@ rated 11,369, plot links 8,315. Frontier 16,657 accepted / 44,744 pending.
 Build 12 min (26k pages — faster than wave 8's 24, disk cache warm). Deployed
 chalchitra-qmmnwtdt6; seed republished + caches purged in-chain. Homepage live
 reads 15,218 films / 1,594 series.
+
+## Session 25 — expansion wave 10 (chain7 green)
+
+3,000 more works → **19,235 titles** (+2,423), 28,788 pages, trailers 6,463,
+rated 12,525, plot links 9,015. Frontier 19,284 accepted / 41,744 pending —
+past the one-third mark of the known frontier. Deployed chalchitra-bzpvdze2g;
+seed republished + caches purged in-chain. Homepage live: 17,303 films.
