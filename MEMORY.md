@@ -1201,3 +1201,23 @@ reads 15,218 films / 1,594 series.
 rated 12,525, plot links 9,015. Frontier 19,284 accepted / 41,744 pending —
 past the one-third mark of the known frontier. Deployed chalchitra-bzpvdze2g;
 seed republished + caches purged in-chain. Homepage live: 17,303 films.
+
+## Session 26 — why VERCEL_TOKEN "came back": CLI token rotation + 2 more growth ceilings
+
+User called out that the Aug-29 token fix wasn't permanent. ROOT CAUSE (proven):
+the Vercel CLI ROTATES its session token around local deployments — auth.json
+showed vca_1D…→vca_0W… with mtime matching a local deploy. Any token copied to
+the repo secret dies on my next local deploy. Vercel's API REFUSES programmatic
+token creation ("Cannot create tokens for this app") — a never-expiring token
+is dashboard-only, user action. MITIGATION (self-healing): scripts-sync-vercel-
+secret.sh re-syncs the secret from local auth; AGENTS runbook + all chain
+templates now run it after every local deploy.
+
+Two MORE ceilings surfaced during verification (corpus growth):
+1. Daily workflow timeout-minutes 120 → runs cancelled at ~2h0m before deploy
+   (same class as the hourly's 30-min kills). Raised to 300 (bbaf1d0).
+2. Build site OOM: 28,788 pages exceed Node's default ~4GB old-space on the
+   7GB runner → NODE_OPTIONS=--max-old-space-size=6144 on the build step
+   (a3d4104). If pages keep growing, next lever: split the build or trim the
+   eager import.meta.glob dataset per route.
+Verification run in flight after both fixes.
