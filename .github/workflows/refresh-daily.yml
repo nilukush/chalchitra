@@ -27,7 +27,9 @@ permissions:
 jobs:
   refresh-and-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # corpus growth note: at ~29k cached pages the refresh+dataset+build chain
+    # takes ~2.5h; 120 min was silently cancelling runs before the deploy step
+    timeout-minutes: 300
     env:
       TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
       AI_API_KEY: ${{ secrets.AI_API_KEY }}
