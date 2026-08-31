@@ -1186,3 +1186,11 @@ rated 10,009 (first time past 10k), plot links 7,479. Frontier 13,926 accepted /
 47,744 pending. Seed republished + caches purged in-chain. NOTE for scale:
 build minutes are the next constraint if waves continue (Vercel unaffected —
 prebuilt deploy; GitHub Actions public-repo free; Render daily-only fallback).
+
+## Session 24 — expansion wave 9 (chain6 green)
+
+3,000 more works → **16,812 titles** (+2,607), 26,340 pages, trailers 5,896,
+rated 11,369, plot links 8,315. Frontier 16,657 accepted / 44,744 pending.
+Build 12 min (26k pages — faster than wave 8's 24, disk cache warm). Deployed
+chalchitra-qmmnwtdt6; seed republished + caches purged in-chain. Homepage live
+reads 15,218 films / 1,594 series.
