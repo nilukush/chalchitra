@@ -1239,3 +1239,11 @@ Also fixed this session while verifying: daily timeout 120→300 min (runs were
 cancelled at 2h pre-deploy), build OOM → NODE_OPTIONS 6GB heap (28,788 pages).
 scripts-sync-vercel-secret.sh retained — it becomes the right tool for keeping
 ANY long-lived token synced; useless for expiring session tokens.
+
+## Session 27 — expansion wave 11 (chain8 green)
+
+3,000 more works → **21,380 titles** (+2,145), 30,960 pages (build 17 min), trailers
+6,991, rated 13,456, plot links 9,485. Frontier 21,716 accepted / 38,744 pending
+(56% of the estimated full corpus converted). Deployed chalchitra-g05sr6i4n;
+seed republished (481MB) + caches purged in-chain. Homepage live: 19,137 films /
+2,243 series. Still blocked on user dashboard token for CI deploys.
