@@ -1247,3 +1247,14 @@ ANY long-lived token synced; useless for expiring session tokens.
 (56% of the estimated full corpus converted). Deployed chalchitra-g05sr6i4n;
 seed republished (481MB) + caches purged in-chain. Homepage live: 19,137 films /
 2,243 series. Still blocked on user dashboard token for CI deploys.
+
+## Session 28 — VERCEL_TOKEN PERMANENTLY FIXED (user provided dashboard token)
+
+User supplied a never-expires dashboard token (vcp_…) from docs/vercel-chalchitra.md
+(file lives in the PUBLIC expat-salary repo — untracked, now also .gitignored there
+to prevent accidental commit). Token verified via whoami with the workflow's env
+pattern → gh secret set VERCEL_TOKEN. **END-TO-END VERIFIED: daily-refresh run
+33479814534 completed SUCCESS (2h23m) — refresh → dataset → trends → re-classify
+sweep → build (6GB heap) → seed publish → DEPLOY all green.** The nightly pipeline
+is now fully self-sufficient: data refresh + build + deploy, every night at 05:15 UTC.
+The CLI-session-token saga is closed (root cause was expiring vca_ access tokens).
