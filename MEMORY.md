@@ -1281,3 +1281,9 @@ Forced a full 14-day catch-up (235 tracked titles dirty) → dataset rebuild →
 **Toxic 7.3/43 live on production**. Lesson recorded: any future URL change
 MUST go through the shared builders (a new query param added inline in tmdb.ts
 would re-create this bug).
+
+## Session 30 — expansion wave 12 (chain10 green)
+
+3,000 more works → **23,447 titles** (+2,067), 32,726 pages, trailers ~7.5k,
+rated ~14k. Frontier ~36.7k pending. Deployed chalchitra-bobtpercc; seed
+republished + caches purged in-chain. Build 17 min (6GB heap, 32.7k pages).
