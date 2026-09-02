@@ -123,10 +123,12 @@ export function getTitleBySlug(slug: string, kind?: 'movie' | 'series'): TitleRe
   return pool.find((t) => t.slug === slug);
 }
 
-/** Already-released titles, newest first — "Fresh in theatres" & friends. */
+/** Already-released titles, newest first — "Fresh in theatres" & friends.
+ *  MUST sort explicitly: movies.json file order is parse-order, not recency. */
 export function recentTitles(kind: 'movie' | 'series', count: number): TitleRecord[] {
   return titles.filter((t) => !t.archive)
     .filter((t) => t.kind === kind && isReleased(t))
+    .sort((a, b) => (b.releaseDate ?? '').localeCompare(a.releaseDate ?? ''))
     .slice(0, count);
 }
 

@@ -1287,3 +1287,19 @@ would re-create this bug).
 3,000 more works → **23,447 titles** (+2,067), 32,726 pages, trailers ~7.5k,
 rated ~14k. Frontier ~36.7k pending. Deployed chalchitra-bobtpercc; seed
 republished + caches purged in-chain. Build 17 min (6GB heap, 32.7k pages).
+
+## Session 31 — "Fresh in theatres" miss (Bethlehem): orphaned language categories + unsorted rail
+
+**How the rail works**: recentTitles = released, non-ARCHIVE, kind movie → slice 12.
+**Why Bethlehem missed (two stacked causes)**:
+1. Wikipedia hangs the by-language year categories (2026 Malayalam-language films
+   etc.) under "2026 films by language", NOT under our walk root "2026 Indian
+   films" — 72 current-year films were catalogue-invisible; they only arrived via
+   person waves as ARCHIVE records, and archive is excluded from the rail.
+   FIX: extract-titles now also walks 12 language roots (hi/ta/te/ml/kn/bn/mr/pa/
+   gu/or/as/ur 2026 <L>-language films); catalogue 452 → 515 films; Bethlehem now
+   catalogue with 8.4 rating.
+2. recentTitles never sorted — "newest first" was file-parse order. Now sorts by
+   releaseDate desc. Rail verified: Bethlehem Kudumba Unit appears (rank ~10,
+   Aug-21 cohort) — live on production.
+Deployed chalchitra-r33sngvm0; seed republished + caches purged. 32,889 pages.
