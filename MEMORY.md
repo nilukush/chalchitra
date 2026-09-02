@@ -1258,3 +1258,26 @@ pattern → gh secret set VERCEL_TOKEN. **END-TO-END VERIFIED: daily-refresh run
 sweep → build (6GB heap) → seed publish → DEPLOY all green.** The nightly pipeline
 is now fully self-sufficient: data refresh + build + deploy, every night at 05:15 UTC.
 The CLI-session-token saga is closed (root cause was expiring vca_ access tokens).
+
+## Session 29 — rating staleness root cause: invalidation URL drift (Toxic 6.2 vs 7.3)
+
+**Answer to "does tmdb-changes pull updated ratings?"** — yes by design (change
+list flags the id → cache entries invalidated → dirty overwrite on next dataset),
+and rating/vote changes DO appear in the /changes feed. What was broken: the
+invalidation's URL strings had DRIFTED from the real fetch shapes (pre-language-
+filter era `?append_to_response=videos` without include_video_language, no lite
+shape, no /videos fallback) — every invalidation deleted files that don't exist
+while the real cached ratings stayed frozen. Toxic: 6.231/13 on site vs 7.3/43
+live. (Forensic wrinkle: multiple historical URL eras — 13-lang, hi-first — left
+inert legacy cache files; Toxic's live record had been built from the 13-lang
+file during the crashed-runs window.)
+
+**Fix (permanent against this class)**: URL shapes now live in ONE place —
+tmdb-lib exports VIDEO_LANGS + catalogueDetailsUrl/liteDetailsUrl/
+seasonDetailsUrl/videosFallbackUrl; tmdb.ts fetches and tmdb-changes-lib
+invalidation both use them; invalidation sweeps BOTH details shapes + all 12
+fallback-language URLs + season URLs per changed title. Tests pin the shapes.
+Forced a full 14-day catch-up (235 tracked titles dirty) → dataset rebuild →
+**Toxic 7.3/43 live on production**. Lesson recorded: any future URL change
+MUST go through the shared builders (a new query param added inline in tmdb.ts
+would re-create this bug).

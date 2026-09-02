@@ -15,22 +15,15 @@ import { Agent, fetch as undiciFetch } from 'undici';
  *  connection — without allocating an Agent per request. */
 const tmdbAgent = new Agent({ keepAliveTimeout: 4_000, keepAliveMaxTimeout: 8_000 });
 import type { TitleRecord } from '../types.js';
-import { applyLiteEnrichment, episodesFromTmdbSeason, languageBonus, languageIsoFor, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
+import { applyLiteEnrichment, catalogueDetailsUrl, episodesFromTmdbSeason, languageBonus, languageIsoFor, liteDetailsUrl, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, seasonDetailsUrl, videosFallbackUrl, VIDEO_LANGS, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
 const API = 'https://api.themoviedb.org/3';
 const IMG = 'https://image.tmdb.org/t/p';
 
-/** Indian-cinema trailers are tagged with their audio language (ta, te, hi…)
- *  or nothing at all — the API returns ONLY en-US videos without this filter,
- *  hiding most official trailers (verified: movie 1408162 returns 0 videos
- *  under language=en-US but 5 YouTube trailers with this list appended).
- *  `null` = untagged uploads. NOTE: extending this list to 13 entries
- *  (+gu,or,as) trips a TMDB cache bug — the video append returns EMPTY for
- *  the whole 13-entry URL class (live: trailers fell 3755→1791). Stay at 11;
- *  gu/or/as titles are covered by the short per-title /videos fallback. */
-const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur';
+/** VIDEO_LANGS and all request-URL shapes live in tmdb-lib (shared with the
+ *  change-list invalidation — see the rationale there). */
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -47,7 +40,7 @@ async function synthesizeMissingSeasons(record: TitleRecord, pacedGet: PacedGet)
   const added: ReturnType<typeof episodesFromTmdbSeason> = [];
   for (let season = 1; season <= maxSeasons; season++) {
     if (covered.has(season)) continue;
-    const payload = await pacedGet(`/tv/${record.tmdbId}/season/${season}?language=en-US`);
+    const payload = await pacedGet(seasonDetailsUrl(record.tmdbId, season));
     const rows = payload ? episodesFromTmdbSeason(payload, season) : [];
     if (rows.length === 0) break;
     added.push(...rows);
@@ -184,7 +177,7 @@ export async function enrichTitlesLite(
       let hitDetails: any = null;
       let bestScore = -1;
       for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, maxCandidates)) {
-        const det = await pacedGet(`/${kind}/${candidate.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`);
+        const det = await pacedGet(liteDetailsUrl(kind, candidate.id));
         const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
         // language concordance: a short Indian title ("Om") must not match a
         // same-year foreign film (Thai "OM" beat the Tamil original once)
@@ -204,7 +197,7 @@ export async function enrichTitlesLite(
       matched++;
       record.tmdbId = hit.id;
       // same URL shape as the candidate probes → one cache key per title
-      const details = hitDetails ?? (await pacedGet(`/${kind}/${hit.id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`));
+      const details = hitDetails ?? (await pacedGet(liteDetailsUrl(kind, hit.id)));
       // TMDB intermittently serves CACHE-EMPTY video appends for an exact URL
       // (verified live: same movie, short list → 2 videos, our list → 0). The
       // dedicated /videos endpoint is a different cache entry — refill the
@@ -213,7 +206,7 @@ export async function enrichTitlesLite(
         // short per-title list (en + null + the record's own language) — long
         // lists hit the poisoned-URL behavior far more often
         const iso = languageIsoFor(record.language) ?? 'hi';
-        const alt = await pacedGet(`/${kind}/${hit.id}/videos?language=en-US&include_video_language=en,null,${iso}`);
+        const alt = await pacedGet(videosFallbackUrl(kind, hit.id, iso));
         if (alt?.results?.length) details.videos = alt;
       }
       if (details && applyLiteEnrichment(record, details, opts.dirty?.has(hit.id) ?? false)) enriched++;
@@ -282,7 +275,7 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
 
     const sources: string[] = record.enrichedFrom ?? [];
 
-    const details = await tmdbGet(`/${kind}/${hit.id}?language=en-US&append_to_response=videos&${VIDEO_LANGS}`, apiKey);
+    const details = await tmdbGet(catalogueDetailsUrl(kind, hit.id), apiKey);
     if (!details) continue;
 
     if ((!record.backdrop || dirty.has(hit.id)) && details.backdrop_path) {
@@ -310,7 +303,7 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
     if (!record.trailer || dirty.has(hit.id)) {
       if ((details.videos?.results ?? []).length === 0) {
         const iso = languageIsoFor(record.language) ?? 'hi';
-        const alt = await tmdbGet(`/${kind}/${hit.id}/videos?language=en-US&include_video_language=en,null,${iso}`, apiKey);
+        const alt = await tmdbGet(videosFallbackUrl(kind, hit.id, iso), apiKey);
         if (alt?.results?.length) details.videos = alt;
       }
       const videoPools: TmdbVideo[][] = [(details.videos?.results ?? []) as TmdbVideo[]];
@@ -336,7 +329,7 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
       let list = record.episodesList;
       let filled = 0;
       for (const n of wantedSeasons) {
-        const payload = await tmdbGet(`/tv/${hit.id}/season/${n}?language=en-US`, apiKey);
+        const payload = await tmdbGet(seasonDetailsUrl(hit.id, n), apiKey);
         if (!payload?.episodes) continue;
         const before = list.filter((e) => e.summary).length;
         list = mergeEpisodeSummaries(list, payload, n);

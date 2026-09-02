@@ -1,8 +1,10 @@
 /**
  * Pure planning for the TMDB change-list delta (Step 8b): which of OUR cache
  * entries must be invalidated when TMDB reports a movie/tv id as changed.
- * Deletion/orchestration live in tmdb-changes.ts.
+ * Deletion/orchestration live in tmdb-changes.ts. URL shapes come from the
+ * SHARED builders in enrich/tmdb-lib — never hand-write them here.
  */
+import { FALLBACK_LANG_ISO, catalogueDetailsUrl, liteDetailsUrl, seasonDetailsUrl, videosFallbackUrl } from './enrich/tmdb-lib.js';
 
 export interface TmdbInvalidation {
   kind: 'movie' | 'tv';
@@ -31,16 +33,23 @@ export function planTmdbRefresh(
   for (const title of ourTitles) {
     if (!title.tmdbId) continue;
     if (title.kind === 'movie' && movies.has(title.tmdbId)) {
-      plan.push({
-        kind: 'movie',
-        tmdbId: title.tmdbId,
-        urls: [`/movie/${title.tmdbId}?language=en-US&append_to_response=videos`],
-      });
+      // a title may be enriched by the catalogue pass OR the archive lite pass
+      // (or the /videos fallback) — invalidate every shape it could occupy
+      const urls = [
+        catalogueDetailsUrl('movie', title.tmdbId),
+        liteDetailsUrl('movie', title.tmdbId),
+        ...FALLBACK_LANG_ISO.map((iso) => videosFallbackUrl('movie', title.tmdbId, iso)),
+      ];
+      plan.push({ kind: 'movie', tmdbId: title.tmdbId, urls });
     } else if (title.kind === 'series' && tv.has(title.tmdbId)) {
-      const urls = [`/tv/${title.tmdbId}?language=en-US&append_to_response=credits,videos`];
+      const urls = [
+        liteDetailsUrl('tv', title.tmdbId),
+        catalogueDetailsUrl('tv', title.tmdbId),
+        ...FALLBACK_LANG_ISO.map((iso) => videosFallbackUrl('tv', title.tmdbId, iso)),
+      ];
       const claimed = Math.min(Math.max(Number(title.seasons) || 0, 0), MAX_SEASONS);
       for (let season = 1; season <= claimed; season++) {
-        urls.push(`/tv/${title.tmdbId}/season/${season}?language=en-US`);
+        urls.push(seasonDetailsUrl(title.tmdbId, season));
       }
       plan.push({ kind: 'tv', tmdbId: title.tmdbId, urls });
     }

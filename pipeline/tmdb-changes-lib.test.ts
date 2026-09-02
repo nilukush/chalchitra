@@ -13,18 +13,20 @@ describe('planTmdbRefresh', () => {
     const plan = planTmdbRefresh([111, 999], [], ourTitles);
     expect(plan).toHaveLength(1);
     expect(plan[0]).toMatchObject({ kind: 'movie', tmdbId: 111 });
-    expect(plan[0].urls).toContain('/movie/111?language=en-US&append_to_response=videos');
+    expect(plan[0].urls).toContain('/movie/111?language=en-US&append_to_response=videos&include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur');
+    expect(plan[0].urls).toContain('/movie/111?language=en-US&append_to_response=credits,videos&include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur');
   });
 
   it('invalidates details + every claimed season URL for changed series', () => {
     const plan = planTmdbRefresh([], [222, 333], ourTitles);
     const tv222 = plan.find((p) => p.tmdbId === 222)!;
-    expect(tv222.urls).toContain('/tv/222?language=en-US&append_to_response=credits,videos');
+    expect(tv222.urls).toContain('/tv/222?language=en-US&append_to_response=credits,videos&include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur');
+    expect(tv222.urls).toContain('/tv/222?language=en-US&append_to_response=videos&include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur');
     expect(tv222.urls).toContain('/tv/222/season/1?language=en-US');
     expect(tv222.urls).toContain('/tv/222/season/3?language=en-US');
-    expect(tv222.urls).toHaveLength(4);
+    expect(tv222.urls.some((u) => u === '/tv/222/videos?language=en-US&include_video_language=en,null,ta')).toBe(true);
     const tv333 = plan.find((p) => p.tmdbId === 333)!;
-    expect(tv333.urls).toEqual(['/tv/333?language=en-US&append_to_response=credits,videos']);
+    expect(tv333.urls).toContain('/tv/333?language=en-US&append_to_response=credits,videos&include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur');
   });
 
   it('ignores TMDB ids we do not track', () => {

@@ -167,6 +167,41 @@ export function languageBonus(originalLanguage: string | undefined, recordLangua
   return originalLanguage === iso ? 3 : -3;
 }
 
+
+/** Canonical TMDB request URLs — SHARED by enrichment and the change-list
+ *  invalidation (tmdb-changes-lib). They MUST live in one place: the
+ *  invalidation once drifted from the fetch shapes and silently deleted
+ *  nothing, freezing ratings site-wide for days (Toxic 6.2 vs 7.3 live).
+ */
+/** Indian-cinema trailers are tagged with their audio language (ta, te, hi…) or
+ *  nothing at all — the API returns ONLY en-US videos without this filter
+ *  (verified: movie 1408162 returns 0 videos under language=en-US but 5 YouTube
+ *  trailers with this list). `null` = untagged uploads. NOTE: extending this to
+ *  13 entries (+gu,or,as) trips a TMDB cache bug — the video append returns
+ *  EMPTY for the whole 13-entry URL class (live: trailers fell 3755→1791).
+ *  Stay at 11; gu/or/as titles use the short per-title /videos fallback. */
+export const VIDEO_LANGS = 'include_video_language=en,null,hi,ta,te,ml,kn,bn,mr,pa,ur';
+
+export function catalogueDetailsUrl(kind: 'movie' | 'tv', id: number | string): string {
+  return `/${kind}/${id}?language=en-US&append_to_response=videos&${VIDEO_LANGS}`;
+}
+
+export function liteDetailsUrl(kind: 'movie' | 'tv', id: number | string): string {
+  return `/${kind}/${id}?language=en-US&append_to_response=credits,videos&${VIDEO_LANGS}`;
+}
+
+export function seasonDetailsUrl(id: number | string, season: number): string {
+  return `/tv/${id}/season/${season}?language=en-US`;
+}
+
+/** Per-title video fallback (short lists dodge TMDB's long-list cache bug). */
+export function videosFallbackUrl(kind: 'movie' | 'tv', id: number | string, iso: string): string {
+  return `/${kind}/${id}/videos?language=en-US&include_video_language=en,null,${iso}`;
+}
+
+/** Every iso the fallback could have used — invalidation sweeps them all. */
+export const FALLBACK_LANG_ISO = ['hi', 'ta', 'te', 'ml', 'kn', 'bn', 'mr', 'pa', 'ur', 'gu', 'or', 'as'];
+
 export interface TmdbDetailsLite {
   backdrop_path?: string | null;
   genres?: { name?: string }[];
