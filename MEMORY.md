@@ -1354,3 +1354,12 @@ crash) — one paced chain at a time applies to builds too, not just fetchers.
 rated 14,720. Frontier 25,822 accepted / 33,402 pending (43.6% of the pending
 pool converted; diminishing yield per wave — deeper archive = fewer accepted,
 more rejects/missing). Deployed chalchitra-hsa8x9jgz; seed republished.
+
+## Session 35 — expansion wave 14 (chain15 green)
+
+3,000 more works → **25,751 titles** (+1,034), 35,487 pages, trailers 7,945,
+rated 15,085, persons 9,407. Frontier 27,304 accepted / 30,402 pending. Yield
+down again (1,034 accepted; rejects 4.6k, missing 663) — deep-archive territory,
+as predicted in session 34. Deployed chalchitra-hoi6g7d67; seed republished.
+NEXT: at this yield curve, consider capping waves or switching to targeted
+sweeps after another wave or two.
