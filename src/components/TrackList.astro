@@ -8,14 +8,17 @@ interface Props {
   query: string;
 }
 const { soundtrack, query } = Astro.props;
-const hasAnyMeta = soundtrack.tracks.some((t) => t.singers || t.lyrics || t.length);
+// multi-language releases carry one album per language (Kannada, Telugu, …);
+// single-album soundtracks render exactly as before
+const albums = (soundtrack.albums?.length ?? 0) > 0 ? soundtrack.albums : [{ title: soundtrack.title, tracks: soundtrack.tracks }];
+const multi = albums.length > 1;
 const listen = (platform: string, extra = '') =>
   `${platform}${encodeURIComponent((query + ' ' + extra).trim())}`;
 ---
 
 <div>
   <div class="mb-3 flex flex-wrap items-center gap-2">
-    {soundtrack.title && (
+    {soundtrack.title && !multi && (
       <p class="mr-auto text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
         {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
       </p>
@@ -30,31 +33,36 @@ const listen = (platform: string, extra = '') =>
       Gaana
     </a>
   </div>
-  <div class="overflow-hidden rounded-2xl border border-ink-700/70">
-  {soundtrack.title && (
-    <p class="border-b border-ink-700/70 bg-ink-800/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
-      {soundtrack.title}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
-    </p>
-  )}
-  <table class="w-full text-sm">
-    <caption class="sr-only">Track listing</caption>
-    <tbody>
-      {soundtrack.tracks.map((track) => (
-        <tr class="border-b border-ink-700/40 last:border-0 hover:bg-ink-800/40">
-          <td class="w-10 px-4 py-3 align-top font-display text-base font-bold text-saffron-400">{track.number}</td>
-          <td class="px-2 py-3 align-top">
-            <span class="font-semibold text-ivory-100">{track.title}</span>
-            {track.singers && <span class="block text-xs text-ivory-500">{track.singers}</span>}
-          </td>
-          {hasAnyMeta && (
-            <td class="hidden px-4 py-3 align-top text-xs text-ivory-500 md:table-cell">
-              {track.lyrics ? `Lyrics: ${track.lyrics}` : ''}
-            </td>
-          )}
-          <td class="whitespace-nowrap px-4 py-3 text-right align-top text-xs text-ivory-600">{track.length ?? ''}</td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-  </div>
+  {albums.map((album) => {
+    const hasAnyMeta = album.tracks.some((t) => t.singers || t.lyrics || t.length);
+    return (
+      <div class:list={['overflow-hidden rounded-2xl border border-ink-700/70', multi && 'mb-5 last:mb-0']}>
+        {(album.title || (multi && soundtrack.composer)) && (
+          <p class="border-b border-ink-700/70 bg-ink-800/60 px-4 py-2.5 text-[11px] font-semibold uppercase tracking-widest text-ivory-600">
+            {album.title ?? 'Soundtrack'}{soundtrack.composer ? ` · ${soundtrack.composer}` : ''}
+          </p>
+        )}
+        <table class="w-full text-sm">
+          <caption class="sr-only">Track listing{album.title ? ` — ${album.title}` : ''}</caption>
+          <tbody>
+            {album.tracks.map((track) => (
+              <tr class="border-b border-ink-700/40 last:border-0 hover:bg-ink-800/40">
+                <td class="w-10 px-4 py-3 align-top font-display text-base font-bold text-saffron-400">{track.number}</td>
+                <td class="px-2 py-3 align-top">
+                  <span class="font-semibold text-ivory-100">{track.title}</span>
+                  {track.singers && <span class="block text-xs text-ivory-500">{track.singers}</span>}
+                </td>
+                {hasAnyMeta && (
+                  <td class="hidden px-4 py-3 align-top text-xs text-ivory-500 md:table-cell">
+                    {track.lyrics ? `Lyrics: ${track.lyrics}` : ''}
+                  </td>
+                )}
+                <td class="whitespace-nowrap px-4 py-3 text-right align-top text-xs text-ivory-600">{track.length ?? ''}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  })}
 </div>

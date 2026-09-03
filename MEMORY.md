@@ -1303,3 +1303,27 @@ republished + caches purged in-chain. Build 17 min (6GB heap, 32.7k pages).
    releaseDate desc. Rail verified: Bethlehem Kudumba Unit appears (rank ~10,
    Aug-21 cohort) — live on production.
 Deployed chalchitra-r33sngvm0; seed republished + caches purged. 32,889 pages.
+
+## Session 32 — soundtrack "repeating songs" + dead in-page nav + source provenance
+
+1. **Soundtrack repetition**: multi-language releases (Toxic) carry SIX {{Track
+   listing}} templates — one per language album (Kannada/Hindi/Telugu/Tamil/
+   Malayalam + Non-album singles) on the soundtrack subpage, labeled by === X ===
+   subheadings with EMPTY headline params. The parser flattened all into one list
+   (54 tracks, Tabaahi ×5) → "songs repeating" everywhere multi-album. FIX (TDD):
+   Soundtrack.albums[] — parser chunks the scope by subheading (level-3 always,
+   level-2 when not a generic container like "Track listing"), TrackList renders
+   one labeled table per album; single-album pages unchanged. Live: Toxic shows
+   six labeled albums.
+2. **Nav dead links**: the in-page nav computed `sec-<slug>` hrefs but the
+   chapter <details> elements never carried the ids, and collapsed chapters
+   can't be opened by an anchor anyway. FIX: id + scroll-mt-40 on each <details>
+   + a click handler that sets target.open = true before the scroll. Live:
+   #sec-development etc. exist and work.
+3. **"2026 films by language" provenance (user asked)**: NOT a new source — it's
+   Wikipedia's own category-tree parent of the per-language year categories
+   (discovered via prop=categories on Category:2026 Malayalam-language films
+   while diagnosing the Bethlehem miss). The walk roots added are the same
+   per-language categories the films' own articles carry; no external list.
+Also: chained two builds concurrently by mistake (dist race → Astro finalize
+crash) — one paced chain at a time applies to builds too, not just fetchers.

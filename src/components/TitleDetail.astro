@@ -506,7 +506,7 @@ const jsonLd: Record<string, unknown>[] = [
                   ? extractTimelineDates(section.text, 6)
                   : [];
                 return (
-                  <details class="card-sheen group rounded-2xl border border-ink-700/70 bg-ink-850/50" open={si === 0}>
+                  <details id={secId} class="card-sheen group scroll-mt-40 rounded-2xl border border-ink-700/70 bg-ink-850/50" open={si === 0}>
                     <summary class="flex cursor-pointer list-none items-center gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
                       <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-saffron-500/30 bg-saffron-500/10 font-display text-sm font-bold text-saffron-400">
                         {String(si + 1).padStart(2, '0')}
@@ -626,6 +626,15 @@ const jsonLd: Record<string, unknown>[] = [
 </script>
 
 <script>
+  // in-page nav → collapsed chapters: open the target chapter before the
+  // browser scrolls to it (anchor alone can't open a <details> element)
+  document.querySelectorAll<HTMLAnchorElement>('a[href^="#sec-"]').forEach((link) => {
+    link.addEventListener('click', () => {
+      const target = document.querySelector<HTMLDetailsElement>(link.getAttribute('href') ?? '');
+      if (target) target.open = true;
+    });
+  });
+
   // spoiler gate for the full plot
   document.querySelectorAll<HTMLButtonElement>('.toggle-btn[data-target="plot-spoiler"]').forEach((btn) => {
     let open = false;

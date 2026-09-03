@@ -21,10 +21,19 @@ export interface TrackRow {
   length?: string;
 }
 
+export interface SoundtrackAlbum {
+  /** album headline — the language/version label on multi-album releases */
+  title?: string;
+  tracks: TrackRow[];
+}
+
 export interface Soundtrack {
-  /** album/section headline when present */
+  /** album/section headline when present (first album's) */
   title?: string;
   composer?: string;
+  /** one entry per {{Track listing}}/table — multi-language releases carry
+   *  one album per language; rendering them flat made songs "repeat" */
+  albums?: SoundtrackAlbum[];
   tracks: TrackRow[];
 }
 
@@ -52,41 +61,77 @@ export function extractSoundtrack(pageWikitext: string): Soundtrack | null {
     if (listings.length > 0) scope = pageWikitext;
   }
 
-  const tracks: TrackRow[] = [];
+  const albums: SoundtrackAlbum[] = [];
   let title: string | undefined;
   let composer: string | undefined;
 
-  for (const listing of listings) {
-    const params = listing.params;
-    title = title ?? clean(params['headline']) ?? clean(params['title']);
-    const allLyrics = clean(params['all_lyrics']);
-    const allMusic = clean(params['all_music']);
-    if (!composer && allMusic) composer = allMusic;
+  // group the scope into (album-heading, body) chunks: multi-language releases
+  // label each {{Track listing}} with an === Kannada === / === Telugu === style
+  // SUBHEADING (the headline param is often left empty on those pages)
+  const chunks: { heading?: string; body: string }[] = [];
+  let activeHeading: string | undefined;
+  for (const line of scope.split('\n')) {
+    const sub = /^={3,4}\s*(.*?)\s*=+\s*$/.exec(line);
+    if (sub) {
+      activeHeading = stripWikitext(sub[1]).trim() || undefined;
+      continue;
+    }
+    const top = /^={2}\s*(.*?)\s*={2,}\s*$/.exec(line);
+    if (top && !sub) {
+      const heading = stripWikitext(top[1]).trim();
+      // level-2 sections are album groups too ("Non-album singles") — except
+      // the generic containers (the matched Soundtrack/Music/Track listing)
+      activeHeading = /^(track listing|soundtrack[s]?|music|songs?|music album|soundtrack album)$/i.test(heading)
+        ? undefined
+        : heading || undefined;
+      continue;
+    }
+    if (chunks.length === 0 || chunks[chunks.length - 1].heading !== activeHeading) {
+      chunks.push({ heading: activeHeading, body: '' });
+    }
+    chunks[chunks.length - 1].body += line + '\n';
+  }
+  const scopeChunkOf = (needleScope: string): string => needleScope; // (scope invariant)
+  void scopeChunkOf;
 
-    for (let n = 1; n <= 99; n++) {
-      const t =
-        clean(params[`title${n}`]) ??
-        clean(params[`track${n}`]) ??
-        clean(params[`song${n}`]) ??
-        clean(params[`${n}`]);
-      if (!t) continue;
-      tracks.push({
-        number: String(n),
-        title: t,
-        singers:
-          clean(params[`singer${n}`]) ??
-          clean(params[`singers${n}`]) ??
-          clean(params[`note${n}`]) ??
-          clean(params[`vocal${n}`]),
-        lyrics: clean(params[`lyrics${n}`]) ?? clean(params[`lyricist${n}`]) ?? allLyrics,
-        length: clean(params[`length${n}`]) ?? clean(params[`duration${n}`]),
-      });
+  for (const chunk of (chunks.length > 0 ? chunks : [{ heading: undefined, body: scope }])) {
+    const chunkListings = findTemplates(chunk.body, /^track listing$/i);
+    for (const listing of chunkListings) {
+      const params = listing.params;
+      const albumTitle = clean(params['headline']) ?? clean(params['title']) ?? chunk.heading;
+      title = title ?? albumTitle;
+      const allLyrics = clean(params['all_lyrics']);
+      const allMusic = clean(params['all_music']);
+      if (!composer && allMusic) composer = allMusic;
+
+      const albumTracks: TrackRow[] = [];
+      for (let n = 1; n <= 99; n++) {
+        const t =
+          clean(params[`title${n}`]) ??
+          clean(params[`track${n}`]) ??
+          clean(params[`song${n}`]) ??
+          clean(params[`${n}`]);
+        if (!t) continue;
+        albumTracks.push({
+          number: String(n),
+          title: t,
+          singers:
+            clean(params[`singer${n}`]) ??
+            clean(params[`singers${n}`]) ??
+            clean(params[`note${n}`]) ??
+            clean(params[`vocal${n}`]),
+          lyrics: clean(params[`lyrics${n}`]) ?? clean(params[`lyricist${n}`]) ?? allLyrics,
+          length: clean(params[`length${n}`]) ?? clean(params[`duration${n}`]),
+        });
+      }
+      if (albumTracks.length > 0) albums.push({ title: albumTitle, tracks: albumTracks });
     }
   }
+  const tracks = albums.flatMap((a) => a.tracks);
   if (tracks.length > 0) {
     // composer often named in the section prose ("music is composed by X")
     const lead = clean(section?.body.split('\n').find((l) => /compos/i.test(l)));
-    return { title, composer: composer ?? lead, tracks };
+    return { title, composer: composer ?? lead, albums, tracks };
   }
 
   // 2) track wikitables (on the page, or on a soundtrack-album subpage whose

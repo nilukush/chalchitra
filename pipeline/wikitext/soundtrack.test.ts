@@ -152,3 +152,55 @@ describe('findSoundtrackSubpage', () => {
     expect(findSoundtrackSubpage('== Episodes ==\n{{Main|List of Aahat episodes}}')).toBeNull();
   });
 });
+
+describe('multi-album soundtracks (multi-language releases)', () => {
+  const twoAlbums = `
+== Soundtrack ==
+{{Track listing|headline=Kannada|all_music=Ravi Basrur
+|title1=Tabaahi|length1=4:17
+|title2=Manamohaka|length2=4:05
+}}
+{{Track listing|headline=Telugu|all_music=Ravi Basrur
+|title1=Tabaahi|length1=4:10
+|title2=Madhosh|length2=3:50
+}}
+`;
+
+  it('groups each {{Track listing}} into its own album with its headline', () => {
+    const st = extractSoundtrack(twoAlbums);
+    expect(st?.albums).toHaveLength(2);
+    expect(st?.albums?.[0].title).toBe('Kannada');
+    expect(st?.albums?.[0].tracks.map((t) => t.title)).toEqual(['Tabaahi', 'Manamohaka']);
+    expect(st?.albums?.[1].title).toBe('Telugu');
+    expect(st?.albums?.[1].tracks.map((t) => t.title)).toEqual(['Tabaahi', 'Madhosh']);
+  });
+
+it('derives album titles from === subheadings === when the headline param is empty (Toxic pattern)', () => {
+    const subpageStyle = `
+== Track listing ==
+=== Kannada ===
+{{Track listing
+| title1 = Tabaahi
+}}
+=== Telugu ===
+{{Track listing
+| title1 = Tabaahi
+}}
+`;
+    const st = extractSoundtrack(subpageStyle);
+    expect(st?.albums).toHaveLength(2);
+    expect(st?.albums?.[0].title).toBe('Kannada');
+    expect(st?.albums?.[1].title).toBe('Telugu');
+  });
+
+  it('keeps the flat tracks list as the union (back-compat for single-album consumers)', () => {
+    const st = extractSoundtrack(twoAlbums);
+    expect(st?.tracks).toHaveLength(4);
+  });
+
+  it('single listing still works with album of one and no title', () => {
+    const st = extractSoundtrack('== Songs ==\n{{Track listing|title1=Only|length1=3:00}}');
+    expect(st?.albums).toHaveLength(1);
+    expect(st?.tracks.map((t) => t.title)).toEqual(['Only']);
+  });
+});
