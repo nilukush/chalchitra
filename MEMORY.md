@@ -1327,3 +1327,23 @@ Deployed chalchitra-r33sngvm0; seed republished + caches purged. 32,889 pages.
    per-language categories the films' own articles carry; no external list.
 Also: chained two builds concurrently by mistake (dist race → Astro finalize
 crash) — one paced chain at a time applies to builds too, not just fetchers.
+
+## Session 33 — ratings freshness for new releases + soundtrack scope proof
+
+1. **Soundtrack fix scope (user asked "only Toxic?")**: GLOBAL — parser/renderer
+   change + full dataset re-parse. 646 titles now carry labeled multi-album
+   soundtracks (toxic 6, dc 3, jana-nayagan 3, magudam/vishwanath-and-sons/
+   cocktail-2 2…).
+2. **Ratings still stale for new releases (babita 4/1 vs live 5/2)**: TWO causes.
+   (a) timing — the vote landed after our last fetch AND after yesterday's
+   nightly (which ran BEFORE the URL-builder fix was even pushed); today's
+   nightly was late/queued. (b) SYSTEMIC: the /changes feed is LOSSY for us —
+   10,000 results/day hard cap vs ~21k tracked ids (feed showed exactly 10000
+   movies = truncated), so low-profile rating drifts never get flagged.
+   FIX: **freshness sweep** — tmdb-tracked.json now carries releaseDate;
+   planFreshnessRefresh (TDD) flags every title RELEASED within 45 days for
+   force-refresh on EVERY tmdb-changes run (cache invalidated + dirty), so new
+   releases' ratings/trailers no longer depend on the capped feed. Cost: a few
+   hundred TMDB calls/day. Verified: 272 flagged → 417 entries invalidated →
+   babita 5/2 deployed live. Also fixed a TDZ bug in the first wiring
+   (plan self-reference) — caught by the chain's fail-fast.

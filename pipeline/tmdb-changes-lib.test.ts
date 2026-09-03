@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planTmdbRefresh } from './tmdb-changes-lib.js';
+import { planFreshnessRefresh, planTmdbRefresh } from './tmdb-changes-lib.js';
 
 describe('planTmdbRefresh', () => {
   const ourTitles = [
@@ -32,5 +32,33 @@ describe('planTmdbRefresh', () => {
   it('ignores TMDB ids we do not track', () => {
     const plan = planTmdbRefresh([999], [888], ourTitles);
     expect(plan).toHaveLength(0);
+  });
+});
+
+describe('planFreshnessRefresh (recent-release force refresh)', () => {
+  const today = '2026-09-03';
+  const tracked = [
+    { tmdbId: 1, kind: 'movie' as const, releaseDate: '2026-08-28' },  // 6 days old → in
+    { tmdbId: 2, kind: 'movie' as const, releaseDate: '2026-01-15' },  // months old → out
+    { tmdbId: 3, kind: 'series' as const, releaseDate: '2026-10-01' }, // future → out
+    { tmdbId: 4, kind: 'movie' as const },                             // no date → out
+  ];
+
+  it('flags released titles within the 45-day window with every cache shape', () => {
+    const plan = planFreshnessRefresh(tracked, today);
+    expect(plan.map((p) => p.tmdbId)).toEqual([1]);
+    expect(plan[0].urls.some((u) => u.startsWith('/movie/1?language=en-US&append_to_response=videos&'))).toBe(true);
+    expect(plan[0].urls.some((u) => u.startsWith('/movie/1/videos?language=en-US&include_video_language='))).toBe(true);
+  });
+
+  it('includes a 20-day-old release but not a 55-day-old one (45-day cutoff)', () => {
+    const plan = planFreshnessRefresh(
+      [
+        { tmdbId: 10, kind: 'movie' as const, releaseDate: '2026-07-10' },
+        { tmdbId: 11, kind: 'movie' as const, releaseDate: '2026-08-14' },
+      ],
+      today,
+    );
+    expect(plan.map((p) => p.tmdbId)).toEqual([11]);
   });
 });

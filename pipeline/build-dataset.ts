@@ -752,8 +752,8 @@ async function main() {
   writeFileSync(
     trackedPath,
     JSON.stringify({
-      movies: movies.filter((t) => t.tmdbId).map((t) => t.tmdbId),
-      series: series.filter((t) => t.tmdbId).map((t) => ({ tmdbId: t.tmdbId, seasons: t.seasons })),
+      movies: movies.filter((t) => t.tmdbId).map((t) => ({ tmdbId: t.tmdbId, releaseDate: t.releaseDate })),
+      series: series.filter((t) => t.tmdbId).map((t) => ({ tmdbId: t.tmdbId, seasons: t.seasons, releaseDate: t.releaseDate })),
     }),
   );
 

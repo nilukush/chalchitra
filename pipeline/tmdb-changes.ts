@@ -15,7 +15,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { tmdbGet } from './enrich/tmdb.js';
-import { planTmdbRefresh, type TrackedTitle } from './tmdb-changes-lib.js';
+import { planFreshnessRefresh, planTmdbRefresh, type TrackedTitle } from './tmdb-changes-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -70,9 +70,13 @@ async function main() {
   if (existsSync(trackedPath)) {
     try {
       const t = JSON.parse(readFileSync(trackedPath, 'utf8'));
+      // movies entries are objects with releaseDate in the new shape, plain
+      // numbers in old caches — accept both
       tracked = [
-        ...((t.movies ?? []) as number[]).map((id) => ({ tmdbId: id, kind: 'movie' as const })),
-        ...((t.series ?? []) as { tmdbId: number; seasons?: string }[]).map((s) => ({ tmdbId: s.tmdbId, kind: 'series' as const, seasons: s.seasons })),
+        ...((t.movies ?? []) as (number | { tmdbId: number; releaseDate?: string })[]).map((m) =>
+          typeof m === 'number' ? { tmdbId: m, kind: 'movie' as const } : { tmdbId: m.tmdbId, kind: 'movie' as const, releaseDate: m.releaseDate },
+        ),
+        ...((t.series ?? []) as { tmdbId: number; seasons?: string; releaseDate?: string }[]).map((s) => ({ tmdbId: s.tmdbId, kind: 'series' as const, seasons: s.seasons, releaseDate: s.releaseDate })),
       ];
     } catch {
       /* fall through */
@@ -90,7 +94,14 @@ async function main() {
     }
   }
 
-  const plan = planTmdbRefresh(changedMovies, changedTv, tracked);
+  const feedPlan = planTmdbRefresh(changedMovies, changedTv, tracked);
+  const feedIds = new Set(feedPlan.map((p) => p.tmdbId));
+  // recent releases are force-refreshed EVERY run: their ratings move fastest
+  // and the change feed is lossy at our scale (10k/day cap)
+  const plan = [
+    ...feedPlan,
+    ...planFreshnessRefresh(tracked, end).filter((f) => !feedIds.has(f.tmdbId)),
+  ];
   // dirty ids: the next dataset run may OVERWRITE TMDB-owned fields for these
   // (rating/trailer/backdrop/tagline) instead of fill-only-empty
   writeFileSync(path.join(DATA, 'cache', 'tmdb-dirty.json'), JSON.stringify({ ids: plan.map((p) => p.tmdbId) }));
