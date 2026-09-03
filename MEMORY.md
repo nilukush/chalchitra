@@ -1347,3 +1347,10 @@ crash) — one paced chain at a time applies to builds too, not just fetchers.
    hundred TMDB calls/day. Verified: 272 flagged → 417 entries invalidated →
    babita 5/2 deployed live. Also fixed a TDZ bug in the first wiring
    (plan self-reference) — caught by the chain's fail-fast.
+
+## Session 34 — expansion wave 13 (chain14 green)
+
+3,000 more works → **24,717 titles** (+1,585), 34,442 pages, trailers 7,736,
+rated 14,720. Frontier 25,822 accepted / 33,402 pending (43.6% of the pending
+pool converted; diminishing yield per wave — deeper archive = fewer accepted,
+more rejects/missing). Deployed chalchitra-hsa8x9jgz; seed republished.
