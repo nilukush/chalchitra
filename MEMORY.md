@@ -1363,3 +1363,14 @@ down again (1,034 accepted; rejects 4.6k, missing 663) — deep-archive territor
 as predicted in session 34. Deployed chalchitra-hoi6g7d67; seed republished.
 NEXT: at this yield curve, consider capping waves or switching to targeted
 sweeps after another wave or two.
+
+## Session 36 — expansion wave 15 (chain16 green) — bulk-wave era closing
+
+3,000 more works → **26,725 titles** (+974), 36,471 pages, trailers 8,116,
+rated 15,395. Frontier 28,732 accepted / 27,402 pending. Yield: 974/3000
+(32%, was 35% last wave, ~90% in early waves); rejects 5.9k, missing 909.
+**Bulk waves are now past knee of the curve** — the remaining 27.4k pending
+averages ~1/3 accepted and falling. RECOMMENDATION for next sessions: pause
+bulk waves; pivot to targeted sweeps (EXPAND_FOCUS on prolific persons' back
+catalogs, or filmography rows that already link internally to existing pages).
+Deployed chalchitra-pnrfwbg8t; seed republished. Build 25 min at 36.5k pages.
