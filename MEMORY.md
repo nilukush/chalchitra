@@ -1374,3 +1374,24 @@ averages ~1/3 accepted and falling. RECOMMENDATION for next sessions: pause
 bulk waves; pivot to targeted sweeps (EXPAND_FOCUS on prolific persons' back
 catalogs, or filmography rows that already link internally to existing pages).
 Deployed chalchitra-pnrfwbg8t; seed republished. Build 25 min at 36.5k pages.
+
+## Session 37 — targeted-sweep experiment: yield parity with bulk (~30%)
+
+Ran the pivot experiment: EXPAND_FOCUS waves on 8 Indian-cinema figures
+(Bhanu Banerjee 155, Krishna 130, Bhagyalakshmi 105, Jayanthi 56, M.S.
+Viswanathan, Shreeram Lagoo, Nagesh, Samaresh Routray). RESULT: 485 accepted /
+619 rejected / 496 missing of ~1,600 fetched = **30% — same as bulk waves (32%)**.
+Titles 27,020 (+295 pages), 36,771 pages built, deployed chalchitra-rbppziv4c.
+
+WHY targeting didn't help: (a) old filmographies are full of RED LINKS (496
+missing = works with no Wikipedia article at all — e.g. Bhanu Banerjee's
+1950s Bengali films); (b) the 200-slot waves mix focus-works with bulk filler;
+(c) the pending pool itself is ~1/3 noise (foreign-person filmographies:
+Stallone-class cameo pages imported whole Hollywood catalogs — correctly
+rejected as non-Indian but still fetched).
+
+REAL next lever (design for a future session): source-weighted prioritization
+— rank pending targets by whether their REFERENCING persons are Indian-cinema
+(inferable from the referencing person's filmography language markers);
+targets sourced only from foreign persons get deprioritized or dropped.
+That attacks the 60%+ reject share directly instead of paying 1.1s per fetch.
