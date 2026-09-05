@@ -3,14 +3,15 @@ import seriesJson from '../../data/series.json';
 import statsJson from '../../data/site-stats.json';
 import trendsJson from '../../data/trends.json';
 import type { PersonRecord, SiteStats, TitleRecord } from '../../pipeline/types';
+import type { TitleSummary } from '../../pipeline/dataset-lib';
 import type { TrendsPayload } from '../../pipeline/trends-lib';
 
 // persons live as first-letter chunks (data/persons/A.json … _.json) — the
 // monolith would cross the 100MB runtime + git per-file limit as waves grow
 const personChunks = import.meta.glob<{ default: PersonRecord[] }>('../../data/persons/*.json', { eager: true });
 
-export const movies = moviesJson as TitleRecord[];
-export const series = seriesJson as TitleRecord[];
+export const movies = moviesJson as TitleSummary[];
+export const series = seriesJson as TitleSummary[];
 export const persons: PersonRecord[] = Object.values(personChunks)
   .flatMap((mod) => mod.default)
   .sort((a, b) => a.name.localeCompare(b.name));
@@ -19,7 +20,7 @@ export const trends = trendsJson as TrendsPayload;
 
 /** Top trending titles joined to their full records (ready for PosterCard).
  *  Released only — unreleased buzz surfaces via anticipatedTrending(). */
-export function trendingTitles(count: number): TitleRecord[] {
+export function trendingTitles(count: number): TitleSummary[] {
   return trends.topTitles
     .map((entry) => getTitleBySlug(entry.slug, entry.kind))
     .filter((t): t is TitleRecord => Boolean(t) && isReleased(t as TitleRecord))
@@ -87,11 +88,27 @@ export function liveTrendingCandidates(count: number): LiveCandidate[] {
     .map(({ s: _s, ...rest }) => rest);
 }
 
-export const titles: TitleRecord[] = [...movies, ...series];
+export const titles: TitleSummary[] = [...movies, ...series];
+
+// ── chunked full records ──────────────────────────────────────────────
+// heavy payloads (references, reception, chapters, episodes, credits) live
+// in per-letter chunks; ONLY the title page loads them, lazily
+const movieChunks = import.meta.glob<{ default: TitleRecord[] }>('../../data/titles/movies/*.json');
+const seriesChunks = import.meta.glob<{ default: TitleRecord[] }>('../../data/titles/series/*.json');
+
+/** Full record for one title (loads its letter chunk — cached per build). */
+export async function fullTitle(kind: 'movie' | 'series', slug: string): Promise<TitleRecord | undefined> {
+  const first = slug[0]?.toUpperCase() ?? '#';
+  const bucket = /^[A-Z]$/.test(first) ? first : '_';
+  const loader = (kind === 'movie' ? movieChunks : seriesChunks)[`../../data/titles/${kind === 'movie' ? 'movies' : 'series'}/${bucket}.json`];
+  if (!loader) return undefined;
+  const mod = await loader();
+  return mod.default.find((t) => t.slug === slug);
+}
 
 /** Current editorial-catalogue records (archive titles live on person pages & search). */
-export const catalogueMovies: TitleRecord[] = movies.filter((m) => !m.archive);
-export const catalogueSeries: TitleRecord[] = series.filter((s) => !s.archive);
+export const catalogueMovies: TitleSummary[] = movies.filter((m) => !m.archive);
+export const catalogueSeries: TitleSummary[] = series.filter((s) => !s.archive);
 
 /** ISO date (YYYY-MM-DD) for "today" — ISO strings compare lexicographically,
  *  so `date > TODAY` means a strictly future release. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSearchDocuments, computeSlugRedirects, slugify, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { bucketKeyForSlug, buildSearchDocuments, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -280,5 +280,44 @@ describe('computeSlugRedirects (Wikipedia renames)', () => {
     const { redirects, next } = computeSlugRedirects([{ pageid: 7, slug: 'x', kind: 'movie' }] as any, {});
     expect(redirects).toEqual([]);
     expect(next).toEqual({ '7': { slug: 'x', kind: 'movie' } });
+  });
+});
+
+describe('toTitleSummary (chunked-titles architecture)', () => {
+  const full = {
+    slug: 'raakshasa', kind: 'movie', title: 'Raakshasa', year: 2026, language: 'Malayalam',
+    wikiTitle: 'Raakshasa (TV series)', pageid: 123, archive: true, releaseDate: '2026-01-01',
+    poster: 'https://p', backdrop: 'https://b', rating: { source: 'tmdb', value: 7, votes: 5 },
+    genres: ['Thriller'], seasons: 1, tmdbId: 42,
+    plot: 'x'.repeat(2000), plotHtml: '<p>x</p>', summary: 's', nativeName: 'r', tagline: 't',
+    articleSections: [{ title: 'Casting', text: '...' }], references: [{ title: 'ref', url: 'u' }],
+    reception: 'critics loved it', sections: ['Casting'],
+    episodesList: [{}, {}, {}], soundtrack: { tracks: [] }, awards: [{ work: 'x' }],
+    facts: [{ label: 'l', value: 'v' }], cast: [], crew: [], external: { links: [] }, trailer: 'https://yt',
+  };
+
+  it('keeps listing/search fields, drops heavy payloads', () => {
+    const sum = toTitleSummary(full as any);
+    expect(sum.slug).toBe('raakshasa');
+    expect(sum.title).toBe('Raakshasa');
+    expect(sum.rating?.value).toBe(7);
+    expect(sum.archive).toBe(true);
+    expect(sum.releaseDate).toBe('2026-01-01');
+    expect(sum.seasons).toBe(1);
+    expect(sum.episodeCount).toBe(3);
+    expect((sum as any).plot).toBeUndefined();
+    expect((sum as any).references).toBeUndefined();
+    expect((sum as any).articleSections).toBeUndefined();
+    expect((sum as any).episodesList).toBeUndefined();
+    expect((sum as any).soundtrack).toBeUndefined();
+    expect((sum as any).awards).toBeUndefined();
+    expect((sum as any).trailer).toBeUndefined();
+    expect((sum as any).cast).toBeUndefined();
+  });
+
+  it('bucketKeyForSlug maps letters and everything else to #', () => {
+    expect(bucketKeyForSlug('raakshasa')).toBe('R');
+    expect(bucketKeyForSlug('108-base-hospital-uri')).toBe('#');
+    expect(bucketKeyForSlug('')).toBe('#');
   });
 });

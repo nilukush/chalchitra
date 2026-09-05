@@ -41,6 +41,39 @@ export function wikiUrlFor(title: string): string {
 }
 
 
+
+/** Fields that live only in the per-title CHUNK files (loaded lazily by the
+ *  title page): prose, references, episode guides, credits. Everything else
+ *  ships in the light movies.json/series.json summaries that indexes, search
+ *  and cards consume eagerly. */
+const HEAVY_TITLE_FIELDS = [
+  'plot', 'summary', 'plotHtml', 'nativeName', 'tagline', 'articleSections',
+  'references', 'reception', 'sections', 'episodesList', 'soundtrack',
+  'awards', 'facts', 'cast', 'crew', 'external', 'trailer',
+] as const;
+
+export type TitleSummary = Omit<TitleRecord, (typeof HEAVY_TITLE_FIELDS)[number]> & {
+  /** episodesList length, carried for index badges without the heavy list */
+  episodeCount?: number;
+};
+
+/** Project a full title record to its light summary (index/search/card shape). */
+export function toTitleSummary(record: TitleRecord): TitleSummary {
+  const out: Record<string, unknown> = { episodeCount: record.episodesList?.length };
+  for (const [key, value] of Object.entries(record)) {
+    if ((HEAVY_TITLE_FIELDS as readonly string[]).includes(key)) continue;
+    if (value === undefined) continue;
+    out[key] = value;
+  }
+  return out as TitleSummary;
+}
+
+/** Chunk bucket for a title slug: first letter uppercased, non-letters → '#'. */
+export function bucketKeyForSlug(slug: string): PersonsBucket {
+  const first = (slug ?? '')[0]?.toUpperCase() ?? '#';
+  return /^[A-Z]$/.test(first) ? (first as PersonsBucket) : '#';
+}
+
 /** Diff current record slugs against the previous build's slug map (keyed by
  *  Wikipedia pageid): a renamed article changes its slug, so emit old→new
  *  redirects and persist the new mapping for the next diff. */

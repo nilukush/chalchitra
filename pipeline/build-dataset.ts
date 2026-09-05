@@ -41,7 +41,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -528,13 +528,10 @@ async function main() {
       const yearFromBox = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
       const year = yearFromBox ? Number(String(yearFromBox).slice(0, 4)) : Number(String(entry.year ?? '').slice(0, 4)) || undefined;
       const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: true });
-      // size compromise (one-tier mandate): article CHAPTERS now ship for
-      // archive titles too (+~2KB each — Production/Casting/Release/Reception);
-      // references/reception stay trimmed until title JSON-chunking lands
-      // (full references would add ~170MB to the eagerly-loaded dataset)
-      record.references = [];
-      record.reception = undefined;
-      record.sections = [];
+      // one-tier mandate: FULL fidelity for every title — references, reception
+      // and chapters all ship. The heavy payloads live in per-letter CHUNK
+      // files (data/titles/<kind>/<L>.json) that only the title page loads;
+      // movies.json/series.json carry light summaries for indexes/search.
       record.external = { imdbId: record.external.imdbId, official: record.external.official, links: record.external.links.slice(0, 6) };
       // wire cast/crew to the person universe (catalogue + expansion waves);
       // plain-text names link via the exact-name fallback
@@ -735,8 +732,24 @@ async function main() {
   mkdirSync(DATA, { recursive: true });
   const PUBLIC_DIR = path.join(ROOT, 'public');
   mkdirSync(PUBLIC_DIR, { recursive: true });
-  writeFileSync(path.join(DATA, 'movies.json'), JSON.stringify(movies));
-  writeFileSync(path.join(DATA, 'series.json'), JSON.stringify(series));
+  // chunked full records (title pages load one letter-chunk lazily) + light
+  // summaries for everything else (indexes, search, cards, rails)
+  const TITLES_DIR = path.join(DATA, 'titles');
+  for (const [kind, records] of [['movies', movies], ['series', series]] as const) {
+    const byBucket = new Map<string, TitleRecord[]>();
+    for (const record of records) {
+      const key = bucketKeyForSlug(record.slug);
+      const bucket = byBucket.get(key);
+      if (bucket) bucket.push(record);
+      else byBucket.set(key, [record]);
+    }
+    for (const [bucket, bucketRecords] of byBucket) {
+      mkdirSync(path.join(TITLES_DIR, kind), { recursive: true });
+      writeFileSync(path.join(TITLES_DIR, kind, `${bucket === '#' ? '_' : bucket}.json`), JSON.stringify(bucketRecords));
+    }
+    const summaryFile = path.join(DATA, `${kind}.json`);
+    writeFileSync(summaryFile, JSON.stringify(records.map((r) => toTitleSummary(r))));
+  }
   // persons by first-letter chunks: the single file would cross the 100MB
   // runtime + GitHub per-file limit as waves grow ('#' bucket → _.json)
   rmSync(path.join(DATA, 'persons.json'), { force: true });

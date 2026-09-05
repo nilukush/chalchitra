@@ -1,12 +1,12 @@
 ---
 import TitleDetail from '../../components/TitleDetail.astro';
-import { movies } from '../../lib/data';
+import { fullTitle, movies } from '../../lib/data';
 
 export function getStaticPaths() {
-  return movies.map((movie) => ({ params: { slug: movie.slug }, props: { movie } }));
+  return movies.map((movie) => ({ params: { slug: movie.slug } }));
 }
 
-const { movie } = Astro.props;
+const movie = await fullTitle('movie', Astro.params.slug!);
 ---
 
-<TitleDetail item={movie} />
+{movie && <TitleDetail item={movie} />}

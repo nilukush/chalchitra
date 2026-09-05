@@ -1421,3 +1421,25 @@ That attacks the 60%+ reject share directly instead of paying 1.1s per fetch.
    for ALL titles (one-tier mandate); references/reception stay trimmed until
    title JSON-chunking. Build 28 min at 36,769 pages with the bigger payload.
    Raakshasa now renders sec-casting/sec-reception live.
+
+## Session 39 — title chunking shipped (the "right solution" for dataset size)
+
+User approved implementing chunking instead of trimming. ARCHITECTURE NOW:
+- data/titles/<movies|series>/<A-Z|_>.json — FULL records (300MB, gitignored):
+  plot+plotHtml, references, reception, articleSections, episodesList,
+  soundtrack, awards, facts, cast, crew, external, trailer. Title pages load
+  ONE letter chunk lazily via non-eager import.meta.glob (module-cached).
+- data/movies.json+series.json — LIGHT summaries via toTitleSummary() (TDD):
+  dropped the 18 heavy fields, kept listing/search/card fields + episodeCount.
+  145MB→19MB+2.7MB eagerly loaded.
+- The archive trim is GONE — full one-tier fidelity for every title (raakshasa
+  live: 16 references + Casting + Reception + reception prose).
+RESULTS: Astro build 28 min → 9.6 min (3×) at the same 36,769 pages; CI memory
+pressure gone (6GB heap flag retained but likely unnecessary). Movies [slug]
+and series [slug] pages rewritten: getStaticPaths from summaries + await
+fullTitle(kind, slug). Pipeline consumers of movies.json (expand discovery,
+tmdb-changes fallback) verified compatible with summaries (wikiTitle/pageid/
+tmdbId/seasons/releaseDate kept). Tests 264.
+Deployed chalchitra-pwisgwu24; seed republished; nightly inherits everything.
+FUTURE NOTE: persons could get the same treatment if their eager load ever
+becomes a constraint (9.4k persons currently fine).
