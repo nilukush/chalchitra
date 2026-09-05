@@ -508,13 +508,19 @@ async function main() {
     let archiveMovies = 0;
     let archiveSeries = 0;
     const seenFinal = new Set<string>([...movies, ...series].map((t) => t.wikiTitle));
+    // dedupe by PAGEID too: the same article can appear under two title
+    // spellings ("108: Base Hospital Uri" catalogue vs "108 Base Hospital – Uri"
+    // filmography link) — string matching missed it and built the page twice
+    const seenPageIds = new Set<number>([...movies, ...series].map((t) => t.pageid).filter(Boolean));
     for (const [requested, entry] of accepted) {
+      if (seenPageIds.has(entry.pageid)) continue;
       const page = readCachedPage(entry.pageid);
       if (!page?.wikitext) continue;
       // page.title is authoritative (Wikipedia renames update it via refresh);
       // the frontier's stored finalTitle can lag a move
       const finalTitle = page.title ?? entry.finalTitle ?? requested;
       if (seenFinal.has(finalTitle)) continue;
+      seenPageIds.add(entry.pageid);
       titlePages.set(finalTitle, page); // poster resolution + plot-link lookup
       const kind = entry.kind!;
       const slug = kind === 'movie' ? movieRegistry.slug(finalTitle, page.pageid) : seriesRegistry.slug(finalTitle, page.pageid);
@@ -522,11 +528,11 @@ async function main() {
       const yearFromBox = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
       const year = yearFromBox ? Number(String(yearFromBox).slice(0, 4)) : Number(String(entry.year ?? '').slice(0, 4)) || undefined;
       const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: true });
-      // full-fidelity mandate (2026-08-20): soundtracks stay; references and
-      // article chapters remain trimmed ONLY until the JSON-chunking step
-      // lands (Step 6) — they dominate record size
+      // size compromise (one-tier mandate): article CHAPTERS now ship for
+      // archive titles too (+~2KB each — Production/Casting/Release/Reception);
+      // references/reception stay trimmed until title JSON-chunking lands
+      // (full references would add ~170MB to the eagerly-loaded dataset)
       record.references = [];
-      record.articleSections = [];
       record.reception = undefined;
       record.sections = [];
       record.external = { imdbId: record.external.imdbId, official: record.external.official, links: record.external.links.slice(0, 6) };

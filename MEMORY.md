@@ -1395,3 +1395,29 @@ REAL next lever (design for a future session): source-weighted prioritization
 (inferable from the referencing person's filmography language markers);
 targets sourced only from foreign persons get deprioritized or dropped.
 That attacks the 60%+ reject share directly instead of paying 1.1s per fetch.
+
+## Session 38 — ratings lag, 108-2 duplicate, archive chapters restored
+
+1. **Ratings (toxic 7.7 vs 7.9, gandhari unrated)**: end-to-end verification —
+   pipeline URL returns fresh data (deleted cache → refetch → 7.9/68), both
+   nightlies sweep correctly (1188-1221 titles, ~1820 invalidations incl. the
+   67-title freshness window), gandhari's miss was a 0-vote cache from its
+   release day. After sweep+rebuild: toxic 7.9/68, gandhari 5.8/3 — both LIVE.
+   The 7.7 the user saw was the Sep-4 nightly's output; why that refetch came
+   back 51-vote-old remains unexplained (TMDB serving CI a cached response is
+   the leading theory) — the daily freshness sweep bounds any such miss to 24h.
+   Residual lag is inherent to daily cadence for hot titles (votes move
+   intra-day). NOTE: chains that skip tmdb-changes (waves) serve stale TMDB —
+   always run the sweep before a ratings-relevant dataset.
+2. **108 Base Hospital Uri duplicated** ("108: Base Hospital Uri" catalogue vs
+   "108 Base Hospital – Uri" archive): SAME pageid under two title spellings;
+   string dedupe missed it. FIX: archive expansion now dedupes by pageid.
+   The slug-redirect system caught the removed slug automatically
+   (/series/108-base-hospital-uri-2 → /series/108-base-hospital-uri).
+3. **Missing Production/Casting/Release/Reception chapters on wave titles**:
+   deliberate archive-lite trim ("until chunking lands") — NOT a regression
+   from multiple runs. Measured: chapters ≈ +2KB/title (+50MB dataset —
+   affordable), full references +170MB (not). FIX: article chapters now ship
+   for ALL titles (one-tier mandate); references/reception stay trimmed until
+   title JSON-chunking. Build 28 min at 36,769 pages with the bigger payload.
+   Raakshasa now renders sec-casting/sec-reception live.
