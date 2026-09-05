@@ -42,6 +42,40 @@ export function wikiUrlFor(title: string): string {
 
 
 
+
+const INDIAN_LANGUAGE_MARKER =
+  /bengali|hindi|tamil|telugu|malayalam|kannada|marathi|punjabi|odia|assamese|urdu|gujarati|tulu|konkani/i;
+
+
+/** Names that are never a film/series article — filtered BEFORE fetching.
+ *  These classes were 2,500+ of the expansion rejects: award ceremonies
+ *  (451), TV season pages (297), year-in lists. Person links are filtered
+ *  separately against the persons universe. */
+export function isNonTitleTargetName(name: string): boolean {
+  const n = (name ?? '').trim();
+  if (n.length < 4) return true;
+  return (
+    /\bawards?( ceremony| function)?$/i.test(n) ||
+    /\s\(season \d+\)$/i.test(n) ||
+    /^(list of )?\d{4} in\b/i.test(n)
+  );
+}
+
+/** A person counts as Indian-cinema when any filmography row/section carries
+ *  an Indian-language marker — used to weight expansion targets: works cited
+ *  only by foreign persons (Stallone-class cameos importing whole Hollywood
+ *  catalogs) are fetched last. */
+export function personIsIndianCinema(person: {
+  filmography?: Array<{ heading?: string; rows?: Array<{ notes?: string; language?: string }> }>;
+}): boolean {
+  for (const section of person.filmography ?? []) {
+    for (const row of section.rows ?? []) {
+      if (INDIAN_LANGUAGE_MARKER.test(`${row.notes ?? ''} ${row.language ?? ''} ${section.heading ?? ''}`)) return true;
+    }
+  }
+  return false;
+}
+
 /** Fields that live only in the per-title CHUNK files (loaded lazily by the
  *  title page): prose, references, episode guides, credits. Everything else
  *  ships in the light movies.json/series.json summaries that indexes, search

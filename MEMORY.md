@@ -1443,3 +1443,20 @@ tmdbId/seasons/releaseDate kept). Tests 264.
 Deployed chalchitra-pwisgwu24; seed republished; nightly inherits everything.
 FUTURE NOTE: persons could get the same treatment if their eager load ever
 becomes a constraint (9.4k persons currently fine).
+
+## Session 40 — expansion yield engineering: source weighting + pre-fetch filters
+
+Diagnosed reject classes after the weighted wave (yield parity at 32%): wrong-type
+4,509 (56% of rejects — subtypes: PERSON links 1,863, TV seasons 297, award pages
+451, channels 260, companies/settlements/newspapers ~400), non-indian 2,503,
+no-infobox 1,062. Fixes (TDD, 267 tests):
+1. **personIsIndianCinema** — frontier entries carry `indian` (sourced by ≥1
+   Indian-cinema person via language markers); wave sort puts Indian-sourced first.
+2. **isNonTitleTargetName** + persons-universe lookup — discovery NEVER enqueues
+   person links / award ceremonies / "(season N)" / year-in lists; retroactive
+   purge retired **1,288 pending junk entries with zero fetches**.
+RESULT: filtered weighted wave yield **38.5%** (1,155/3,000) vs 32% baseline.
+Titles 28,173 (+966+1,155 across two waves), 37,770 pages. Frontier pending
+18,514 / accepted 31,338. Yield ceiling now ~40%: remaining rejects are stubs
+without infoboxes and genuinely foreign works in Indian persons' filmographies.
+Deployed chalchitra-p4b3zbhoq; seed republished.

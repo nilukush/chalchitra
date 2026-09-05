@@ -18,6 +18,7 @@ loadEnv();
 import { fetchPages, readCachedPage } from './wiki-api.js';
 import { classifyTitlePage } from './classify-title.js';
 import { loadPersons } from './persons-store.js';
+import { isNonTitleTargetName, personIsIndianCinema } from './dataset-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -31,6 +32,8 @@ interface FrontierTarget {
   reason?: string;
   year?: string;
   refs: number;
+  /** sourced by ≥1 Indian-cinema person — fetched before foreign-only targets */
+  indian?: boolean;
 }
 
 interface Frontier {
@@ -56,29 +59,49 @@ async function main() {
   const catalogue = new Set<string>([...movies, ...series].map((t: any) => t.wikiTitle));
 
   // collect unique targets with reference counts + best-known year
-  const targets = new Map<string, { refs: number; year?: string }>();
-  const bump = (wikiTitle: string | undefined, year?: string) => {
+  const targets = new Map<string, { refs: number; year?: string; indian: boolean }>();
+  // a filmography row can point at a PERSON (crew collaborations), an award
+  // ceremony, or a season page — never a title target; filter before fetching
+  const personTitles = new Set<string>(persons.map((p: any) => p.wikiTitle).filter(Boolean));
+  const bump = (wikiTitle: string | undefined, year?: string, indian = false) => {
     if (!wikiTitle || catalogue.has(wikiTitle)) return;
-    const cur = targets.get(wikiTitle) ?? { refs: 0, year };
+    if (personTitles.has(wikiTitle) || isNonTitleTargetName(wikiTitle)) return;
+    const cur = targets.get(wikiTitle) ?? { refs: 0, year, indian };
     cur.refs++;
+    cur.indian = cur.indian || indian;
     if (!cur.year && year) cur.year = year;
     targets.set(wikiTitle, cur);
   };
   for (const person of persons) {
+    // source weighting: works cited only by foreign persons (Stallone-class
+    // cameos whose filmographies imported whole Hollywood catalogs) are fetched
+    // LAST — they were ~2/3 of bulk-wave rejects
+    const indian = personIsIndianCinema(person as any);
     for (const section of person.filmography ?? []) {
-      for (const row of section.rows) bump(row.wikiTitle, row.year);
+      for (const row of section.rows) bump(row.wikiTitle, row.year, indian);
     }
-    for (const award of person.awards ?? []) bump(award.workWikiTitle, award.year);
+    for (const award of person.awards ?? []) bump(award.workWikiTitle, award.year, indian);
   }
 
   const frontier = loadFrontier();
   // register new targets as pending (sorted for stable batch composition → API-cache reuse)
+  // retroactive: pending entries that the new filters catch never get fetched
+  let purged = 0;
+  for (const [name, entry] of Object.entries(frontier.targets)) {
+    if (entry.status !== 'pending') continue;
+    if (personTitles.has(name)) { entry.status = 'rejected'; entry.reason = 'filtered:person'; purged++; }
+    else if (isNonTitleTargetName(name)) { entry.status = 'rejected'; entry.reason = 'filtered:pattern'; purged++; }
+  }
+  if (purged > 0) console.log(`  pre-fetch filters: ${purged} pending entries retired (person/award/season links)`);
+
   const names = [...targets.keys()].sort();
   for (const name of names) {
+    const info = targets.get(name)!;
     if (!frontier.targets[name]) {
-      frontier.targets[name] = { pageid: 0, status: 'pending', refs: targets.get(name)!.refs, year: targets.get(name)!.year };
+      frontier.targets[name] = { pageid: 0, status: 'pending', refs: info.refs, year: info.year, indian: info.indian };
     } else {
-      frontier.targets[name].refs = targets.get(name)!.refs;
+      frontier.targets[name].refs = info.refs;
+      frontier.targets[name].indian = info.indian;
     }
   }
 
@@ -139,6 +162,9 @@ async function main() {
       const fa = focusTitles.has(a) ? 0 : 1;
       const fb = focusTitles.has(b) ? 0 : 1;
       if (fa !== fb) return fa - fb;
+      const ia = frontier.targets[a].indian === false ? 1 : 0;
+      const ib = frontier.targets[b].indian === false ? 1 : 0;
+      if (ia !== ib) return ia - ib; // Indian-sourced works first
       return frontier.targets[b].refs - frontier.targets[a].refs || a.localeCompare(b);
     })
     .slice(0, waveSize);

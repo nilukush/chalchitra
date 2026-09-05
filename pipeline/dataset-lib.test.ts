@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bucketKeyForSlug, buildSearchDocuments, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { bucketKeyForSlug, buildSearchDocuments, isNonTitleTargetName, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -319,5 +319,37 @@ describe('toTitleSummary (chunked-titles architecture)', () => {
     expect(bucketKeyForSlug('raakshasa')).toBe('R');
     expect(bucketKeyForSlug('108-base-hospital-uri')).toBe('#');
     expect(bucketKeyForSlug('')).toBe('#');
+  });
+});
+
+describe('personIsIndianCinema (expansion source weighting)', () => {
+  const indian = { name: 'Bhanu', filmography: [{ heading: 'Films', rows: [{ title: 'X', notes: 'Bengali' }] }] };
+  const indianByHeading = { name: 'Krishna', filmography: [{ heading: 'Telugu films', rows: [{ title: 'X' }] }] };
+  const foreign = { name: 'Stallone', filmography: [{ heading: 'Film', rows: [{ title: 'Rocky', notes: 'English' }] }] };
+  const empty = { name: 'Nobody', filmography: [] };
+
+  it('marks persons whose filmography carries Indian-language markers', () => {
+    expect(personIsIndianCinema(indian as any)).toBe(true);
+    expect(personIsIndianCinema(indianByHeading as any)).toBe(true);
+    expect(personIsIndianCinema(foreign as any)).toBe(false);
+    expect(personIsIndianCinema(empty as any)).toBe(false);
+  });
+});
+
+describe('isNonTitleTargetName (expansion pre-fetch filter)', () => {
+  it('rejects award ceremonies, TV seasons, and year-in list pages by name', () => {
+    expect(isNonTitleTargetName('National Film Awards')).toBe(true);
+    expect(isNonTitleTargetName('Filmfare Awards')).toBe(true);
+    expect(isNonTitleTargetName('69th Filmfare Awards')).toBe(true);
+    expect(isNonTitleTargetName('Kerala State Film Awards ceremony')).toBe(true);
+    expect(isNonTitleTargetName('Bigg Boss (season 5)')).toBe(true);
+    expect(isNonTitleTargetName('2026 in Indian television')).toBe(true);
+  });
+
+  it('keeps actual film and series titles', () => {
+    expect(isNonTitleTargetName('Mandela (2021 film)')).toBe(false);
+    expect(isNonTitleTargetName('Bigg Boss')).toBe(false);
+    expect(isNonTitleTargetName('108 Base Hospital – Uri')).toBe(false);
+    expect(isNonTitleTargetName('Awards')).toBe(true); // award page, correctly filtered
   });
 });
