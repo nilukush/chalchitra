@@ -1483,3 +1483,11 @@ declining value per fetch. Deployed chalchitra-4gfxoowh5; seed republished.
 3,000 fetched → +481 accepted (16%). Titles **28,979**, 38,751 pages. Frontier:
 accepted 33,364 / pending **9,514** (78% converted; 3 waves to closure).
 Deployed chalchitra-gbdm2zvsg; seed republished.
+
+## Session 44 — expansion wave 5000 (chain25 green) — frontier nearly closed
+
+5,000 fetched → +962 accepted (19%). Titles **29,941**, 39,228 pages. Frontier:
+accepted 34,326 / pending **4,514** (88% converted — ONE more wave closes the
+known frontier). NOTE: Wikipedia image-resolution phase hit hard rate-limiting
+this run (~2h40m with 30s backoffs) — nights are busier; waves that fetch
+fewer new images are less exposed. Deployed + seed republished.
