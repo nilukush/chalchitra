@@ -1467,3 +1467,13 @@ Deployed chalchitra-p4b3zbhoq; seed republished.
 trailers ~8.6k. Frontier: accepted 32,345 / pending 15,514 (68% of the pool
 converted). Deployed chalchitra-duehn9uso; seed republished. ~6 more waves
 exhaust the pending pool at this rate — the frontier is visibly closing.
+
+## Session 42 — expansion wave (chain23 green)
+
+3,000 fetched → +538 accepted (**18% yield — sharp drop**; the filters already
+consumed the clean tail, and this wave hit red-link/foreign-heavy strata:
+missing +553, rejects +1,909). Titles **28,741**, 38,512 pages. Frontier:
+accepted 32,883 / pending 12,514 (72% converted). Build note: this build took
+38 min (2289s) — machine was busy; chunked builds normally ~7-10 min.
+Yield curve is now clearly asymptotic — ~4 waves left to exhaust pending, at
+declining value per fetch. Deployed chalchitra-4gfxoowh5; seed republished.
