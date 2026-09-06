@@ -1477,3 +1477,9 @@ accepted 32,883 / pending 12,514 (72% converted). Build note: this build took
 38 min (2289s) — machine was busy; chunked builds normally ~7-10 min.
 Yield curve is now clearly asymptotic — ~4 waves left to exhaust pending, at
 declining value per fetch. Deployed chalchitra-4gfxoowh5; seed republished.
+
+## Session 43 — expansion wave (chain24 green)
+
+3,000 fetched → +481 accepted (16%). Titles **28,979**, 38,751 pages. Frontier:
+accepted 33,364 / pending **9,514** (78% converted; 3 waves to closure).
+Deployed chalchitra-gbdm2zvsg; seed republished.
