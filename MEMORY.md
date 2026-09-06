@@ -1460,3 +1460,10 @@ Titles 28,173 (+966+1,155 across two waves), 37,770 pages. Frontier pending
 18,514 / accepted 31,338. Yield ceiling now ~40%: remaining rejects are stubs
 without infoboxes and genuinely foreign works in Indian persons' filmographies.
 Deployed chalchitra-p4b3zbhoq; seed republished.
+
+## Session 41 — expansion wave (filtered, chain22 green)
+
+3,000 fetched → +1,007 accepted (**34%**). Titles **29,014**, 38,247 pages,
+trailers ~8.6k. Frontier: accepted 32,345 / pending 15,514 (68% of the pool
+converted). Deployed chalchitra-duehn9uso; seed republished. ~6 more waves
+exhaust the pending pool at this rate — the frontier is visibly closing.
