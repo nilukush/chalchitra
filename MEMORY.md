@@ -1491,3 +1491,14 @@ accepted 34,326 / pending **4,514** (88% converted — ONE more wave closes the
 known frontier). NOTE: Wikipedia image-resolution phase hit hard rate-limiting
 this run (~2h40m with 30s backoffs) — nights are busier; waves that fetch
 fewer new images are less exposed. Deployed + seed republished.
+
+## Session 45 — FRONTIER CLOSED (chain26) + nightly trickle consumer
+
+Closure wave: 3,093 fetched (post-filter pool) → +357 accepted. Titles
+**29,613**, 39,393 pages. Frontier: accepted 34,683 / pending **1,421** —
+the pool no longer drains to zero because DISCOVERY keeps replenishing it
+(newly-built persons' filmographies reference new works). That's the healthy
+steady state. ARCHITECTURAL CLOSE: the nightly now runs `pipeline:expand 300`
+after dataset — the trickle is consumed automatically every day; manual waves
+are retired. Era summary: bulk waves took the catalogue from 5,744 → ~29,600
+titles across 15 sessions. Deployed chalchitra-bdmqsnp43; seed republished.
