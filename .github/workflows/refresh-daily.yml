@@ -76,6 +76,9 @@ jobs:
       - name: Rebuild dataset
         run: npm run pipeline:dataset
 
+      - name: Expansion trickle (300 newest frontier works)
+        run: npm run pipeline:expand 300
+
       - name: Refresh trends
         run: npm run pipeline:trends
 
