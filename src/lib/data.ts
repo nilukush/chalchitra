@@ -92,18 +92,36 @@ export const titles: TitleSummary[] = [...movies, ...series];
 
 // ── chunked full records ──────────────────────────────────────────────
 // heavy payloads (references, reception, chapters, episodes, credits) live
-// in per-letter chunks; ONLY the title page loads them, lazily
-const movieChunks = import.meta.glob<{ default: TitleRecord[] }>('../../data/titles/movies/*.json');
-const seriesChunks = import.meta.glob<{ default: TitleRecord[] }>('../../data/titles/series/*.json');
+// in per-letter chunks; ONLY the title page loads them. Loaded from DISK
+// through a small LRU (NOT import.meta.glob — the module registry retains
+// every chunk for the whole build and OOMs the 7GB CI runner at ~39k pages;
+// pages are generated in slug order, so 4 retained chunks cover the run).
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 
-/** Full record for one title (loads its letter chunk — cached per build). */
+const CHUNK_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../data/titles');
+const chunkCache = new Map<string, TitleRecord[]>(); // insertion order = LRU
+const CHUNK_CACHE_MAX = 4;
+
+/** Full record for one title (LRU-cached disk read of its letter chunk). */
 export async function fullTitle(kind: 'movie' | 'series', slug: string): Promise<TitleRecord | undefined> {
   const first = slug[0]?.toUpperCase() ?? '#';
   const bucket = /^[A-Z]$/.test(first) ? first : '_';
-  const loader = (kind === 'movie' ? movieChunks : seriesChunks)[`../../data/titles/${kind === 'movie' ? 'movies' : 'series'}/${bucket}.json`];
-  if (!loader) return undefined;
-  const mod = await loader();
-  return mod.default.find((t) => t.slug === slug);
+  const key = `${kind === 'movie' ? 'movies' : 'series'}/${bucket}`;
+  let records = chunkCache.get(key);
+  if (!records) {
+    try {
+      records = JSON.parse(readFileSync(path.join(CHUNK_DIR, `${key}.json`), 'utf8')) as TitleRecord[];
+    } catch {
+      return undefined; // missing chunk → no such title
+    }
+    if (chunkCache.size >= CHUNK_CACHE_MAX) chunkCache.delete(chunkCache.keys().next().value as string);
+  } else {
+    chunkCache.delete(key); // refresh LRU recency
+  }
+  chunkCache.set(key, records);
+  return records.find((t) => t.slug === slug);
 }
 
 /** Current editorial-catalogue records (archive titles live on person pages & search). */

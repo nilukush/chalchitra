@@ -3,7 +3,8 @@ import TitleDetail from '../../components/TitleDetail.astro';
 import { fullTitle, movies } from '../../lib/data';
 
 export function getStaticPaths() {
-  return movies.map((movie) => ({ params: { slug: movie.slug } }));
+  // slug order → consecutive pages share one letter chunk (keeps the LRU at 1-2 chunks)
+  return [...movies].sort((a, b) => a.slug.localeCompare(b.slug)).map((movie) => ({ params: { slug: movie.slug } }));
 }
 
 const movie = await fullTitle('movie', Astro.params.slug!);
