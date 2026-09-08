@@ -1530,3 +1530,12 @@ directors first then billing order (TDD, 31 tests) → 9.8MB raw (~1MB gzipped
 transfer; the doc count × base fields now dominates — further shrink would
 mean dropping result thumbnails, not worth it). Deployed chalchitra-cfog3fzs7;
 seed republished.
+
+## Session 48 — scheduled-run reliability: dual slots
+
+Discovered the Sep-8 05:15Z scheduled nightly NEVER RAN — third straight day of
+GitHub cron delays (observed 4-5h late on Sep 5/6/7; >1h-late jobs get dropped
+under load). Single-slot schedules are unreliable on free repos. FIX: two cron
+slots (05:15 + 17:15 UTC) — drop-tolerance + data/deploy freshness now ≤12h
+(covers Indian prime time with a same-evening build). Concurrency group queues
+them safely if both fire. Production meanwhile stayed current via local chains.
