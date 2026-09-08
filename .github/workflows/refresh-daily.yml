@@ -14,7 +14,12 @@ name: Daily refresh
 
 on:
   schedule:
-    - cron: '15 5 * * *' # daily 05:15 UTC (after TMDB daily exports ~07:00 UTC? no — before; TMDB changes lag gracefully)
+    # TWO slots: GitHub's cron queue has been delaying scheduled runs 4-5h and
+    # silently dropping >1h-late jobs under load — a single slot missed a full
+    # day (2026-09-08). The second slot also halves data/deploy freshness lag.
+    # 05:15 UTC + 17:15 UTC (evening IST ≈ 22:45 — fresh for Indian prime time)
+    - cron: '15 5 * * *'
+    - cron: '15 17 * * *'
   workflow_dispatch: {} # manual trigger from the Actions tab
 
 concurrency:
