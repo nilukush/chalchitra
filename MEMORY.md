@@ -1502,3 +1502,21 @@ steady state. ARCHITECTURAL CLOSE: the nightly now runs `pipeline:expand 300`
 after dataset — the trickle is consumed automatically every day; manual waves
 are retired. Era summary: bulk waves took the catalogue from 5,744 → ~29,600
 titles across 15 sessions. Deployed chalchitra-bdmqsnp43; seed republished.
+
+## Session 46 — nightly failures root-caused and fixed (OOM + token clobber)
+
+User reported 2 days of nightly failures. TWO stacked causes:
+1. **Build OOM in CI**: the chunked architecture's import.meta.glob loader
+   retained ALL 300MB of title chunks in the module registry — fine locally,
+   fatal on the 7GB runner at ~39k pages. FIX: fullTitle now reads chunks from
+   DISK through a 4-slot LRU (fs.readFileSync, no module registry), and
+   [slug] getStaticPaths generate in slug order so consecutive pages share a
+   chunk. Measured: peak RSS 6GB+OOM → **1.8GB**, 39,393 pages in 11.4 min.
+2. **Deploy token invalid AGAIN**: scripts-sync-vercel-secret.sh (built for the
+   expiring-CLI-token era) was OVERWRITING the permanent vcp_ secret with the
+   CLI's expiring session token on every local chain. FIX: secret restored to
+   the permanent token; the script is now a safe no-op (chains that call it
+   stay harmless).
+END-TO-END VERIFIED: run 34139456058 — refresh, dataset, expansion trickle,
+build, seed, **DEPLOY all success**; production live (homepage 25,789 films).
+The nightly is fully self-sufficient again: data + trickle + build + deploy.
