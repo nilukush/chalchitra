@@ -1520,3 +1520,13 @@ User reported 2 days of nightly failures. TWO stacked causes:
 END-TO-END VERIFIED: run 34139456058 — refresh, dataset, expansion trickle,
 build, seed, **DEPLOY all success**; production live (homepage 25,789 films).
 The nightly is fully self-sufficient again: data + trickle + build + deploy.
+
+## Session 47 — steady-state QA sweep + search-index cap
+
+Proactive audit of 20 random deep-archive pages: **0 blank shells** — all have
+plot+cast, most have chapters/ratings/posters; wave-era quality holds. Found
+search-index.json at 11MB; capped searchable-names (q) at 8 per title,
+directors first then billing order (TDD, 31 tests) → 9.8MB raw (~1MB gzipped
+transfer; the doc count × base fields now dominates — further shrink would
+mean dropping result thumbnails, not worth it). Deployed chalchitra-cfog3fzs7;
+seed republished.

@@ -169,9 +169,11 @@ export function buildSearchDocuments(
   const docs: SearchDoc[] = [];
 
   for (const item of [...movies, ...series]) {
+    // directors/creators first, then cast in billing order — the size cap
+    // (below) must never push directors out of the searchable set
     const linkedNames = new Set<string>();
-    for (const member of item.cast ?? []) if (member.slug) linkedNames.add(member.name);
     for (const name of [...(item.directedBy ?? []), ...(item.createdBy ?? [])]) linkedNames.add(name);
+    for (const member of item.cast ?? []) if (member.slug) linkedNames.add(member.name);
     docs.push({
       id: `${item.kind}:${item.slug}`, // MiniSearch requires an id; kind-qualified (slug collides across movie/series)
       s: item.slug,
@@ -182,7 +184,9 @@ export function buildSearchDocuments(
       p: item.poster,
       r: item.rating?.value,
       rd: item.releaseDate,
-      q: [...linkedNames],
+      // top-billed only: full cast arrays made the index 11MB at 39k docs;
+      // 8 names keeps the searchable-by-actor experience at a third the size
+      q: [...linkedNames].slice(0, 8),
     });
   }
 

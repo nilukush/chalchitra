@@ -353,3 +353,16 @@ describe('isNonTitleTargetName (expansion pre-fetch filter)', () => {
     expect(isNonTitleTargetName('Awards')).toBe(true); // award page, correctly filtered
   });
 });
+
+describe('search doc size discipline', () => {
+  it('caps the searchable-names array at 8 (11MB index at 39k docs otherwise)', () => {
+    const big = {
+      slug: 'x', kind: 'movie', title: 'X', year: 2026, language: 'Hindi',
+      directedBy: ['Dir'],
+      cast: Array.from({ length: 20 }, (_, i) => ({ name: 'Actor ' + i, slug: 'a' + i, role: '' })),
+    };
+    const docs = buildSearchDocuments([big] as any, [] as any, []);
+    expect(docs[0].q).toHaveLength(8);
+    expect(docs[0].q[0]).toBe('Dir'); // director first, then billing order
+  });
+});
