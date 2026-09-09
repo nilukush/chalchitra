@@ -1552,3 +1552,18 @@ confirm the DUAL-SCHEDULE nightly fired and deployed on Sep 8 — the redundancy
 worked on its first day. Also: Cloudflare Pages (20k file cap) / Netlify
 (10k) / GH Pages (1GB) cannot host this site — Vercel archive deploys remain
 the only viable free host; pruning is the load-bearing maintenance.
+
+## Session 50 — deployment storage is TEAM-wide; pruned all 9 projects
+
+Docs-confirmed: Deployment Storage (10GB Hobby) is ONE team-level quota across
+ALL projects. Team audit: chalchitra + 8 others (execatlas, pm-cares, nakshatra,
+events-aggregator, pagemd, drishti, resumate, cinen). Pruned team-wide keeping
+newest 2 per project (no domain pins anywhere — all sites follow latest prod):
+46 (chalchitra, earlier) + 124 (others; pm-cares 39, pagemd 21, nakshatra 18,
+events 18, cinen 16, resumate 8, execatlas 4). All sites verified 200 — EXCEPT
+pagemd's 404, which is its own Next.js app's root-route 404 (pre-existing;
+its deployment serves fine). scripts-prune-deployments.sh now takes a project
+id (arg 2, defaults chalchitra). RECOMMENDED (user, 1 min, dashboard-only):
+Team Settings → Security & Privacy → Deployment Retention Policy (e.g.
+Production 7 days, apply to all) — Vercel-native belt-and-braces on top of
+the nightly prune.

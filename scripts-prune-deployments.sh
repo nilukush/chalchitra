@@ -7,7 +7,7 @@
 set -euo pipefail
 TOK="${VERCEL_TOKEN:?VERCEL_TOKEN required}"
 TEAM="team_ESjn8Fy4BBbh1gZ86oI4wRo5"
-PROJ="prj_6wi3VkkU22tfM5iQjw2YKsYGSKgT"
+PROJ="${2:-prj_6wi3VkkU22tfM5iQjw2YKsYGSKgT}" # default: chalchitra
 KEEP="${1:-2}"
 IDS=$(curl -fsS -m 60 "https://api.vercel.com/v6/deployments?projectId=$PROJ&limit=100&teamId=$TEAM" \
   -H "Authorization: Bearer $TOK" \
