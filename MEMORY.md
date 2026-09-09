@@ -1584,3 +1584,27 @@ The nightly keep-2 prune still runs after every deploy for same-day cleanup
 (instant headroom instead of waiting out the retention window) — belt and
 braces. The two mechanisms don't conflict: retention deletes what the prune
 already missed.
+
+## HANDOFF — 2026-09-09 (post-compaction; supersedes session-level reading)
+
+**END-STATE**: Chalchitra is a self-running system at ~29.6k titles / ~39.4k pages
+/ ~9.4k persons. NOTHING is queued. Growth is automatic: dual-slot nightly
+(05:15+17:15 UTC, drop-tolerant) does refresh → tmdb-changes (feed + 45-day
+freshness sweep) → titles discovery (root + 12 language categories) → dataset
+(light summaries + title chunks) → expand trickle (300/day; frontier CLOSED at
+~34.7k accepted, pre-fetch filters + Indian-source weighting) → build (disk-LRU
+chunks, ~1.8GB peak, ~11 min) → seed publish → deploy (permanent token) →
+keep-2 deployment prune. User-set retention policy (prod 1w) guards the rest;
+storage TEAM-wide across 9 projects (all pruned 2026-09-09, 170 deleted).
+
+**ALL reported issues fixed & live-verified** (trailers/languages, Kamal class,
+casts, ratings freshness incl. Babita/Toxic/Gandhari classes, 108-2 pageid
+dupes, chapters/references full fidelity via chunking, soundtrack multi-album
+labels, nav anchors, search redesign, squares, trending chips, Upcoming,
+redirects on renames). Search index capped (q≤8 names, 9.8MB). QA sample: 0
+blank archive shells.
+
+**Session-start ritual**: `gh run list` (both slots green?), browse findings =
+bug reports with data trails, vendor emails = work orders (free tier only).
+Full architecture/gotchas: CLAUDE.md (rewritten 2026-09-09 — now current);
+runbook: AGENTS.md. Chronology: this file (sessions 1-51).
