@@ -1567,3 +1567,20 @@ id (arg 2, defaults chalchitra). RECOMMENDED (user, 1 min, dashboard-only):
 Team Settings → Security & Privacy → Deployment Retention Policy (e.g.
 Production 7 days, apply to all) — Vercel-native belt-and-braces on top of
 the nightly prune.
+
+## Session 51 — team Deployment Retention Policy set by user
+
+USER ACTION COMPLETED (dashboard): retention = Cancelled 1d / Errored 1w /
+Pre-production 1d / Production 1w, applied to ALL projects. UI location
+correction: it lives under **Build and Deployment**, not "Security & Privacy"
+(the docs page said Security & Privacy — docs lag the UI). Policy fields are
+not exposed on the project API — enforcement is server-side.
+
+INTERPLAY with the nightly prune (both stay): Chalchitra deploys ~2×/day;
+a 7-day production window retains a rolling ~14 deployments. With Vercel's
+cross-deployment dedup that measured ~200MB effective/deployment (48 hit the
+10GB quota), the rolling window alone ≈ 2.8-3GB steady state — fits the quota.
+The nightly keep-2 prune still runs after every deploy for same-day cleanup
+(instant headroom instead of waiting out the retention window) — belt and
+braces. The two mechanisms don't conflict: retention deletes what the prune
+already missed.
