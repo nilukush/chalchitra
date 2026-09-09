@@ -1539,3 +1539,16 @@ under load). Single-slot schedules are unreliable on free repos. FIX: two cron
 slots (05:15 + 17:15 UTC) — drop-tolerance + data/deploy freshness now ≤12h
 (covers Indian prime time with a same-evening build). Concurrency group queues
 them safely if both fire. Production meanwhile stayed current via local chains.
+
+## Session 49 — Vercel deployment-storage quota (10GB) hit and fixed
+
+User forwarded Vercel's 100%-quota email. CAUSE: every deploy retains a full
+immutable site copy (~2.8GB dist at 39k pages, compressed/deduped server-side);
+48 accumulated deployments exhausted the free 10GB. FIX: (1) pruned 46 via the
+v13 API, kept newest 2 (prod + rollback) — 10GB freed, production verified 200;
+(2) scripts-prune-deployments.sh (keep-N) wired into the nightly AFTER every
+deploy, so storage stays at ≤3 sites forever. NOTE: the two newest deployments
+confirm the DUAL-SCHEDULE nightly fired and deployed on Sep 8 — the redundancy
+worked on its first day. Also: Cloudflare Pages (20k file cap) / Netlify
+(10k) / GH Pages (1GB) cannot host this site — Vercel archive deploys remain
+the only viable free host; pruning is the load-bearing maintenance.
