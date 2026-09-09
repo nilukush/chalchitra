@@ -126,6 +126,14 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
         run: npx --yes vercel@latest deploy ./dist --prod --yes --archive=tgz --token "$VERCEL_TOKEN"
 
+      # every deploy retains a full ~2.8GB site copy — 48 of them exhausted the
+      # free 10GB deployment-storage quota (2026-09-08); keep prod + one rollback
+      - name: Prune old Vercel deployments (keep newest 2)
+        if: env.VERCEL_TOKEN != ''
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: ./scripts-prune-deployments.sh 2
+
       # ── Deploy: wire your host here, e.g. ────────────────────────────────
       # - name: Deploy
       #   run: npx wrangler pages deploy dist --project-name chalchitra
