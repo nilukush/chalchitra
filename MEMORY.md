@@ -1687,3 +1687,14 @@ lives only in the VERCEL_TOKEN Actions secret → dashboard/API audits go
 through dispatched workflows using that secret. (2) The dashboard number to
 TRUST is deploys-green + current deployment count, never the 30-day Total.
 (3) Usage → Deployment Storage → Projects shows per-project current usage.
+
+**Follow-up (user screenshot #2)**: the overview panel shows Vercel's OWN
+"Exceeded free resources" banner — Deployment Storage bar 118.79 GB / 10 GB.
+Same summed 30-day series vs the allowance. Real enforcement = 503
+DEPLOYMENT_PAUSED + manual resume (KB); that bit on Sep 8 when HELD storage
+crossed 10GB (~208MB effective/deployment × 48). Today: 19 held ≈ ~4GB
+effective — banner red yet 10 green daily runs + same-day dispatch deploying
+fine. Structural: a 2.8GB daily-deploying Hobby site can never get this bar
+green (>10GB/30d even at minimal retention). STANCE: no change — watch
+deploys-green + census; symptom-if-enforcement-changes = 503s on prod alias
+caught by session-start gh run list.
