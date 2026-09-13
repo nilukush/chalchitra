@@ -1698,3 +1698,13 @@ fine. Structural: a 2.8GB daily-deploying Hobby site can never get this bar
 green (>10GB/30d even at minimal retention). STANCE: no change — watch
 deploys-green + census; symptom-if-enforcement-changes = 503s on prod alias
 caught by session-start gh run list.
+
+**Screenshot #3 (same afternoon)**: overview panel now reads **11.79 GB /
+10 GB** (was 118.79) — same series, different window (the identical mantissa
+says ~3-day window vs 30-day; usage sums, not a live gauge). Files API
+(v13 /files?v2=1) returns 0 files for every deployment with this token —
+per-deployment size is NOT programmatically reachable; the user's dashboard
+per-project view is the only size source. Actionable signal stays
+deploys-green; lever ladder if enforcement ever bites: chalchitra keep-1 →
+prune idle projects' stale 2nd deployments (drishti's ERRORED April one is
+pure waste) → tighten execatlas retention (user's call, their active project).
