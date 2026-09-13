@@ -1738,3 +1738,18 @@ displace the good rollback) and runs via `if: always()` so failed deploys
 still get cleaned; new dispatchable `vercel-prune.yml` (keep/project
 inputs) = the manual hygiene lever, since no local token exists. Fixture-
 tested keep/drop logic locally (errored dropped, old-good-rollback kept).
+
+**VERIFIED LIVE (run 34751425130, ~13:25 UTC)**: production carries BOTH award
+rounds — anuparna-roy Venice-2025 Best Director rows (round 1), biju-menon
+unchanged 26W+3N=29, aftab 4W+2N=6 (awards-table templates), aamir 59W+45N=104
+(subpage), manoj-k-jayan full 69-row honours list incl. round-2 bullet-in-cell
+recovery. Red herring during verification: the wins/nominations COUNTER counts
+only explicit Won/Nominated results — bullet rows carry result:"" so manoj
+reads "1 wins" above a complete table. Follow-up candidate (cosmetic, needs a
+semantics call): counter vs row-count on bullet-sourced pages.
+Also learned: the 10:41 "fetch failed" deploy went READY server-side (CLI only
+lost polling) and now serves as the rollback — a retried deploy may create a
+duplicate; the READY-aware prune self-heals that next cycle. Dispatched
+vercel-prune validated live: plan kept 2 READY, 0 to drop. CI cache parity
+confirmed for manoj (seed == live Wikipedia; only an infobox label differs
+from local). CI dataset: 25,803 movies / 3,843 series / 9,407 persons.
