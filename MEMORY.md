@@ -1637,6 +1637,7 @@ amit-trivedi 50, aamir subpage 108 rows / 0 shells, junk audit 0.
 
 **Residual (documented in ISSUES.md)**: {{awards table}} templates (16 persons)
 and bullets inside table cells (manoj-k-jayan shape — tables.ts drops non-|/!
-lines in cells) unparsed. Pushed to main; nightly 05:15 UTC applies it to
-production automatically (parser reads existing cache — no seed republish
-needed; no pages were fetched this session).
+lines in cells) unparsed. Pushed to main (aca5945) + workflow_dispatch
+triggered same-day (run 34747640954) so production deploys the fix within
+hours; nightly 05:15 UTC keeps it after that (parser reads existing cache —
+no seed republish needed; no pages were fetched this session).
