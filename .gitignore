@@ -16,3 +16,5 @@ public/search-index.json
 .vercel
 .env*
 data/titles/
+/docs/vercel-chalchitra.md
+/docs/ISSUES.md

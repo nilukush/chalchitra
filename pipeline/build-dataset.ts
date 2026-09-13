@@ -466,10 +466,18 @@ async function main() {
     }
 
     const awardRows: AwardRow[] = [];
-    for (const source of [awardsSubPage?.wikitext, page.wikitext]) {
+    // the awards subpage IS award content: every section (and the lead) parses
+    for (const [source, subpage] of [
+      [awardsSubPage?.wikitext, true],
+      [page.wikitext, false],
+    ] as const) {
       if (!source) continue;
       const known = new Set(awardRows.map((r) => `${r.year ?? ''}|${r.award}|${r.category ?? ''}|${r.work ?? ''}`));
-      awardRows.push(...extractAwards(source).filter((r) => !known.has(`${r.year ?? ''}|${r.award}|${r.category ?? ''}|${r.work ?? ''}`)));
+      awardRows.push(
+        ...extractAwards(source, 200, { subpage }).filter(
+          (r) => !known.has(`${r.year ?? ''}|${r.award}|${r.category ?? ''}|${r.work ?? ''}`),
+        ),
+      );
     }
 
     persons.push({

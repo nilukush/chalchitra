@@ -18,7 +18,7 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
 - `npm run pipeline:persons [n]` / `pipeline:expand [n]` — wave fetchers (frontiers;
   pre-fetch filters drop person/award/season links; Indian-source-weighted ranking)
 - `npm run pipeline:trends` — Wikipedia pageviews → trending rails (NOT in dataset step)
-- `npm test` (vitest, 267 tests — **TDD: extend tests first**) / `npm run build` / dev port **4730**
+- `npm test` (vitest, 284 tests — **TDD: extend tests first**) / `npm run build` / dev port **4730**
 - `./scripts-prune-deployments.sh [keep] [projectId]` — Vercel deployment pruning
 
 ## Architecture (load-bearing shapes)
@@ -36,6 +36,12 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
   ratings site-wide for days. Never extend VIDEO_LANGS past 11 entries (13-entry lists
   trip a TMDB cache bug returning EMPTY video appends).
 - Persons: first-letter chunks (`data/persons/`, `#`→`_`), eager glob (fine at 9.4k).
+- **Awards parser covers THREE source shapes** (`pipeline/wikitext/awards.ts`, docs/ISSUES.md
+  #1): wikitables, bullet honours lists (`;`/`'''[[Ceremony]]'''` context lines, `**`
+  category children, "In YYYY," prose bullets rejected), and awards-subpage mode
+  (`{subpage: true}` — every section + lead in scope, prose pass OFF). Ceremony context
+  also fills award-less tables under `===Ceremony===` headings. Edition links
+  (`[[58th …|2024]]`) read as ceremony+year, never as award "2024".
 - Renames: `planRenames` (moves don't bump lastrevid) → refetch under new title →
   cumulative slug redirects (`data/redirects.json` ← pageid-keyed slug-map in cache,
   kind-flips emit `/series→/movies` paths) consumed by astro.config.

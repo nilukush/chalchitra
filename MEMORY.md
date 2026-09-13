@@ -1608,3 +1608,35 @@ blank archive shells.
 bug reports with data trails, vendor emails = work orders (free tier only).
 Full architecture/gotchas: CLAUDE.md (rewritten 2026-09-09 — now current);
 runbook: AGENTS.md. Chronology: this file (sessions 1-51).
+
+## Session 52 — 2026-09-13 — docs/ISSUES.md #1: awards coverage gap FIXED (284 tests)
+
+3-agent consensus (Debugger git-archaeology / Verifier cache-vs-dataset scan /
+Analyzer Wikipedia-convention research). **Verdict: NOT a regression, NOT a
+Wikipedia change** — awards.ts was born table-only (all 6 commits), bullet
+honours lists were never parseable; "was working" = user had only seen
+table-shaped pages (anuparna-roy bullets ✗ vs biju-menon table ✓). Verifier
+scope: 762 persons bullet-list zero-rows + 436 hidden behind compound section
+titles ("Awards and recognitions") + 249 subsection-hosted + 102 zero-row
+tables + 258 hollow label-only shells ≈ 18% of persons damaged.
+
+**Fixed in awards.ts (TDD, 268→284 tests; full detail in docs/ISSUES.md)**:
+bullet parser (years incl. "In YYYY,"/edition links/trailing parens; category
+links + "Best…" segments; italic + for-clause works; result won-by-convention
+with "(Nominated)" override); context sources = `;` defs, `'''[[Ceremony]]'''`
+bold headers, `===` subsection titles, parent-* for ** children; unanchored
+AWARD_SECTION_TITLE; subpage mode `{subpage:true}` (build-dataset persons path,
+limit 200, prose pass OFF there — label-only noise); ceremony fills award-less
+tables; junk guards (edition-link years→ceremony+year, "(First Prize)"
+qualifiers, generic names, prose-sentence bullets, hollow shells deduped).
+
+**Recovery (local rebuild, warm cache, no refetch)**: persons w/ awards
+2,055→3,192 (+55%), rows→33,052 (18,091 won); titles 3,428→4,312, rows
+26,285→33,603. Verified: anuparna-roy Venice-2025 row, biju 29 (unchanged),
+amit-trivedi 50, aamir subpage 108 rows / 0 shells, junk audit 0.
+
+**Residual (documented in ISSUES.md)**: {{awards table}} templates (16 persons)
+and bullets inside table cells (manoj-k-jayan shape — tables.ts drops non-|/!
+lines in cells) unparsed. Pushed to main; nightly 05:15 UTC applies it to
+production automatically (parser reads existing cache — no seed republish
+needed; no pages were fetched this session).
