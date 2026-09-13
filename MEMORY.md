@@ -1708,3 +1708,18 @@ per-project view is the only size source. Actionable signal stays
 deploys-green; lever ladder if enforcement ever bites: chalchitra keep-1 →
 prune idle projects' stale 2nd deployments (drishti's ERRORED April one is
 pure waste) → tighten execatlas retention (user's call, their active project).
+
+**Screenshot #4 (full Usage page, 56k-tall capture)**: complete free-tier
+audit. Of ~25 metered products, Deployment Storage is the ONLY over-quota
+item (115.79 GB / 10 GB in the Aug 14-Sep 13 window; declining as pre-prune
+peak days roll out: 118.79 → 115.79 across the user's two captures).
+Everything else deeply under: Fast Data Transfer 192.85 MB / 100 GB (0.2%,
+the real free-tier risk for a 39k-page site), Edge Requests 11,475 / 1M,
+Build Minutes 0s (prebuilt CLI deploys), Build CPU 11h12m (included, no
+Hobby cap), Fluid memory 0.03 / 360 GB-hrs, ISR reads 31 / 1M, Functions
+invocations 98 / 1M, Observability 15.36 kB, images/config/blob all 0.
+No other red indicators anywhere on the page. Storage detail chart shows
+the same step pattern; 2 blue step-charts in the 21k-34k px region flaky
+to OCR (vision service timeouts), immaterial: overview table enumerated
+every product. Deploys: run 34747640954 (round 1) ~2h in, healthy; a
+second queued Daily refresh will deploy round-2 residuals right after.
