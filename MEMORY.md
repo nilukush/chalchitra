@@ -1723,3 +1723,18 @@ the same step pattern; 2 blue step-charts in the 21k-34k px region flaky
 to OCR (vision service timeouts), immaterial: overview table enumerated
 every product. Deploys: run 34747640954 (round 1) ~2h in, healthy; a
 second queued Daily refresh will deploy round-2 residuals right after.
+
+**Same afternoon — dispatched run failed at the FINAL step (transient)**:
+34747640954 built everything (dataset 25803/3843/9407, site green) but
+`vercel deploy` died AFTER the 388MB upload with `Error: fetch failed`
+during Vercel-side extraction (deployment DqQsWJTYvpecSUkfyiPSmPRDmkqE =
+ERRORED; production alias never moved). The 05:15 cron slot — delayed ~5h
+by GitHub's queue (the documented behavior), released when the dispatch
+freed the concurrency group — ran right behind it on latest main and
+carries BOTH award rounds. **Permanent hardening (fd29568)**: deploy step
+retries 3× (60s backoff); prune is READY-aware (ERRORED/CANCELED never
+take a keep slot — state-blind keeping would have let today's ERRORED one
+displace the good rollback) and runs via `if: always()` so failed deploys
+still get cleaned; new dispatchable `vercel-prune.yml` (keep/project
+inputs) = the manual hygiene lever, since no local token exists. Fixture-
+tested keep/drop logic locally (errored dropped, old-good-rollback kept).
