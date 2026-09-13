@@ -61,6 +61,56 @@ jobs:
             const oldest = Math.max(...rows.map((r) => (now - r.c) / 86400000)).toFixed(1);
             console.log(`oldest deployment: ${oldest} days`);
           SCRIPT
+      - name: Per-deployment size probe
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          TEAM: team_ESjn8Fy4BBbh1gZ86oI4wRo5
+        run: |
+          node <<'SCRIPT'
+            const TEAM = process.env.TEAM;
+            const H = { Authorization: 'Bearer ' + process.env.VERCEL_TOKEN };
+            const get = async (url) => (await fetch(url, { headers: H })).json();
+            (async () => {
+              const list = await get(`https://api.vercel.com/v6/deployments?teamId=${TEAM}&limit=100`);
+              const deployments = list.deployments ?? [];
+              const byProject = new Map();
+              for (const d of deployments) {
+                const proj = d.name ?? '?';
+                let sizeBytes = 0;
+                let files = 0;
+                let pages = 0;
+                let until = '';
+                const cap = proj === 'chalchitra' ? 3 : 60; // chalchitra: 39k files — sample only
+                for (;;) {
+                  pages += 1;
+                  const page = await get(
+                    `https://api.vercel.com/v13/deployments/${d.uid}/files?v2=1&limit=100${until ? '&until=' + until : ''}`,
+                  );
+                  const fs2 = page.files ?? [];
+                  files += fs2.length;
+                  sizeBytes += fs2.reduce((a, f) => a + (f.size ?? 0), 0);
+                  until = page.pagination?.next ?? '';
+                  if (!until || fs2.length < 100 || pages >= cap) break;
+                }
+                const det = await get(`https://api.vercel.com/v13/deployments/${d.uid}?teamId=${TEAM}`);
+                const sizeFields = Object.entries({ ...(det.meta ?? {}), ...det }).filter(
+                  ([k, v]) => /size|storage/i.test(k) && typeof v !== 'object',
+                );
+                console.log(
+                  `${proj} ${d.uid} ${d.target ?? 'preview'}: files=${files} (pages=${pages}${cap === 3 ? ', sampled' : ''}) sum=${(sizeBytes / 1048576).toFixed(1)}MB` +
+                    (sizeFields.length ? ` meta=${JSON.stringify(Object.fromEntries(sizeFields))}` : ''),
+                );
+                byProject.set(proj, (byProject.get(proj) ?? 0) + sizeBytes);
+              }
+              console.log('=== approx raw output size per project (sum of file bytes; Vercel-billed storage dedups across deployments, so held-quota usage is lower) ===');
+              let total = 0;
+              for (const [p, b] of [...byProject].sort((a, b) => b[1] - a[1])) {
+                console.log(`  ${p}: ${(b / 1073741824).toFixed(2)} GB`);
+                total += b;
+              }
+              console.log(`  TEAM TOTAL (raw, pre-dedup): ${(total / 1073741824).toFixed(2)} GB`);
+            })().catch((e) => { console.error('probe failed:', e.message); process.exit(0); });
+          SCRIPT
       - name: Usage endpoints (best effort)
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
