@@ -1663,3 +1663,27 @@ duplicates/shells; shell share now 5.6% = by-design prose labels). aftab
 0→6 rows, manoj 0→37 (year+work every row). Filmography/soundtrack/episodes
 unchanged (opt-in param; their tests untouched). Dispatch run 34747640954
 predates this push — the 17:15 UTC scheduled slot deploys the residuals.
+
+## Session 52 (cont. — 2026-09-13 afternoon) — Vercel "120 GB" scare = chart semantics, NOT an outage
+
+User filed docs/ISSUES.md: dashboard shows 118.79 GB deployment storage,
+"wasn't this solved?" **Verdict: nothing is exceeded.** The Usage → Deployment
+Storage 30-day chart is GB-MONTHS accounting (docs: max stored per project per
+day, SUMMED across the period; 1GB held all month = 1 GB-month) — a usage sum
+like bandwidth that can only grow (~6-8 GB/day at our 2×2.8GB steady state)
+and never drops on pruning (why no Sep-9 dip). The pre-fix Sep 1-9 peak days
+stay baked in until they roll out of the window.
+
+Evidence: dispatched read-only census workflow
+(.github/workflows/vercel-storage-audit.yml — REUSABLE diagnostic) →
+team-wide 19 deployments currently held; chalchitra exactly 2 (prune healthy,
+last 3 daily runs "pruned 1/1, kept newest 2 of 3"); execatlas 8 (within its
+prod-1w retention, self-drops from day 7); 5 other projects 1-2 each. Deploys
+green throughout — the Sep-8 pause failure mode stays solved.
+
+**Key lessons**: (1) NO local Vercel token exists anymore (expat-salary
+docs/vercel-chalchitra.md is GONE — memory was stale); the permanent token
+lives only in the VERCEL_TOKEN Actions secret → dashboard/API audits go
+through dispatched workflows using that secret. (2) The dashboard number to
+TRUST is deploys-green + current deployment count, never the 30-day Total.
+(3) Usage → Deployment Storage → Projects shows per-project current usage.
