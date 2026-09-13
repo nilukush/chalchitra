@@ -574,6 +574,79 @@ describe('extractAwards (edition-link display years)', () => {
   });
 });
 
+// {{awards table}} template (aftab-shivdasani shape, pageid 1108304): the
+// template OPENS a table (no {| of its own, no header row) that continues
+// with |- row syntax and closes with |}. Single award column holding
+// "… Award for …" category links — there is no separate ceremony column.
+const awardsTableTemplate = `
+== Awards ==
+{{awards table}}
+|-
+|rowspan="2"|2000
+|rowspan="2"|''[[Mast (film)|Mast]]''
+| [[Star Screen Award for Most Promising Newcomer - Male]]
+| {{won}}
+|-
+| [[Zee Cine Award for Best Male Debut]]
+| {{won}}
+|-
+| 2005
+| ''[[Masti (2004 film)|Masti]]''
+| [[Bollywood Movie Awards|Bollywood Movie Award for Best Comedian]]
+| {{won}}
+|}
+`;
+
+describe('extractAwards ({{awards table}} template)', () => {
+  it('parses template-opened tables positionally', () => {
+    const rows = extractAwards(awardsTableTemplate);
+    const newcomer = rows.find((r) => /Most Promising Newcomer/.test(r.award));
+    expect(newcomer).toMatchObject({ year: '2000', work: 'Mast', result: 'won' });
+    const debut = rows.find((r) => /Male Debut/.test(r.award));
+    expect(debut).toMatchObject({ year: '2000', work: 'Mast', workWikiTitle: 'Mast (film)', result: 'won' });
+    const comedian = rows.find((r) => /Best Comedian/.test(r.award));
+    expect(comedian).toMatchObject({ year: '2005', work: 'Masti', awardWikiTitle: 'Bollywood Movie Awards', result: 'won' });
+  });
+});
+
+// Bullets INSIDE table cells (manoj-k-jayan shape, pageid 6536967): the Award
+// cell holds a multi-line bullet list; tables.ts drops non-|/! lines by
+// default, so the cell read empty and the row died at the award gate.
+const bulletsInCells = `
+==Awards==
+{| class="wikitable sortable"
+|+ List of awards received by Manoj K. Jayan
+|-
+! scope="col" | Year
+! scope="col" | Title
+! scope="col" | Award
+|-
+|1992
+|''[[Perumthachan (film)|Perumthachan]]''
+|
+*Film Artsclub Award
+|-
+|1993
+|''[[Sargam (1992 film)|Sargam]]''
+|
+* Kerala State Film Award (Second Best Actor)
+*Film Critics Award
+|}
+`;
+
+describe('extractAwards (bullet lists inside table cells)', () => {
+  it('expands a bullet-filled award cell into one row per bullet, sharing year and work', () => {
+    const rows = extractAwards(bulletsInCells);
+    expect(rows).toHaveLength(3);
+    const artsclub = rows.find((r) => r.award === 'Film Artsclub Award');
+    expect(artsclub).toMatchObject({ year: '1992', work: 'Perumthachan', workWikiTitle: 'Perumthachan (film)' });
+    const kerala = rows.find((r) => r.award === 'Kerala State Film Award (Second Best Actor)');
+    expect(kerala).toMatchObject({ year: '1993', work: 'Sargam' });
+    const critics = rows.find((r) => r.award === 'Film Critics Award');
+    expect(critics).toMatchObject({ year: '1993', work: 'Sargam' });
+  });
+});
+
 describe('extractAwards (title-page shapes)', () => {
   it('maps Nominee(s) to recipients and reads wikilinked years', () => {
     const rows = extractAwards(titleAwardsArth);

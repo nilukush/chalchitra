@@ -37,11 +37,14 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
   trip a TMDB cache bug returning EMPTY video appends).
 - Persons: first-letter chunks (`data/persons/`, `#`→`_`), eager glob (fine at 9.4k).
 - **Awards parser covers THREE source shapes** (`pipeline/wikitext/awards.ts`, docs/ISSUES.md
-  #1): wikitables, bullet honours lists (`;`/`'''[[Ceremony]]'''` context lines, `**`
-  category children, "In YYYY," prose bullets rejected), and awards-subpage mode
-  (`{subpage: true}` — every section + lead in scope, prose pass OFF). Ceremony context
-  also fills award-less tables under `===Ceremony===` headings. Edition links
-  (`[[58th …|2024]]`) read as ceremony+year, never as award "2024".
+  #1): wikitables (incl. `{{awards table}}` template-opened ones — no `{|`, no header),
+  bullet honours lists (`;`/`'''[[Ceremony]]'''` context lines, `**` category children,
+  "In YYYY," prose bullets rejected; bullets INSIDE table cells expand one row per
+  bullet via tables.ts's opt-in `multilineCells` — keep it awards-only), and
+  awards-subpage mode (`{subpage: true}` — every section + lead in scope, prose pass
+  OFF). Ceremony context also fills award-less tables under `===Ceremony===` headings.
+  Edition links (`[[58th …|2024]]`) read as ceremony+year, never as award "2024".
+  `{{Infobox awards list}}` is aggregate counts — deliberately unparsed.
 - Renames: `planRenames` (moves don't bump lastrevid) → refetch under new title →
   cumulative slug redirects (`data/redirects.json` ← pageid-keyed slug-map in cache,
   kind-flips emit `/series→/movies` paths) consumed by astro.config.

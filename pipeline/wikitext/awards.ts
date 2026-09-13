@@ -286,6 +286,24 @@ function isGenericAwardName(name: string): boolean {
   return name.replace(GENERIC_HEADING_WORDS, '').replace(/[^a-z0-9]/gi, '').trim().length === 0;
 }
 
+/** A cell holding an embedded bullet list (honours lists inside an
+ *  Award-column cell) expands into one row per bullet, sharing the row's
+ *  other cells (year, work, result). */
+function expandBulletRow(cells: string[]): string[][] {
+  const idx = cells.findIndex((c) => c.includes('\n*'));
+  if (idx === -1) return [cells];
+  const parts = cells[idx].split('\n').map((p) => p.trim()).filter((p) => p !== '');
+  const base = parts[0]?.startsWith('*') || parts[0]?.startsWith('#') ? '' : (parts[0] ?? '');
+  const bullets = parts
+    .filter((p) => p.startsWith('*') || p.startsWith('#'))
+    .map((p) => p.replace(/^\s*[*#]+\s*/, ''))
+    .filter((p) => p !== '');
+  const variants: string[][] = [];
+  if (base !== '') variants.push(cells.map((c, j) => (j === idx ? base : c)));
+  for (const b of bullets) variants.push(cells.map((c, j) => (j === idx ? b : c)));
+  return variants.length > 0 ? variants : [cells];
+}
+
 export function extractAwards(
   pageWikitext: string,
   limit = 120,
@@ -327,8 +345,11 @@ export function extractAwards(
   }
 
   for (const { section, ceremony } of scoped) {
-    for (const table of section.body.match(/\{\|[\s\S]*?\|\}/g) ?? []) {
-      const view = parseWikitableView(table);
+    // {{awards table}} OPENS a table (no {|, no header row) that continues
+    // with |- row syntax and closes with |} — rewrite it to a plain opener
+    const tableSource = section.body.replace(/\{\{\s*awards table[^}]*\}\}/gi, '{| class="wikitable"');
+    for (const table of tableSource.match(/\{\|[\s\S]*?\|\}/g) ?? []) {
+      const view = parseWikitableView(table, { multilineCells: true });
       const fields = view.header?.map((h) => HEADER_FIELD[h] ?? null) ?? null;
       const hasWorkColumn = fields?.some((f) => f === 'work') ?? false;
       let lastYear: string | undefined;
@@ -338,7 +359,11 @@ export function extractAwards(
       let lastWork: string | undefined;
       let lastWorkWiki: string | undefined;
 
-      for (const cells of view.rows) {
+      // bullet-expanded variants; residual leading bullet markers stripped
+      // (a single-bullet cell arrives as "*Award Name" after cell trimming)
+      for (const cells of view.rows
+        .flatMap(expandBulletRow)
+        .map((row) => row.map((c) => c.replace(/^\s*[*#]+\s*/, '')))) {
         if (cells.every((c) => c.trim() === '')) continue;
         // rows come rowspan-expanded and positionally aligned with the header
         const aligned = fields !== null && cells.length === fields.length;
@@ -351,6 +376,7 @@ export function extractAwards(
         let workWikiTitle: string | undefined;
         let recipients: string | undefined;
         let result: AwardResult | null = null;
+        let categoryFromLink = false;
 
         cells.forEach((rawCell, i) => {
           const text = rawCell.trim();
@@ -396,6 +422,7 @@ export function extractAwards(
           } else if (isCategoryArticleLink(text) && category === undefined) {
             // category article wikilink, whichever column it strayed into
             category = display;
+            categoryFromLink = true;
           } else if (field === 'category') {
             category = display;
           } else if (field === 'recipients') {
@@ -449,6 +476,14 @@ export function extractAwards(
           awardWikiTitle = ceremony.awardWikiTitle;
         }
 
+        // single-award-column shapes ({{awards table}}): the "… Award for …"
+        // category link IS the award — promote it instead of dropping the
+        // row for lacking a ceremony column
+        if (award === '' && categoryFromLink && category) {
+          award = category;
+          category = undefined;
+        }
+
         // a row must carry substance beyond a bare ceremony name — pure
         // ceremony/fragment rows are table structure, not nominations
         if (award && (category || work || result || year || recipients)) {
@@ -467,13 +502,25 @@ export function extractAwards(
     }
 
     // bullet honours lists: "; [[Ceremony]]:" / ";''Work''" definition lines
-    // set context, "*" lines are entries, "**" children carry the category
-    const lines = section.body.split('\n');
+    // set context, "*" lines are entries, "**" children carry the category.
+    // Lines inside table spans are skipped — their bullets are consumed by
+    // the table pass above (expandBulletRow).
+    const lines = tableSource.split('\n');
     const def: ListCtx = {};
     let parentBullet: { award?: string; awardWikiTitle?: string; year?: string } | null = null;
+    let inTable = false;
     for (let i = 0; i < lines.length; i += 1) {
       const t = lines[i].trim();
       if (t === '') continue;
+      if (/\{\|/.test(t)) {
+        inTable = true;
+        continue;
+      }
+      if (/^\|\}/.test(t)) {
+        inTable = false;
+        continue;
+      }
+      if (inTable) continue;
       // bold '''[[Ceremony]]''' lines act as ceremony headers between bullet
       // groups (the a-m-rathnam convention)
       const boldCeremony = /^'''\s*(\[\[[^\]]+\]\])\s*'''/.exec(t);

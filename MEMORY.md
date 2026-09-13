@@ -1641,3 +1641,25 @@ lines in cells) unparsed. Pushed to main (aca5945) + workflow_dispatch
 triggered same-day (run 34747640954) so production deploys the fix within
 hours; nightly 05:15 UTC keeps it after that (parser reads existing cache —
 no seed republish needed; no pages were fetched this session).
+
+## Session 52 (cont.) — residuals CLOSED same day ("ok" = chase them)
+
+Both documented residuals fixed (TDD 286→286 incl. 2 new; suite 286/286):
+- **{{awards table}}** (114 cached files, not 16 — subpages included): opener
+  rewritten to `{| class="wikitable"`, parsed positionally; single-award-column
+  "Award for" links promoted to award at the push gate (only fires when the
+  row would otherwise die — rowspan-carry rows unaffected, Session-14
+  anti-promotion test still green).
+- **Bullets inside table cells** (manoj-k-jayan): tables.ts opt-in
+  `multilineCells` merges `*`/`#` lines into the preceding cell BEFORE the
+  cell-line filter (filter-then-merge was a no-op — the filter eats bullets).
+  awards.ts expandBulletRow → one row per bullet sharing year/work; the list
+  walk skips table spans (killed the old double-parse: same bullet counted
+  by table pass AND as an award-only shell).
+- {{Infobox awards list}} (38 subpages) skipped deliberately: aggregate
+  win/nom counts, not rows.
+Dataset: persons w/awards 3,192 (flat); rows 33,052→32,164 (−888 = removed
+duplicates/shells; shell share now 5.6% = by-design prose labels). aftab
+0→6 rows, manoj 0→37 (year+work every row). Filmography/soundtrack/episodes
+unchanged (opt-in param; their tests untouched). Dispatch run 34747640954
+predates this push — the 17:15 UTC scheduled slot deploys the residuals.

@@ -10,6 +10,14 @@ export interface WikitableView {
   rows: string[][];
 }
 
+export interface TableViewOptions {
+  /** Keep `*`/`#` lines inside cells, merging each into the preceding cell
+   *  (award lists embedded in an Award-column cell). OFF by default —
+   *  filmography/soundtrack/episode tables never carry bullet cells and
+   *  must keep their exact current output. */
+  multilineCells?: boolean;
+}
+
 /** MediaWiki cell format: `| attr="…" attr2=… | content`. */
 const CELL_ATTRS = /^((?:[\w-]+\s*=\s*("[^"]*"|'[^']*'|[^\s|]+)\s*)+\|\s*)+/;
 
@@ -33,6 +41,27 @@ function readSpan(raw: string, attr: 'rowspan' | 'colspan'): number {
   return Number.isFinite(n) && n > 1 ? Math.min(n, 100) : 1;
 }
 
+/** Merge bullet/numbered lines into the preceding CELL line (multilineCells).
+ *  Runs before the cell-line filter, which would otherwise drop them. */
+function mergeContinuationLines(lines: string[]): string[] {
+  const out = [...lines];
+  for (let i = 0; i < out.length; i += 1) {
+    if (!/^\s*[*#]/.test(out[i])) continue;
+    let anchor = -1;
+    for (let j = i - 1; j >= 0; j -= 1) {
+      if (/^\s*[!|]/.test(out[j]) && !/^\s*\|\}/.test(out[j]) && !/^\s*\|\+/.test(out[j])) {
+        anchor = j;
+        break;
+      }
+    }
+    if (anchor >= 0) {
+      out[anchor] += '\n' + out[i];
+      out[i] = '';
+    }
+  }
+  return out;
+}
+
 /** One wikitext table (`{| … |}`) → optional header row + data rows.
  *
  * Rows are returned as a rowspan/colspan-EXPANDED grid: a cell declaring
@@ -40,7 +69,7 @@ function readSpan(raw: string, attr: 'rowspan' | 'colspan'): number {
  * repeats into sibling columns), so every row is positionally aligned with
  * the header and consumers can map by column index instead of guessing.
  * Empty cells are preserved positionally. */
-export function parseWikitableView(table: string): WikitableView {
+export function parseWikitableView(table: string, opts: TableViewOptions = {}): WikitableView {
   const chunks = table.split(/^\|-.*$/m);
   const rowsRaw: string[][] = [];
   let header: string[] | null = null;
@@ -48,11 +77,13 @@ export function parseWikitableView(table: string): WikitableView {
   const active = new Map<number, { text: string; remaining: number }>();
 
   for (const chunk of chunks) {
-    const lines = chunk
+    const rawLines = chunk
       .split('\n')
-      .map((l) => l.trimEnd())
+      .map((l) => l.trimEnd());
+    const lines = (opts.multilineCells ? mergeContinuationLines(rawLines) : rawLines).filter(
       // `|+ …` is the table CAPTION, not a data row; `{|`/`|}` are delimiters
-      .filter((l) => /^\s*[!|]/.test(l) && !/^\s*\|\}/.test(l) && !/^\s*\|\+/.test(l) && l.trim() !== '');
+      (l) => /^\s*[!|]/.test(l) && !/^\s*\|\}/.test(l) && !/^\s*\|\+/.test(l) && l.trim() !== '',
+    );
     if (lines.length === 0) continue;
     const cells: ParsedCell[] = [];
     for (const line of lines) {
