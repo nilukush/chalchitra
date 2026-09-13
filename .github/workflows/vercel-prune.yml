@@ -1,0 +1,39 @@
+# Manual Vercel deployment prune (workflow_dispatch). The permanent token
+# lives ONLY in the VERCEL_TOKEN Actions secret — no local CLI token exists —
+# so this is the emergency lever for storage hygiene without a full refresh
+# chain (e.g. cleaning ERRORED deployments left by a transient deploy
+# failure). The daily workflow prunes automatically after every deploy.
+#
+# Inputs:
+#   keep      how many usable (READY/BUILDING/QUEUED) deployments to retain
+#             (default 2 = production + one rollback)
+#   project   Vercel project id (default: chalchitra)
+name: Vercel prune
+
+on:
+  workflow_dispatch:
+    inputs:
+      keep:
+        description: 'Usable deployments to keep'
+        default: '2'
+      project:
+        description: 'Project id (default chalchitra)'
+        default: ''
+
+concurrency:
+  group: vercel-prune
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prune deployments
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: ./scripts-prune-deployments.sh "${{ github.event.inputs.keep || '2' }}" "${{ github.event.inputs.project }}"
