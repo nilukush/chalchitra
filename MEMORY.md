@@ -1753,3 +1753,12 @@ duplicate; the READY-aware prune self-heals that next cycle. Dispatched
 vercel-prune validated live: plan kept 2 READY, 0 to drop. CI cache parity
 confirmed for manoj (seed == live Wikipedia; only an infobox label differs
 from local). CI dataset: 25,803 movies / 3,843 series / 9,407 persons.
+
+**Counter-semantics follow-up CLOSED same day (0b076a7)**: result-less
+tables now apply the list-walk's won-by-convention (marker override strips
+"(nominated)" from the label; Result-column tables keep blank=unknown).
+TDD 286→289. Rebuild: rows flat 32,164 (no junk resurrection — substance
+gate runs before the default), result dist won 20,750 / nominated 10,204 /
+empty 1,210 (prose labels by design); manoj 37/37 won → counter "37 wins".
+39,393 pages built clean. Deploys via the 17:15 UTC slot (first run on the
+hardened workflow: retry + READY-aware prune).
