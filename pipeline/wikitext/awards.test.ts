@@ -647,6 +647,53 @@ describe('extractAwards (bullet lists inside table cells)', () => {
   });
 });
 
+// A table with no Result column is an honours list — the same won-by-
+// convention the bullet-list walk applies (a "(Nominated)" marker overrides).
+// Without it the site counter read "1 wins" above manoj-k-jayan's 69 rows.
+const bulletsInCellsNominated = `
+==Awards==
+{| class="wikitable"
+! Year !! Title !! Award
+|-
+| 2020
+| ''[[Film X (film)|Film X]]''
+|
+*Best Actor (nominated)
+*Critics' Choice Award
+|}
+`;
+
+const resultColumnBlankCell = `
+==Awards==
+{| class="wikitable"
+! Year !! Film !! Award !! Result
+|-
+| 2021 || ''[[Film Y (film)|Film Y]]'' || [[Screen Awards]] ||
+|}
+`;
+
+describe('extractAwards (won-by-convention on result-less tables)', () => {
+  it('fills result won for rows from tables without a Result column', () => {
+    const rows = extractAwards(bulletsInCells);
+    expect(rows).toHaveLength(3);
+    for (const r of rows) expect(r.result).toBe('won');
+  });
+
+  it('a nominated marker inside a result-less table row overrides the convention', () => {
+    const rows = extractAwards(bulletsInCellsNominated);
+    const actor = rows.find((r) => /Best Actor/.test(r.award));
+    expect(actor?.result).toBe('nominated');
+    expect(actor?.award).toBe('Best Actor');
+    expect(rows.find((r) => /Critics/.test(r.award))?.result).toBe('won');
+  });
+
+  it('tables WITH a Result column keep a blank result empty (unknown stays unknown)', () => {
+    const rows = extractAwards(resultColumnBlankCell);
+    const row = rows.find((r) => r.award === 'Screen Awards');
+    expect(row).toMatchObject({ work: 'Film Y', result: '' });
+  });
+});
+
 describe('extractAwards (title-page shapes)', () => {
   it('maps Nominee(s) to recipients and reads wikilinked years', () => {
     const rows = extractAwards(titleAwardsArth);

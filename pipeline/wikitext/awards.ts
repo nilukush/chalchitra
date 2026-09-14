@@ -352,6 +352,7 @@ export function extractAwards(
       const view = parseWikitableView(table, { multilineCells: true });
       const fields = view.header?.map((h) => HEADER_FIELD[h] ?? null) ?? null;
       const hasWorkColumn = fields?.some((f) => f === 'work') ?? false;
+      const hasResultColumn = fields?.some((f) => f === 'result') ?? false;
       let lastYear: string | undefined;
       let lastResult: AwardResult = '';
       let lastAward = '';
@@ -486,7 +487,15 @@ export function extractAwards(
 
         // a row must carry substance beyond a bare ceremony name — pure
         // ceremony/fragment rows are table structure, not nominations
-        if (award && (category || work || result || year || recipients)) {
+        if (award && (category || work || result !== null || year !== undefined || recipients)) {
+          // a table with no Result column is an honours list — apply the same
+          // won-by-convention the bullet-list walk uses (marker overrides)
+          let resultValue: AwardResult = result ?? '';
+          if (result === null && !hasResultColumn) {
+            const nominated = /\bnominat/i.test(cells.join(' '));
+            resultValue = nominated ? 'nominated' : 'won';
+            if (nominated) award = award.replace(/\s*\(\s*nominated\s*\)\s*$/i, '');
+          }
           push({
             year,
             award,
@@ -495,7 +504,7 @@ export function extractAwards(
             work,
             workWikiTitle,
             recipients,
-            result: result ?? '',
+            result: resultValue,
           });
         }
       }
