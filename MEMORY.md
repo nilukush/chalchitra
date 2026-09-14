@@ -1762,3 +1762,12 @@ gate runs before the default), result dist won 20,750 / nominated 10,204 /
 empty 1,210 (prose labels by design); manoj 37/37 won → counter "37 wins".
 39,393 pages built clean. Deploys via the 17:15 UTC slot (first run on the
 hardened workflow: retry + READY-aware prune).
+
+**Timeline correction (Sep 14 morning)**: yesterday's delayed 17:15 slot
+(19:25 UTC run, head cc140a4) deployed BEFORE the counter fix existed — the
+poll-watcher caught it already completed (instant watch), so production manoj
+still read "1 wins". That run DID validate the hardening live: "deploy
+attempt 1/3" succeeded first try + READY-aware prune "pruned 1/1, kept 2
+usable of 3". Today's 05:15 slot delayed/dropped again (08:50 UTC, no run);
+counter fix dispatched same-day (34824754080, head 09ea516). anuparna 1→2
+wins on that deploy = legit refresh-added row, not drift.
