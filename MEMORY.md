@@ -1771,3 +1771,9 @@ attempt 1/3" succeeded first try + READY-aware prune "pruned 1/1, kept 2
 usable of 3". Today's 05:15 slot delayed/dropped again (08:50 UTC, no run);
 counter fix dispatched same-day (34824754080, head 09ea516). anuparna 1→2
 wins on that deploy = legit refresh-added row, not drift.
+
+**Counter fix LIVE (run 34824754080, Sep 14 ~11:31 UTC)**: manoj-k-jayan
+"37 wins · 0 nominations" on production; biju 26+3, anuparna 2+0 (refresh-
+added row), aftab 4+2. Deploy attempt 1/3 + READY-aware prune "kept 2
+usable of 3" — hardening steady-state. Awards issue + counter follow-up
+chain fully closed end to end.
