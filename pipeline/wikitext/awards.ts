@@ -617,3 +617,45 @@ export function extractAwards(
     (r) => r.year || r.category || r.work || r.recipients || r.result || !substantive.has(r.award.toLowerCase()),
   );
 }
+
+/** Per-ceremony aggregate from a {{Infobox awards list}} subpage. */
+export interface InfoboxAwardCeremony {
+  award: string;
+  awardWikiTitle?: string;
+  wins: number;
+  nominations: number;
+}
+
+/** Editor-compiled aggregate wins/nominations from a "List of awards…"
+ *  subpage infobox — coverage-audit ground truth for the row parser. */
+export interface InfoboxAwardTotals {
+  wins: number;
+  nominations: number;
+  ceremonies: InfoboxAwardCeremony[];
+}
+
+export function extractInfoboxAwardTotals(pageWikitext: string): InfoboxAwardTotals | null {
+  const m = /\{\{\s*[Ii]nfobox awards list\s*\n([\s\S]*?)^\}\}/m.exec(pageWikitext);
+  if (!m) return null;
+  const param = (key: string) =>
+    new RegExp(`^\\s*\\|\\s*${key}\\s*=\\s*(.*?)\\s*$`, 'm').exec(m[1])?.[1];
+  const num = (value: string | undefined) => {
+    const n = Number((value ?? '').replace(/[^\d]/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  };
+  const ceremonies: InfoboxAwardCeremony[] = [];
+  // matchAll over awardN params (not a 1..n loop) so numbering gaps survive
+  for (const hit of m[1].matchAll(/^\s*\|\s*award(\d+)\s*=\s*(.*?)\s*$/gm)) {
+    const award = stripWikitext(hit[2]).replace(/\s+/g, ' ').trim();
+    if (award === '') continue;
+    const link = extractWikiLinks(hit[2])[0];
+    const i = hit[1];
+    ceremonies.push({
+      award,
+      awardWikiTitle: link?.target,
+      wins: num(param(`award${i}W`)),
+      nominations: num(param(`award${i}N`)),
+    });
+  }
+  return { wins: num(param('wins')), nominations: num(param('nominations')), ceremonies };
+}

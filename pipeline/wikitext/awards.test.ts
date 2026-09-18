@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractAwards } from './awards.js';
+import { extractAwards, extractInfoboxAwardTotals } from './awards.js';
 
 const emraanStyle = `
 == Accolades ==
@@ -721,5 +721,47 @@ describe('extractAwards (title-page shapes)', () => {
       category: 'Upcoming Female Vocalist of The Year',
       result: 'won',
     });
+  });
+});
+
+// {{Infobox awards list}} (38 "List of awards…" subpages): editors compile
+// aggregate wins/nominations there — totals plus per-ceremony counts. Used as
+// ground truth for coverage audits of the row parser.
+const infoboxAwardsList = `
+{{Use Indian English|date=February 2023}}
+{{Infobox awards list
+| name = [[Gulzar]]
+| wins = 43
+| nominations = 92
+| award1 = [[National Film Awards]]
+| award1W = 6
+| award1N = 6
+| award2 = [[Filmfare Awards]]
+| award2W = 22
+| award2N = 51
+| award3 = [[Sahitya Akademi Award]]s
+| award3W = 1
+| award3N = 1
+| award10 = Honours
+| award10W = 4
+| award10N = 4
+}}
+`;
+
+describe('extractInfoboxAwardTotals', () => {
+  it('reads wins/nominations totals and per-ceremony aggregates', () => {
+    const totals = extractInfoboxAwardTotals(infoboxAwardsList);
+    expect(totals).not.toBeNull();
+    expect(totals!.wins).toBe(43);
+    expect(totals!.nominations).toBe(92);
+    expect(totals!.ceremonies).toHaveLength(4);
+    expect(totals!.ceremonies[0]).toMatchObject({ award: 'National Film Awards', awardWikiTitle: 'National Film Awards', wins: 6, nominations: 6 });
+    expect(totals!.ceremonies[1]).toMatchObject({ award: 'Filmfare Awards', wins: 22, nominations: 51 });
+    expect(totals!.ceremonies[2]).toMatchObject({ award: 'Sahitya Akademi Awards', awardWikiTitle: 'Sahitya Akademi Award' });
+    expect(totals!.ceremonies[3]).toMatchObject({ award: 'Honours', wins: 4, nominations: 4 });
+  });
+
+  it('returns null when the page has no infobox awards list', () => {
+    expect(extractInfoboxAwardTotals('==Awards==\nplain page')).toBeNull();
   });
 });
