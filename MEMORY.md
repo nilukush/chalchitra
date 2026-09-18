@@ -1777,3 +1777,22 @@ wins on that deploy = legit refresh-added row, not drift.
 added row), aftab 4+2. Deploy attempt 1/3 + READY-aware prune "kept 2
 usable of 3" — hardening steady-state. Awards issue + counter follow-up
 chain fully closed end to end.
+
+## Session 53 — 2026-09-18 — health sweep green; infobox-aggregates audit
+
+Session-start ritual: 9 consecutive green daily runs (both slots firing,
+delayed as usual), prod 200s, manoj counter holding 37 wins across 4 days
+of nightly rebuilds — awards chain fully persisted. Steady-state hygiene
+confirmed in today's run log: deploy attempt 1/3, prune "kept 2 usable
+of 3".
+
+**{{Infobox awards list}} skip converted into an audit tool (9f79345)**:
+extractInfoboxAwardTotals (TDD, 291 tests; matchAll over awardN params so
+numbering gaps survive) reads the 38 subpages' editor-compiled aggregates
+as ground truth. Audit verdict: MEDIAN WIN COVERAGE 100% (24/38 ≥94%,
+several >100% = page lists more than infobox counts) — rounds 1-2 hold up.
+Weak axis filed as ISSUES.md #2 (local queue; /docs/ is gitignored now):
+nomination tables on DDL 20/212, Hrithik 16/270, Prosenjit 14/84 (likely
+ceremony-less nominee tables) + verify >150% win pages (Rani 108 vs 44)
+for convention-mislabeled noms. Tool is audit-only, NOT wired into
+build-dataset — no dataset change, no deploy needed.
