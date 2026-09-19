@@ -1856,3 +1856,11 @@ now audit ground truth (not "unparsed"), hourly retirement, deploy-retry +
 always-prune, and the security-relevant one: the expat-salary token-file
 pointer replaced with "token lives ONLY in the GH secret" (the file was
 gone since before Sep 13; a future session would have hunted a ghost).
+
+**Steady state CONFIRMED (run 35434847587, Sep 19)**: first fully routine
+slot on all session changes — seed "published 1 part(s)", deploy attempt
+1/3, READY-aware prune "kept 2 usable of 3", dataset 25,826/3,848/9,422,
+production counters holding (manoj 37 wins, biju 26+3). Watcher exit-code
+footgun noted: trailing `[ cond ] && echo` after a break returns 1 — end
+watch scripts with an explicit `exit 0` or bare echo. The 17:15 slot may
+still fire later tonight; covered by tomorrow's session-start sweep.
