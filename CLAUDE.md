@@ -6,7 +6,7 @@ people) from Wikipedia, enriched with TMDB. Product name: **Chalchitra** (चल
 Single-tier policy: every title/person gets the full parse — no fidelity tiers.
 Repo: https://github.com/nilukush/chalchitra (public). Deploy target: **Vercel Hobby**
 (prebuilt CLI deploys from the workflow; `render.yaml` kept as the Render fallback).
-Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
+Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
 
 ## Commands
 - `npm run pipeline:titles` — category walk (root + 12 Indian-language year categories)
@@ -18,8 +18,10 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
 - `npm run pipeline:persons [n]` / `pipeline:expand [n]` — wave fetchers (frontiers;
   pre-fetch filters drop person/award/season links; Indian-source-weighted ranking)
 - `npm run pipeline:trends` — Wikipedia pageviews → trending rails (NOT in dataset step)
-- `npm test` (vitest, 284 tests — **TDD: extend tests first**) / `npm run build` / dev port **4730**
-- `./scripts-prune-deployments.sh [keep] [projectId]` — Vercel deployment pruning
+- `npm test` (vitest, 291 tests — **TDD: extend tests first**) / `npm run build` / dev port **4730**
+- `./scripts-prune-deployments.sh [keep] [projectId]` — Vercel prune (READY-aware:
+  ERRORED/CANCELED never take a keep slot). `./scripts-seed.sh fetch|publish` —
+  split-parts seed release I/O (GitHub caps assets at 2GB; cache grows ~23MB/day)
 
 ## Architecture (load-bearing shapes)
 - **Title chunking (2026-09-05)**: `data/movies.json`/`series.json` are LIGHT summaries
@@ -44,7 +46,9 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
   awards-subpage mode (`{subpage: true}` — every section + lead in scope, prose pass
   OFF). Ceremony context also fills award-less tables under `===Ceremony===` headings.
   Edition links (`[[58th …|2024]]`) read as ceremony+year, never as award "2024".
-  `{{Infobox awards list}}` is aggregate counts — deliberately unparsed.
+  `{{Infobox awards list}}` aggregates are NOT row data but are parsed
+  (`extractInfoboxAwardTotals`) as coverage-audit ground truth — coverage is
+  measured parsed/itemized, never parsed/aggregate (ISSUES #2 lesson).
 - Renames: `planRenames` (moves don't bump lastrevid) → refetch under new title →
   cumulative slug redirects (`data/redirects.json` ← pageid-keyed slug-map in cache,
   kind-flips emit `/series→/movies` paths) consumed by astro.config.
@@ -60,10 +64,14 @@ Current scale (2026-09-09): ~29.6k titles, ~39.4k pages, ~9.4k persons.
   Vercel retention policy (prod 1w, pre-prod/cancelled 1d) + nightly keep-2 prune
   after every deploy. Archive deploys are the ONLY viable free host at this scale
   (Cloudflare 20k-file / Netlify 10k / GH-Pages 1GB caps all exclude ~39k pages).
-- VERCEL_TOKEN is a never-expires dashboard token (`docs/vercel-chalchitra.md` in
-  expat-salary, untracked+gitignored there). `scripts-sync-vercel-secret.sh` is a
-  deliberate NO-OP — restoring it clobbers the permanent token with the CLI's
-  expiring session token (~8-12h life) and breaks nightly deploys.
+- The permanent VERCEL_TOKEN lives ONLY in the GitHub Actions secret (the old
+  expat-salary copy is GONE; no local CLI token exists) — Vercel state is audited
+  via the dispatched `vercel-storage-audit.yml` (read-only census) and
+  `vercel-prune.yml` (manual prune lever). `scripts-sync-vercel-secret.sh` is a
+  deliberate NO-OP — restoring it clobbers the permanent token and breaks
+  nightly deploys. Deploy step retries 3x (a CLI `Error: fetch failed` after a
+  complete upload is a lost polling connection; the deploy often goes READY
+  server-side anyway) and the prune runs `if: always()` to clean ERRORED ones.
 - **After any local run that fetched pages**: republish seed + purge CI caches
   (runbook block in AGENTS.md) or the next nightly silently reverts it.
 - Local `vercel deploy` needs `--scope nilukushs-projects`.

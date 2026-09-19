@@ -1849,3 +1849,10 @@ purpose) — kept in place for now, costs nothing while unscheduled.
 now records the history (unscheduled since Aug 30, refresh leg 1h51m vs
 30-min timeout, covered by dual slots + client trending). Suite still 291
 green. No other references existed.
+
+**CLAUDE.md compaction (Sep 19, 7b85ca0 follow-up)**: stale bits fixed —
+291 tests, seed split-parts + prune scripts in Commands, infobox-aggregates
+now audit ground truth (not "unparsed"), hourly retirement, deploy-retry +
+always-prune, and the security-relevant one: the expat-salary token-file
+pointer replaced with "token lives ONLY in the GH secret" (the file was
+gone since before Sep 13; a future session would have hunted a ghost).
