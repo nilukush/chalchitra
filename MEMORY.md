@@ -1807,3 +1807,12 @@ mislabeling). One acceptable micro-drop: award names with no award noun
 ("Lions Favourite Actor") hit the deliberate anti-noise gate. Durable
 lesson: coverage = parsed/itemized, never parsed/aggregate. ISSUES.md #2
 CLOSED.
+
+**Growth watch (Sep 19): next ceiling filed — seed release asset**.
+pipeline-cache.tar.gz 1.098→1.239 GB in 6 days (+23 MB/day, structural:
+nightly 300-work expansion trickle). GitHub caps release assets at 2 GB/file
+→ nightly seed publish fails ~mid-late Oct. Filed as ISSUES.md #3 (split-
+parts fix + optional tmdb-subtree TTL trim as the curve-flattener). First
+failure symptom: "Publish cache seed release" step errors "exceeds the
+maximum allowed size". Everything else flat/healthy: corpus 25,826/3,848/
+9,420 (±3/day), builds 6-7.5 min, 10 consecutive green runs, prune steady.
