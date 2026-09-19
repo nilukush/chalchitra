@@ -1816,3 +1816,14 @@ parts fix + optional tmdb-subtree TTL trim as the curve-flattener). First
 failure symptom: "Publish cache seed release" step errors "exceeds the
 maximum allowed size". Everything else flat/healthy: corpus 25,826/3,848/
 9,420 (±3/day), builds 6-7.5 min, 10 consecutive green runs, prune steady.
+
+**ISSUES #3 fixed same session (8dca3ed) — seed split-parts**: new
+scripts-seed.sh (fetch/publish; ≤1.4GB seed-part-NN.part assets, legacy-
+monolith fallback for old releases, macOS-portable split+rename, obsolete-
+asset retirement incl. the monolith on first publish). All consumers
+rewired: daily+hourly bootstraps, render.yaml buildCommand, AGENTS.md
+local-republish runbook. Validation: dispatched run 35427965449 (eviction
+raced the dispatch — run kept a stale cache, but the publish step runs
+regardless → first parts publish); fetch path to be verified locally
+against the parts (identical script). zsh lesson: unquoted $var does NOT
+word-split in zsh — use the runbook pipe form for cache eviction loops.
