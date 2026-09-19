@@ -1864,3 +1864,30 @@ production counters holding (manoj 37 wins, biju 26+3). Watcher exit-code
 footgun noted: trailing `[ cond ] && echo` after a break returns 1 — end
 watch scripts with an explicit `exit 0` or bare echo. The 17:15 slot may
 still fire later tonight; covered by tomorrow's session-start sweep.
+
+## Session 53 HANDOFF (2026-09-19 ~12:00 UTC) — steady state, queue empty
+
+Next session starts here. State of the world:
+- **All green**: last 3+ daily runs successful; prod 200; awards fixes
+  (both rounds + counter semantics) persisting across nightly rebuilds.
+- **Queue EMPTY** (docs/ISSUES.md local file): #1 storage chart RESOLVED,
+  #2 nomination "gap" dissolved (metric artifact), #3 seed 2GB ceiling
+  CLOSED (split-parts shipped + validated).
+- **Session shipped**: seed split-parts mechanism (scripts-seed.sh, all 4
+  consumers rewired, parts live on the release, monolith retired); deploy
+  3x retry + if:always() READY-aware prune; dispatchable vercel-prune.yml;
+  refresh-hourly RETIRED (unrunnable: refresh leg 1h51m vs 30-min timeout);
+  CLAUDE.md re-compacted (token secret-only, 291 tests); awards audit tool
+  extractInfoboxAwardTotals. HEAD: 76ee743.
+- **Session-start ritual unchanged**: gh run list (both slots green?),
+  seed part count/size on the release (growth watch — parts multiply as
+  the cache grows; a part approaching 1.4GB means a second part appears,
+  NOT an error), browse findings → docs/ISSUES.md, vendor emails → work
+  orders (free tier only).
+- **Watch signals**: deploy step failures with all-3-attempts error =
+  Vercel-side issue (check audit workflow); "exceeds the maximum allowed
+  size" in Publish seed = seed regression (should be impossible now);
+  slow crawl of dataset counts (25,826/3,848/9,422 at handoff) is normal.
+- Shell footguns this session: zsh does NOT word-split unquoted vars (use
+  the runbook pipe form for cache eviction); trailing `[ ] && echo` after
+  a break returns exit 1 — end watch scripts with explicit `exit 0`.
