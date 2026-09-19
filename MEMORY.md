@@ -1827,3 +1827,12 @@ raced the dispatch — run kept a stale cache, but the publish step runs
 regardless → first parts publish); fetch path to be verified locally
 against the parts (identical script). zsh lesson: unquoted $var does NOT
 word-split in zsh — use the runbook pipe form for cache eviction loops.
+
+**ISSUES #3 CLOSED — split-parts validated live (Sep 19)**: run 35427965449
+green end to end; publish log "seed: published 1 part(s)" + "retired
+pipeline-cache.tar.gz"; release now holds only seed-part-00.part
+(1,249,608,428 B); local ./scripts-seed.sh fetch reassembled byte-identical
++ gzip -t clean. Deploy attempt 1/3, prune kept 2 usable. Residual: CI
+bootstrap-from-parts awaits its first natural cache-miss (identical script,
+locally proven). Seed growth can now be watched via part count/size in the
+session sweep.
