@@ -1796,3 +1796,14 @@ nomination tables on DDL 20/212, Hrithik 16/270, Prosenjit 14/84 (likely
 ceremony-less nominee tables) + verify >150% win pages (Rani 108 vs 44)
 for convention-mislabeled noms. Tool is audit-only, NOT wired into
 build-dataset — no dataset change, no deploy needed.
+
+**Issue #2 dissolved same day (metric artifact, no fix)**: per-table
+re-analysis showed DDL/Prosenjit/Hrithik parse ~100%/95%/74-of-75 of
+ITEMIZED entries; the scary 6-17% came from dividing by infobox aggregates
+that count events the pages never itemize, plus the audit counting header
+|- lines as data rows. Rani's 108 wins vs infobox 44 = stale aggregate,
+explicit Result columns throughout (convention never fired — no
+mislabeling). One acceptable micro-drop: award names with no award noun
+("Lions Favourite Actor") hit the deliberate anti-noise gate. Durable
+lesson: coverage = parsed/itemized, never parsed/aggregate. ISSUES.md #2
+CLOSED.
