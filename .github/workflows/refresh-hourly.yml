@@ -50,7 +50,7 @@ jobs:
       - name: Bootstrap cache from seed release (cache miss only)
         run: |
           if [ ! -d data/cache/pages ]; then
-            curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz | tar -xz
+            ./scripts-seed.sh fetch /tmp/seed.tgz && tar -xzf /tmp/seed.tgz
           fi
 
       - name: Refresh Wikipedia (lastrevid diff, paced)

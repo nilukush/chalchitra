@@ -17,7 +17,7 @@ services:
     name: chalchitra
     runtime: static
     buildCommand: >
-      curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz -o /tmp/seed.tgz
+      ./scripts-seed.sh fetch /tmp/seed.tgz
       && tar -xzf /tmp/seed.tgz
       && npm ci
       && npm run pipeline:dataset

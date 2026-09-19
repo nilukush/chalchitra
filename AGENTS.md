@@ -49,7 +49,7 @@ CI rebuilds from ITS cache, not yours — a local-only wave gets silently revert
 the next daily run. Publish the local cache and evict the stale CI caches:
 ```bash
 tar -czf /tmp/pipeline-cache.tar.gz data/cache
-gh release upload seed /tmp/pipeline-cache.tar.gz --clobber
+./scripts-seed.sh publish /tmp/pipeline-cache.tar.gz   # split parts (2GB asset cap)
 gh api repos/nilukush/chalchitra/actions/caches --paginate \
   --jq '.actions_caches[] | select(.key|startswith("pipeline-cache")) | .id' |
   while read id; do gh api -X DELETE repos/nilukush/chalchitra/actions/caches/$id; done

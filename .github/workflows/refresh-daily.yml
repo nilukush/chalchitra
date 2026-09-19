@@ -63,7 +63,7 @@ jobs:
         run: |
           if [ ! -d data/cache/pages ]; then
             echo "no actions/cache hit — downloading seed release"
-            curl -fsSL https://github.com/nilukush/chalchitra/releases/download/seed/pipeline-cache.tar.gz | tar -xz
+            ./scripts-seed.sh fetch /tmp/seed.tgz && tar -xzf /tmp/seed.tgz
           else
             echo "cache restored — seed not needed"
           fi
@@ -110,10 +110,12 @@ jobs:
       - name: Publish cache seed release
         env:
           GH_TOKEN: ${{ github.token }}
+        # split parts: GitHub caps a release asset at 2GB and data/cache
+        # grows ~20+MB/day — a monolith asset would break the publish around
+        # Oct 2026 (ISSUES #3). scripts-seed.sh handles split + retirement.
         run: |
           tar -czf /tmp/pipeline-cache.tar.gz data/cache
-          gh release create seed --title "Pipeline cache seed" --notes "Auto-refreshed pipeline cache (data/cache) — consumed by the Render static build and CI bootstrap." --latest 2>/dev/null || true
-          gh release upload seed /tmp/pipeline-cache.tar.gz --clobber
+          ./scripts-seed.sh publish /tmp/pipeline-cache.tar.gz
 
       # deploy: GitHub Actions already built dist/ — Vercel receives the
       # PREBUILT artifact (zero Vercel build minutes, no seed download).
