@@ -1836,3 +1836,11 @@ pipeline-cache.tar.gz"; release now holds only seed-part-00.part
 bootstrap-from-parts awaits its first natural cache-miss (identical script,
 locally proven). Seed growth can now be watched via part count/size in the
 session sweep.
+
+**Dead-machinery finding (Sep 19 sweep)**: refresh-hourly last ran Aug 30
+(schedule deliberately removed then — refresh exceeded its 30-min timeout
+at 20k pages). Today's measurement: the refresh leg alone is 1h51m at the
+29k-page corpus, so even a manual dispatch can no longer succeed. AGENTS.md
+corrected (dispatch-only + why). RECOMMENDATION pending user: retire the
+workflow file entirely (dual daily slots + client trending cover its
+purpose) — kept in place for now, costs nothing while unscheduled.
