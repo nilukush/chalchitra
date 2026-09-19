@@ -62,10 +62,10 @@ gh api repos/nilukush/chalchitra/actions/caches --paginate \
   data-in-repo problem, 100GB/month bandwidth. Hobby plan is NON-COMMERCIAL:
   no ads/affiliate/donations allowed, else deployments pause (503).
 - Workflows: refresh-daily (05:15 + 17:15 UTC: refresh → dataset → build →
-  publish seed → Vercel deploy). refresh-hourly is DISPATCH-ONLY since
-  2026-08-30 — the refresh outgrew its 30-min timeout (1h51m at the 29k-page
-  corpus, 2026-09-19), so even a manual dispatch times out; intraday
-  freshness is the client-side trending rail + the dual daily slots.
+  publish seed → Vercel deploy). A former refresh-hourly loop was RETIRED
+  2026-09-19: unscheduled since Aug 30 (refresh outgrew its 30-min timeout;
+  the leg is 1h51m at the 29k-page corpus) and fully covered by the dual
+  daily slots + client-side trending rail.
 - **Render (fallback)**: render.yaml static blueprint (rebuilds from repo +
   seed release; 500 build-min/month ⇒ daily-only). Keep dist/ portable.
 - Secrets needed: TMDB_API_KEY, AI_API_KEY, VERCEL_TOKEN, VERCEL_ORG_ID,

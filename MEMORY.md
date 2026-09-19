@@ -1844,3 +1844,8 @@ at 20k pages). Today's measurement: the refresh leg alone is 1h51m at the
 corrected (dispatch-only + why). RECOMMENDATION pending user: retire the
 workflow file entirely (dual daily slots + client trending cover its
 purpose) — kept in place for now, costs nothing while unscheduled.
+
+**refresh-hourly RETIRED (user-approved, Sep 19)**: file deleted; AGENTS.md
+now records the history (unscheduled since Aug 30, refresh leg 1h51m vs
+30-min timeout, covered by dual slots + client trending). Suite still 291
+green. No other references existed.
