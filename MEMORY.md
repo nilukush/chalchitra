@@ -1891,3 +1891,41 @@ Next session starts here. State of the world:
 - Shell footguns this session: zsh does NOT word-split unquoted vars (use
   the runbook pipe form for cache eviction); trailing `[ ] && echo` after
   a break returns exit 1 — end watch scripts with explicit `exit 0`.
+
+## Session 54 (2026-09-20) — "New on the small screen" question answered; archive-flag class root-caused
+
+Session-start sweep: 10 consecutive daily runs green (both slots firing,
+latest 2 on Sep 19). User question (docs/QUESTIONS.md #1): why do
+Panchanama & Chumbak appear on /series but not in the homepage rail?
+
+**Answer (3-agent consensus, all links file:line confirmed).** Rail =
+recentTitles('series', 6): non-archive + released (date <= build day),
+date desc, top 6 (data.ts:163-168, index.astro:136). Shaque excluded
+correctly (upcoming). Panchanama (rd 09-11) / Chumbak (rd 09-10) excluded
+SOLELY by !archive: archive means "discovered by a wave, never seen by the
+category walk" (build-dataset :538 + seenPageIds dedupe), and the series
+walk reads ONE root (extract-titles.ts:23) while films got 12 language
+roots in the Bethlehem fix (19743b8). Wikipedia-side: Chumbak only in the
+GLOBAL 2026-television-series-debuts cat (3-page untriaged queue);
+Panchanama (2026 TV series) has NO year cat at all. Class size (Verifier,
+prod 09-19 data): 25/99 (25%) of 2026 series debuts misfiled, 4/13 of the
+recent window; movies ~4% (Beep). Per-title self-heal exists (editors
+categorize → next nightly promotes; Revolutionaries is the live proof).
+
+**Fix designed, consensus, NOT implemented (awaiting user go — recorded
+as docs/ISSUES.md Issue 4):** (1) two GLOBAL series roots in
+extract-titles fetched WITHOUT subcat recursion (2026 television series
+debuts direct-pages + 2026 web series debuts), Indian-gated via
+classifyTitlePage — recursion OFF is mandatory (41 country subcats);
+(2) build-dataset archive expansion promotes archive:false when infobox
+year === catalogue year (catches zero-cat Panchanama/Beep class);
+(3) keep !archive on rails; clean stale data.ts:127 comment + dead
+catalogueMovies/catalogueSeries exports. Side finding: 2 non-Indian
+series in dataset (Headline/BD, Bas Tera Saath Ho/PK) — classify-gate
+scope leak, look during Issue 4.
+
+Answer written to docs/QUESTIONS.md; Issue 4 opened in docs/ISSUES.md.
+No code changed; 291 tests untouched. Local data/*.json stale vs CI
+(several weeks) — production questions must be answered from the
+production build (search-index.json rd/y fields) or live site, not local
+data.
