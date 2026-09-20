@@ -41,7 +41,8 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
+import { classifyTitlePage, shouldEvictNonIndian } from './classify-title.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -250,8 +251,14 @@ function parseTitlePage(
 async function main() {
   console.log('→ Loading titles & cached pages…');
   const titles = JSON.parse(readFileSync(path.join(DATA, 'titles.json'), 'utf8'));
+  const catalogueYear: number = titles.catalogueYear ?? new Date().getFullYear();
   const movieTitles: string[] = titles.movies.map((m: any) => m.title);
   const seriesTitles: string[] = titles.series.map((s: any) => s.title);
+  // entries from GLOBAL debuts categories (worldwide membership) — classify
+  // them before admitting; Indian-root entries are trusted as before
+  const indiaCheckTitles = new Set<string>(
+    (titles.series as any[]).filter((s) => s.indiaCheck).map((s) => s.title),
+  );
   const titlePages = await fetchPages([...movieTitles, ...seriesTitles], (d, t) => {
     if (d % 100 === 0 || d === t) console.log(`  titles ${d}/${t}`);
   });
@@ -266,9 +273,17 @@ async function main() {
   const titleCast = new Map<string, { name: string; wikiTitle: string | null; role: string }[]>();
   const titleCrew = new Map<string, { name: string; role: string; target: string }[]>();
 
+  let globalRootRejected = 0;
   for (const [wikiTitle, page] of titlePages) {
     const kind = movieTitles.includes(wikiTitle) ? 'movie' : 'series';
     if (page.missing || !page.wikitext) continue;
+    if (kind === 'series' && indiaCheckTitles.has(wikiTitle)) {
+      // global-root entry: worldwide membership, so gate on Indian-ness.
+      // classifyTitlePage's own kind verdict is ignored — the root it came
+      // through already fixes the record kind as series.
+      const verdict = classifyTitlePage(page.wikitext);
+      if ('reject' in verdict) { globalRootRejected++; continue; }
+    }
     const slug = kind === 'movie' ? movieRegistry.slug(wikiTitle, page.pageid) : seriesRegistry.slug(wikiTitle, page.pageid);
     const record = parseTitlePage(kind, wikiTitle, page, slug);
     (kind === 'movie' ? movies : series).push(record);
@@ -285,7 +300,7 @@ async function main() {
     for (const member of cast) if (member.wikiTitle) personLinkTargets.add(member.wikiTitle);
   }
 
-  console.log(`→ Parsed ${movies.length} movies, ${series.length} series`);
+  console.log(`→ Parsed ${movies.length} movies, ${series.length} series${globalRootRejected > 0 ? ` (global roots: ${globalRootRejected} non-Indian skipped)` : ''}`);
   console.log(`→ Discovering ${personLinkTargets.size} candidate person pages…`);
   const candidates = [...personLinkTargets];
   const personPages = await fetchPages(candidates, (d, t) => {
@@ -524,6 +539,10 @@ async function main() {
       if (seenPageIds.has(entry.pageid)) continue;
       const page = readCachedPage(entry.pageid);
       if (!page?.wikitext) continue;
+      // evict strays that predate the classify gate's category check
+      // (Issue 4 side finding: Headline/BD, Bas Tera Saath Ho/PK) — full
+      // verdict, so Indian infoboxes survive shared-industry categories
+      if (shouldEvictNonIndian(page.wikitext)) continue;
       // page.title is authoritative (Wikipedia renames update it via refresh);
       // the frontier's stored finalTitle can lag a move
       const finalTitle = page.title ?? entry.finalTitle ?? requested;
@@ -535,7 +554,10 @@ async function main() {
       const box = parseInfobox(page.wikitext) ?? {};
       const yearFromBox = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
       const year = yearFromBox ? Number(String(yearFromBox).slice(0, 4)) : Number(String(entry.year ?? '').slice(0, 4)) || undefined;
-      const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: true });
+      // archive marks discovery provenance (wave, not category walk) — but a
+      // CURRENT-catalogue-year work is today's slate, not back-catalogue: it
+      // must reach the homepage rails (Panchanama/Beep class, Issue 4)
+      const record = parseTitlePage(kind, finalTitle, page, slug, { year, archive: archiveTierForWaveYear(year, catalogueYear) });
       // one-tier mandate: FULL fidelity for every title — references, reception
       // and chapters all ship. The heavy payloads live in per-letter CHUNK
       // files (data/titles/<kind>/<L>.json) that only the title page loads;

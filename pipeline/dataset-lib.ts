@@ -288,3 +288,39 @@ export function chunkPersons<T extends { name: string }>(persons: T[]): Map<stri
   }
   return chunks;
 }
+
+// ── Issue 4: series catalogue roots + current-year promotion ──────────
+
+export interface CatalogueSeriesEntry {
+  title: string;
+  pageid: number;
+  /** entry came from a GLOBAL debuts category (worldwide membership) —
+   *  build-dataset runs classifyTitlePage on it before admitting it */
+  indiaCheck?: boolean;
+}
+
+/** Merge the trusted Indian-debuts walk with global roots (2026 television
+ *  series debuts / 2026 web series debuts), whose memberships mix countries.
+ *  Indian-root membership wins on overlap; global-only entries carry
+ *  indiaCheck for the build-time gate. */
+export function mergeSeriesRoots(
+  indianDebuts: Array<{ title: string; pageid: number }>,
+  globalRoots: Array<{ title: string; pageid: number }>[],
+): CatalogueSeriesEntry[] {
+  const byId = new Map<number, CatalogueSeriesEntry>();
+  for (const p of indianDebuts) byId.set(p.pageid, { title: p.title, pageid: p.pageid });
+  for (const root of globalRoots) {
+    for (const p of root) {
+      if (!byId.has(p.pageid)) byId.set(p.pageid, { title: p.title, pageid: p.pageid, indiaCheck: true });
+    }
+  }
+  return [...byId.values()];
+}
+
+/** Archive tier for a wave-discovered work: `archive` marks discovery
+ *  provenance (found via a filmography, not the category walk), but a work
+ *  from the CURRENT catalogue year is today's slate, not back-catalogue —
+ *  it must reach the homepage rails (Panchanama/Beep class, Issue 4). */
+export function archiveTierForWaveYear(year: number | undefined, catalogueYear: number): boolean {
+  return year !== catalogueYear;
+}

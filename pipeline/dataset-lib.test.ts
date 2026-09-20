@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bucketKeyForSlug, buildSearchDocuments, isNonTitleTargetName, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, isNonTitleTargetName, mergeSeriesRoots, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -364,5 +364,48 @@ describe('search doc size discipline', () => {
     const docs = buildSearchDocuments([big] as any, [] as any, []);
     expect(docs[0].q).toHaveLength(8);
     expect(docs[0].q[0]).toBe('Dir'); // director first, then billing order
+  });
+});
+
+// ── Issue 4: series walk roots + current-year promotion ──────────────
+describe('mergeSeriesRoots (global series roots)', () => {
+  const waitingHai = { title: 'Waiting Hai', pageid: 1 };
+  const chumbak = { title: 'Chumbak (TV series)', pageid: 2 };
+  const devkhel = { title: 'Devkhel', pageid: 3 };
+
+  it('flags global-root entries for the India check; Indian-debuts entries stay trusted', () => {
+    const merged = mergeSeriesRoots([waitingHai], [[chumbak, devkhel]]);
+    expect(merged.find((e) => e.pageid === 1)?.indiaCheck).toBeUndefined();
+    expect(merged.find((e) => e.pageid === 2)?.indiaCheck).toBe(true);
+    expect(merged.find((e) => e.pageid === 3)?.indiaCheck).toBe(true);
+  });
+
+  it('lets the Indian-debuts root win when both roots carry the same pageid', () => {
+    const globalAlias = { title: 'Waiting Hai (TV series)', pageid: 1 };
+    const merged = mergeSeriesRoots([waitingHai], [[globalAlias]]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0].indiaCheck).toBeUndefined();
+    expect(merged[0].title).toBe('Waiting Hai');
+  });
+
+  it('dedupes the same page across two global roots into one flagged entry', () => {
+    const merged = mergeSeriesRoots([], [[chumbak], [chumbak, devkhel]]);
+    expect(merged.filter((e) => e.pageid === 2)).toHaveLength(1);
+    expect(merged).toHaveLength(2);
+  });
+});
+
+describe('archiveTierForWaveYear (current-year promotion)', () => {
+  it('promotes current-catalogue-year wave works out of the archive tier', () => {
+    expect(archiveTierForWaveYear(2026, 2026)).toBe(false);
+  });
+
+  it('keeps back-catalogue works in the archive tier', () => {
+    expect(archiveTierForWaveYear(2004, 2026)).toBe(true);
+    expect(archiveTierForWaveYear(2025, 2026)).toBe(true);
+  });
+
+  it('keeps undated wave works in the archive tier', () => {
+    expect(archiveTierForWaveYear(undefined, 2026)).toBe(true);
   });
 });

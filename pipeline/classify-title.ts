@@ -18,6 +18,20 @@ const SERIES_INFOBOX = /^infobox\s+(television|tv series|television series|minis
 const INDIAN_LANGUAGES =
   /(hindi|urdu|punjabi|bengali|marathi|gujarati|odia|assamese|tamil|telugu|kannada|malayalam|tulu|meitei|konkani|sanskrit|maithili|santali|kashmiri|nepali|sindhi|dogri|bhojpuri|rajasthani|haryanvi|chhattisgarhi|magahi|awadhi|garhwali|kumaoni)/i;
 
+// Unambiguously non-Indian national origin categories. Deliberately narrow:
+// Nepali is excluded because India itself produces Nepali-language films
+// (Sikkim/Darjeeling) — the language sits in INDIAN_LANGUAGES too.
+const NON_INDIAN_COUNTRY_CATEGORY =
+  /\[\[\s*category\s*:\s*\d{4}\s+(bangladeshi|pakistani|sri lankan|maldivian|bhutanese)[\s\-]/i;
+
+/** The article carries a year-scoped national category of a neighbouring
+ *  industry — a hard non-Indian signal independent of the infobox (Issue 4
+ *  side finding: Headline/BD and Bas Tera Saath Ho/PK leaked in as
+ *  "unverified" because their infoboxes carry no country). */
+export function hasNonIndianCountryCategory(wikitext: string): boolean {
+  return NON_INDIAN_COUNTRY_CATEGORY.test(wikitext);
+}
+
 export function classifyTitlePage(wikitext: string): ClassifyResult {
   if (!wikitext?.trim()) return { reject: 'empty' };
   if (findTemplates(wikitext, /disambiguation/i).length > 0) return { reject: 'disambiguation' };
@@ -45,6 +59,19 @@ function indianCheck(wikitext: string, kind: 'movie' | 'series'): ClassifyResult
   if (INDIAN_LANGUAGES.test(language) && !/^(united states|uk|united kingdom|france|japan|south korea|china|italy|germany|spain|russia|canada|australia)\b/i.test(country.trim())) {
     return { kind };
   }
-  if (!country.trim() && !language.trim()) return { kind, unverified: true };
+  if (!country.trim() && !language.trim()) {
+    if (hasNonIndianCountryCategory(wikitext)) return { reject: 'non-indian' };
+    return { kind, unverified: true };
+  }
   return { reject: 'non-indian' };
+}
+
+/** Build-time eviction for the expansion pass: the FULL verdict decides, not
+ *  the raw category regex (an infobox country = India survives a stray
+ *  Bangladeshi year category). Only signal-free pages with a non-Indian
+ *  national category — or an explicitly non-Indian infobox — evict. */
+export function shouldEvictNonIndian(wikitext: string): boolean {
+  if (!hasNonIndianCountryCategory(wikitext)) return false;
+  const verdict = classifyTitlePage(wikitext);
+  return 'reject' in verdict && verdict.reject === 'non-indian';
 }

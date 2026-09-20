@@ -321,7 +321,12 @@ export async function resolveImageThumbUrls(
   const canonicalKey = (title: string) => title.replace(/^File:/i, '').replace(/_/g, ' ').trim();
   const normalized = [...new Set(filenames.filter(Boolean).map((f) => f.trim()))]
     .map((f) => (f.startsWith('File:') ? f : `File:${f.replace(/^Image:/i, '')}`))
-    .filter((f) => f.length > 5);
+    .filter((f) => f.length > 5)
+    // deterministic order = stable batch cache keys: a small membership
+    // change (a few evictions) must not reshuffle every 50-title batch and
+    // re-fetch the whole phase (that mass re-fetch trips the imageinfo
+    // 429 limiter for the whole IP)
+    .sort();
 
   for (const batch of chunk(normalized, 50)) {
     const data = await apiGet({

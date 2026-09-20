@@ -9,7 +9,8 @@ Repo: https://github.com/nilukush/chalchitra (public). Deploy target: **Vercel H
 Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
 
 ## Commands
-- `npm run pipeline:titles` — category walk (root + 12 Indian-language year categories)
+- `npm run pipeline:titles` — category walk (film root + 12 Indian-language year
+  categories; series Indian-debuts root + 2 GLOBAL debuts categories, direct-pages-only)
 - `npm run pipeline:fetch` / `pipeline:refresh` — full fetch / lastrevid incremental diff
 - `npm run pipeline:tmdb-changes` — TMDB change-list delta + **freshness sweep**
   (everything released ≤45 days is force-invalidated every run — the /changes feed
@@ -54,6 +55,17 @@ Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
   kind-flips emit `/series→/movies` paths) consumed by astro.config.
 - Archive expansion dedupes by **pageid** (title strings collide across spellings:
   "108: Base Hospital Uri" vs "108 Base Hospital – Uri").
+- **`archive` = discovery provenance, not age** (Issue 4, 2026-09-20): catalogue =
+  seen by the category walk, archive = wave-discovered. Two guards keep current-year
+  debuts off the misfiled path (homepage rails filter `!archive`): (a) the series walk
+  merges two GLOBAL debuts categories (`<year> television series debuts`,
+  `<year> web series debuts`) fetched at **depth 0 — recursion would walk 41 country
+  subcats**; their entries carry `indiaCheck` in titles.json and build-dataset gates
+  them through `classifyTitlePage`; (b) wave works whose infobox year equals
+  `titles.json catalogueYear` are promoted to non-archive (`archiveTierForWaveYear` —
+  catches zero-category titles like Panchanama). `hasNonIndianCountryCategory`
+  (classify-title.ts) hard-rejects BD/PK/Sri-Lankan national categories and evicts
+  such strays from the expansion pass at build time.
 
 ## Pipeline / ops steady state (since 2026-09-08)
 - **The frontier is closed** (~34.7k works accepted). Discovery replenishes a daily

@@ -124,9 +124,8 @@ export async function fullTitle(kind: 'movie' | 'series', slug: string): Promise
   return records.find((t) => t.slug === slug);
 }
 
-/** Current editorial-catalogue records (archive titles live on person pages & search). */
-export const catalogueMovies: TitleSummary[] = movies.filter((m) => !m.archive);
-export const catalogueSeries: TitleSummary[] = series.filter((s) => !s.archive);
+// Indexes render the FULL lists (archive titles included — one-tier mandate);
+// homepage rails filter by discovery provenance inside recentTitles & friends.
 
 /** ISO date (YYYY-MM-DD) for "today" — ISO strings compare lexicographically,
  *  so `date > TODAY` means a strictly future release. */

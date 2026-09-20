@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyTitlePage } from './classify-title.js';
+import { classifyTitlePage, hasNonIndianCountryCategory, shouldEvictNonIndian } from './classify-title.js';
 
 const film = (over = '') => `
 {{Infobox film
@@ -90,5 +90,82 @@ describe('classifyTitlePage', () => {
 }}
 `;
     expect(classifyTitlePage(episodic)).toMatchObject({ kind: 'series' });
+  });
+});
+
+// ── Issue 4 side finding: non-Indian national categories ─────────────
+describe('non-Indian country categories', () => {
+  const series = (cats: string, extra = '') => `
+{{Infobox television
+| name = Headline
+| num_episodes = 8
+| original_run = {{Start date|2026|2|1}}
+${extra}}}
+${cats}
+`;
+
+  it('rejects an otherwise-unverified article that carries a non-Indian national debuts category', () => {
+    // no country/language in the infobox → used to pass as { unverified: true }
+    expect(classifyTitlePage(series('[[Category:2026 Bangladeshi television series debuts]]')))
+      .toMatchObject({ reject: 'non-indian' });
+    expect(classifyTitlePage(series('[[Category:2026 Pakistani television series debuts]]')))
+      .toMatchObject({ reject: 'non-indian' });
+    expect(classifyTitlePage(series('[[Category:2024 Sri Lankan films]]')))
+      .toMatchObject({ reject: 'non-indian' });
+  });
+
+  it('a language-only infobox signal still admits despite a non-Indian category (infobox-first)', () => {
+    // corrected precedence: the category veto fires only on signal-free pages;
+    // bare-language pages stay admitted exactly as the wave gate always did —
+    // rejecting them would need country data Wikipedia often omits
+    expect(classifyTitlePage(series('[[Category:2026 Pakistani television series debuts]]', '| language = Hindi')))
+      .toMatchObject({ kind: 'series' });
+  });
+
+  it('keeps Indian, global and category-free pages on the existing verdicts', () => {
+    expect(classifyTitlePage(series('[[Category:2026 Indian television series debuts]]')))
+      .toMatchObject({ kind: 'series' });
+    expect(classifyTitlePage(series('[[Category:2026 web series debuts]]')))
+      .toMatchObject({ kind: 'series' });
+    expect(classifyTitlePage(series(''))).toMatchObject({ kind: 'series' });
+  });
+
+  it('hasNonIndianCountryCategory detects the pattern directly', () => {
+    expect(hasNonIndianCountryCategory('x [[Category:2026 Bangladeshi television series debuts]] y')).toBe(true);
+    expect(hasNonIndianCountryCategory('x [[Category:2026 Indian television series debuts]] y')).toBe(false);
+    expect(hasNonIndianCountryCategory('no categories here')).toBe(false);
+  });
+});
+
+// ── Eviction precision: shared-industry categories must not outrank the infobox ──
+describe('non-Indian category vs infobox precedence', () => {
+  const page = (infobox: string, cats: string) => `
+{{Infobox film
+| name = X
+${infobox}}}
+${cats}
+`;
+
+  it('an infobox country = India WINS over a stray Bangladeshi year category (Indian Bengali films carry both)', () => {
+    expect(classifyTitlePage(page('| country = India\n| language = Bengali', '[[Category:2021 Bangladeshi films]][[Category:Indian films]]')))
+      .toMatchObject({ kind: 'movie' });
+    expect(classifyTitlePage(page('| country = India', '[[Category:2016 Bangladeshi films]]')))
+      .toMatchObject({ kind: 'movie' });
+  });
+
+  it('an Indian-language infobox still accepts when only a Bangladeshi category is present', () => {
+    expect(classifyTitlePage(page('| language = Bengali', '[[Category:2014 Bangladeshi films]]')))
+      .toMatchObject({ kind: 'movie' });
+  });
+
+  it('rejects only when there is NO infobox country/language signal (the Headline shape)', () => {
+    expect(classifyTitlePage(page('', '[[Category:2026 Bangladeshi television series debuts]]')))
+      .toMatchObject({ reject: 'non-indian' });
+  });
+
+  it('shouldEvictNonIndian: full verdict decides, not the raw category regex', () => {
+    expect(shouldEvictNonIndian(page('| country = India', '[[Category:2021 Bangladeshi films]]'))).toBe(false);
+    expect(shouldEvictNonIndian(page('', '[[Category:2026 Pakistani television series debuts]]'))).toBe(true);
+    expect(shouldEvictNonIndian(page('| country = India', ''))).toBe(false);
   });
 });
