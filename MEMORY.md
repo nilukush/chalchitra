@@ -1929,3 +1929,39 @@ No code changed; 291 tests untouched. Local data/*.json stale vs CI
 (several weeks) — production questions must be answered from the
 production build (search-index.json rd/y fields) or live site, not local
 data.
+
+## Session 54 (cont. — 2026-09-20 afternoon) — Issue 4 fix SHIPPED (8a18c0e, 305 tests)
+
+User "ok" → implemented the consensus fix, TDD-first:
+- extract-titles: series walk = Indian-debuts root + TWO GLOBAL roots
+  (`2026 television series debuts`, `2026 web series debuts`) at **depth 0**
+  (recursion would walk 41 country subcats); titles.json gains catalogueYear;
+  global-only entries carry indiaCheck → build-dataset gates them through
+  classifyTitlePage (kind verdict ignored; root fixes kind). Walk: 99 series
+  (70 Indian + 29 global-only, 4 overlap).
+- build-dataset: indiaCheck gate at catalogue ingest; wave works with
+  infobox year === catalogueYear promoted via archiveTierForWaveYear
+  (dataset-lib); expansion evicts via shouldEvictNonIndian.
+- **Mid-impl correction (important precedent)**: first category-gate cut
+  rejected ANY page with a `<year> (Bangladeshi|Pakistani|…)…` category →
+  798 evicted, 561 of them ALSO Indian-categorised (Indian Bengali films
+  routinely carry "YYYY Bangladeshi films" too — shared industry). Audited
+  BEFORE shipping by diffing the drop set against Indian markers. Corrected
+  rule: the category decides ONLY for signal-free infoboxes (no
+  country/language); infobox country=India always wins. Final local
+  eviction: exactly 6 Pakistani Hum-TV dramas. Lesson: any eviction-style
+  gate MUST be audited against the actual drop set before it ships.
+- resolveImageThumbUrls batches now SORTED: membership changes no longer
+  reshuffle every 50-title batch cache key → no mass imageinfo re-fetch →
+  no 429 trip (that instability caused two throttled runs; 7-min cooldown
+  + re-run per runbook works, phases are cache-resumable).
+- Verified locally: dataset 25,787/3,836/9,414; build 39,410 pages; built
+  rail = Waiting Hai, **Chumbak**, The Court, Kerala Underground, Dilon Ki
+  Ram Leela, Bigg Boss; 792 shared-category Indian titles kept (Bengali
+  1,514→1,760); Aga Aai Aaho Aai promoted. Panchanama is CI-corpus-only
+  locally — CI's build is its live proof.
+- Ship sequence: commit 8a18c0e → seed republished (926MB, 1 part; local
+  cache behind CI's so smaller — CI merges with its actions/cache) → 4 CI
+  caches evicted → pushed → refresh-daily dispatched (run 35512142493,
+  ~2-3h). Check its completion + rail on production next session start.
+- data.ts: dead catalogueMovies/catalogueSeries removed, comment fixed.
