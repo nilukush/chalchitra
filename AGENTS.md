@@ -55,6 +55,20 @@ gh api repos/nilukush/chalchitra/actions/caches --paginate \
   while read id; do gh api -X DELETE repos/nilukush/chalchitra/actions/caches/$id; done
 ```
 
+**GUARD before evicting (learned 2026-09-20 — a stale local seed regressed production)**:
+publish-and-evict REPLACES CI's corpus with your local one. If CI has run waves since
+your last local sync, CI's cache is the superset and eviction silently DELETES pages
+(they 404 until the nightly expand trickle re-fetches them). Compare first:
+```bash
+ls data/cache/pages | wc -l                                  # local page count
+curl -s https://chalchitra-pied.vercel.app/search-index.json | jq '.docs | length'
+```
+If local ≪ CI docs + ~25k (persons/subpages margin: CI docs ≈ 39k, healthy local pages
+≈ 57k), your cache is behind — catch up locally BEFORE publishing
+(`npm run pipeline:expand 0` re-discovers, then `pipeline:expand N` fetches), or skip
+eviction entirely and let the nightly trickle absorb your local-only pages instead.
+Eviction is only safe when the local cache is the superset.
+
 ## Deployment (Vercel primary + Render fallback, via GitHub)
 - Repo: github.com/nilukush/chalchitra (public — free Actions minutes).
 - **Vercel (primary)**: the daily workflow deploys the PREBUILT dist/ via

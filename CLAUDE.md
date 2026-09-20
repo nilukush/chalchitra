@@ -86,6 +86,10 @@ Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
   server-side anyway) and the prune runs `if: always()` to clean ERRORED ones.
 - **After any local run that fetched pages**: republish seed + purge CI caches
   (runbook block in AGENTS.md) or the next nightly silently reverts it.
+  **Guard**: only evict when the local page-cache is the SUPERSET — eviction with a
+  stale local seed regressed production once (2026-09-20: ~62 titles 404'd; the
+  nightly expand trickle re-fetches them within 1-2 runs). Compare local
+  `data/cache/pages` count vs the production search-index doc count first.
 - Local `vercel deploy` needs `--scope nilukushs-projects`.
 
 ## Invariants & gotchas

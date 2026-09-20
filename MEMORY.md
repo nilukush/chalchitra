@@ -1965,3 +1965,25 @@ User "ok" → implemented the consensus fix, TDD-first:
   caches evicted → pushed → refresh-daily dispatched (run 35512142493,
   ~2-3h). Check its completion + rail on production next session start.
 - data.ts: dead catalogueMovies/catalogueSeries removed, comment fixed.
+
+## Session 54 (cont. — 2026-09-20 evening) — post-deploy verification caught a self-inflicted regression; guard shipped
+
+Dispatched Issue 4 run 35512142493 went GREEN (4h7m) — and was the first
+natural CI bootstrap-from-seed-parts (validated Issue 3's residual). Production
+rail verified: **Chumbak live in "New on the small screen"**. But /series/
+panchanama 404'd: I had published my weeks-stale LOCAL cache as the seed AND
+evicted all 4 CI caches → CI bootstrapped from my corpus → ~56 CI-only titles
++ 11 persons regressed (~6 other 404s were the CORRECT Pakistani evictions).
+Docs 39,102→39,040; size delta (−51) invisible in logs — content differs, not
+size. CI's own trickle re-discovered the set same-day (+83 accepted, 326
+pending); 17:15 slot was cron-dropped so I dispatched run 35527499604 (~9h
+sooner restore); persons self-heal via dataset's fetchPages. Nothing is lost
+— all pages re-derive from Wikipedia; Panchanama back with the next build or
+two. **Guard shipped** (AGENTS.md + CLAUDE.md): evict only when local
+page-cache ⊇ production (compare data/cache/pages count vs search-index docs);
+else catch up locally first or skip eviction.
+
+LESSON (matches the permanent-fixes memory): a runbook step that REPLACES a
+remote corpus needs a superset check, not just "I fetched new pages locally".
+The Issue 4 code fix itself is verified good end-to-end (local + production
+rail); the regression was purely the cache-swap mechanics around it.
