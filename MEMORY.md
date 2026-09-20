@@ -1987,3 +1987,14 @@ LESSON (matches the permanent-fixes memory): a runbook step that REPLACES a
 remote corpus needs a superset check, not just "I fetched new pages locally".
 The Issue 4 code fix itself is verified good end-to-end (local + production
 rail); the regression was purely the cache-swap mechanics around it.
+
+## Session 54 (cont. — 2026-09-20 ~21:05 UTC) — Issue 5 recovery VERIFIED on production
+
+Restore run 35527499604 green (3h3m). Production now: **panchanama 200 and
+IN the rail** — Waiting Hai, Panchanama, Chumbak, The Court, Kerala
+Underground, Dilon Ki Ram Leela (both Question-1 titles restored). Docs
+39,040→39,070; remaining ~26-title tail builds in the 19:25 run (the 17:15
+slot fired late — delay, not drop) / tomorrow 05:15. Revolutionaries fell
+out of the rail but that is LIVE data: the article's infobox currently has
+no air date (API-checked) — returns automatically when editors re-add one.
+Next session sweep: docs ≥39,102, spot-check urfi/masoom-5 200.
