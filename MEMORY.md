@@ -2125,3 +2125,19 @@ Revolutionaries) validate in the NEXT run's first slice. Dispatched
 35635300756; Revolutionaries expected in that build's rail (~21:00 UTC).
 Sweep checklist: Revolutionaries dated+in-rail; the 3 tolerated-churn docs
 (one-off verify:page on each); drain continues 3k/run oldest-first.
+
+## Session 56 final (2026-09-21 ~21:00 UTC) — REFRESH_TITLES lever; drain-order arithmetic
+
+Run 35635300756 green (drain slice 2: 2,340 stamped, 660 refetched; gate
+clean, churn down to 2: livingston+savvy — the earlier 3 resolved
+themselves). BUT Revolutionaries STILL undated: oldest-first drain has
+~46k pages fetched BEFORE its Sep-1 date ahead of it (~5-8 days at 3k/run
+x2 runs/day) — my "oldest-first fixes it" claim was wrong arithmetic.
+Durable fix instead: **REFRESH_TITLES** — a force-refresh lever (env +
+workflow_dispatch input `refresh_titles`): named articles are invalidated
++ refetched through the paced path BEFORE the diff. Surgical heal for
+stuck-stale pages AND future user-reported staleness. Locally proven
+(80457127 rewritten, revid stamped). Dispatching with
+refresh_titles="The Revolutionaries (TV series)" → dated + in-rail on
+that build. Also: snapshot saves happen ONLY on success — failed runs
+re-diff stale snapshots (harmless, noted).

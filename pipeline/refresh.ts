@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from './env.js';
 
 loadEnv();
-import { fetchPages, fetchLastRevids, fetchTopRevisions } from './wiki-api.js';
+import { fetchPages, fetchLastRevids, fetchTopRevisions, resolvePageIds } from './wiki-api.js';
 import { classifyLegacyByTimestamp, planRefresh, planRenames, planValidation } from './refresh-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -51,6 +51,32 @@ function indexCache(): CachedIndexEntry[] {
 }
 
 async function main() {
+  // targeted force-refresh lever (foolproofing, 2026-09-21): REFRESH_TITLES
+  // is a comma/newline-separated list of article titles whose cached copies
+  // are invalidated and refetched through the normal paced path BEFORE the
+  // diff runs — the surgical heal for a page stuck stale in the legacy drain
+  // (The Revolutionaries sat days deep in the 52k oldest-first queue) and
+  // for any future user-reported stale page. Politeness rule #3 intact:
+  // paced fetchPages, never parallel.
+  const forceTitles = (process.env.REFRESH_TITLES ?? '')
+    .split(/[\n,]/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (forceTitles.length > 0) {
+    console.log(`→ REFRESH_TITLES: force-refreshing ${forceTitles.length} page(s)`);
+    const idMap = await resolvePageIds(forceTitles);
+    for (const title of forceTitles) {
+      const pageid = idMap.get(title);
+      if (pageid && pageid > 0) {
+        const file = path.join(PAGES_DIR, `${pageid}.json`);
+        if (existsSync(file)) rmSync(file, { force: true });
+      }
+    }
+    const pages = await fetchPages(forceTitles);
+    const healed = [...pages.values()].filter((p) => p && !p.missing && p.wikitext).length;
+    console.log(`  ${healed}/${forceTitles.length} pages force-refreshed`);
+  }
+
   const index = indexCache();
   console.log(`→ Refresh: ${index.length} cached pages`);
 

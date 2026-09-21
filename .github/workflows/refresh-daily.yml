@@ -20,7 +20,12 @@ on:
     # 05:15 UTC + 17:15 UTC (evening IST ≈ 22:45 — fresh for Indian prime time)
     - cron: '15 5 * * *'
     - cron: '15 17 * * *'
-  workflow_dispatch: {} # manual trigger from the Actions tab
+  workflow_dispatch:
+    inputs:
+      refresh_titles:
+        description: 'Article titles to force-refresh (comma separated), optional'
+        required: false
+        default: ''
 
 concurrency:
   group: daily-refresh
@@ -69,6 +74,8 @@ jobs:
           fi
 
       - name: Refresh Wikipedia (lastrevid diff, paced)
+        env:
+          REFRESH_TITLES: ${{ github.event.inputs.refresh_titles }}
         run: npm run pipeline:refresh
 
       - name: Sync TMDB change lists
