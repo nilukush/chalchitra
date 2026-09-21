@@ -2141,3 +2141,16 @@ stuck-stale pages AND future user-reported staleness. Locally proven
 refresh_titles="The Revolutionaries (TV series)" → dated + in-rail on
 that build. Also: snapshot saves happen ONLY on success — failed runs
 re-diff stale snapshots (harmless, noted).
+
+## Session 56 END (2026-09-21 23:24 UTC) — Revolutionaries BACK; full arc closed
+
+Run 35654524052 (REFRESH_TITLES dispatch): success. "1/1 pages
+force-refreshed" at 21:01; gate ZERO churn + canaries 10/10. Production
+rail NOW: Waiting Hai, **The Revolutionaries (rd 2026-09-11, slot 2)**,
+Panchanama, Chumbak, The Court, Kerala Underground — every title from
+Question 1 present. The full Issues 4/5/6 + foolproofing arc is closed:
+323 tests, content gate live, pid-index live, swap/rollback/verify:page
+shipped, REFRESH_TITLES lever proven end-to-end in CI. Steady state: the
+legacy drain continues 3k/run oldest-first (~46k left, ~8 days); sweep
+watches churn lists (livingston/savvy flip-flop — likely slug churn, check
+with verify:page if it recurs).
