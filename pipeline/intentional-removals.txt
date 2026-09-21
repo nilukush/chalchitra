@@ -1,0 +1,10 @@
+# Doc ids deliberately removed from the site (one per line, '#'-comments ok).
+# The post-build content check fails the daily run when a page that exists on
+# the live site vanishes from the new build WITHOUT an entry here.
+# Use sparingly — each entry must trace to a documented decision
+# (docs/ISSUES.md). Example (the Issue 4 Pakistani-drama evictions, 2026-09-20):
+# series:aangan
+# series:azar-ki-ayegi-baraat
+# series:mushk
+# series:rasm-e-duniya
+# movie:shadi-aur-tum-say

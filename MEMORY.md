@@ -2033,3 +2033,33 @@ Drain ≈ 10 daily runs; new fetches exact forever. Verified end-to-end on
 pageid 80457127 (stale detected → refetch → revid stamped → date in cache).
 Build 39,410 ✓. Next sweep: Revolutionaries back in rail; watch first
 CI run's validation log line for sane numbers.
+
+## Session 56 (2026-09-21) — foolproofing package SHIPPED (user "ok" on the P1-P6 plan)
+
+Built and verified (317 tests, +8):
+1. **CI content gate**: pipeline/postdeploy-check.ts (+postdeploy-lib pure diff,
+   8 tests) wired into refresh-daily BETWEEN build and cache-save — live site is
+   still the previous deployment there, so any doc the new build dropped fails
+   the run unless declared in pipeline/intentional-removals.txt. Canary fetches
+   sample 10 live docs. Flags: --live-only (triage), --from-data (guard mode,
+   reads data/*.json instead of dist).
+2. **Guarded swap**: scripts-seed.sh swap [--dry-run] = count tripwire (MIN_MARGIN
+   15k, FORCE=1 escape) + EXACT doc-id superset check via postdeploy-check
+   --from-data, then publish + evict. KEY INSIGHT while building: the count
+   tripwire alone could NOT have caught Issue 5 (corpora differed by CONTENT
+   ~60 pages each way, same size) — the exact diff is the real guard.
+3. **Rollback**: publish now renames current parts → seed-prev-NN.part (one
+   previous version kept; stale higher-numbered prev parts retired);
+   rollback --dry-run/--yes restores + evicts. First prev version appears after
+   the next CI publish.
+4. **verify:page**: pageid-anchored record/cache/live comparison (GOTCHA: raw
+   API fetches need formatversion=2 — v1 puts slot content under slots.main['*'],
+   bit me once). AGENTS.md #8 mandates it for "upstream data" verdicts.
+5. AGENTS.md #7: postmortem→test rule; #8: verify rule; session sweep += live
+   doc-count vs yesterday; CLAUDE.md commands/ops updated.
+Smokes: --from-data correctly refuses my behind-CI corpus (78 live ids missing
+locally — true positive); swap dry-run reports refusal; rollback dry-run reports
+no-previous-version. Local verify:page on the-revolutionaries shows cache revid
+1375729867 == live, date present (healed by the Issue 6 fix).
+Dispatched Issue-6 run 35571072883 still in flight at session end (43m/≈3-4h) —
+verify Revolutionaries back in the production rail next sweep.

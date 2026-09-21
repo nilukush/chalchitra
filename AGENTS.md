@@ -16,6 +16,12 @@
    CC BY-SA notice.
 5. Max 3 failed attempts on any step → stop and document in `MEMORY.md`.
 6. `data/*.json` are GENERATED (gitignored): rebuild with `pipeline:dataset`, never commit.
+7. **Every incident ends with the test/gate that would have caught it** — a vitest
+   case for logic bugs, a CI assertion or script guard for ops mistakes. No
+   postmortem is closed without it.
+8. Any "upstream data / not our bug" verdict requires a PAGEID-anchored check
+   (`npm run verify:page -- <slug>`), never a bare-title API probe (Issue 6:
+   a bare-title probe read a reggae band and produced a wrong verdict).
 
 ## Conventions
 - TypeScript strict; ESM (`"type": module`); imports in pipeline use `.js` extensions.
@@ -46,28 +52,23 @@ npm run build                  # verify page count in output
 
 **After ANY local wave/refresh that fetched new pages** (persons/expand/fetch):
 CI rebuilds from ITS cache, not yours — a local-only wave gets silently reverted by
-the next daily run. Publish the local cache and evict the stale CI caches:
+the next daily run. Propagate with the GUARDED swap (learned 2026-09-20: evicting CI
+caches while publishing a stale local seed 404'd ~62 production pages — Issue 5):
 ```bash
-tar -czf /tmp/pipeline-cache.tar.gz data/cache
-./scripts-seed.sh publish /tmp/pipeline-cache.tar.gz   # split parts (2GB asset cap)
-gh api repos/nilukush/chalchitra/actions/caches --paginate \
-  --jq '.actions_caches[] | select(.key|startswith("pipeline-cache")) | .id' |
-  while read id; do gh api -X DELETE repos/nilukush/chalchitra/actions/caches/$id; done
+./scripts-seed.sh swap --dry-run    # see the guard verdict first
+./scripts-seed.sh swap              # guard → publish (keeps ONE previous
+                                     # version as seed-prev parts) → evict CI caches
 ```
+The swap REFUSES unless the local corpus is a production superset (count tripwire +
+exact doc-id diff of local data vs the live search index). If it refuses: catch up
+locally first (`npm run pipeline:expand 0` re-discovers, then `pipeline:expand N`),
+or skip the swap and let the nightly trickle absorb local-only pages.
+**Rollback**: `./scripts-seed.sh rollback --dry-run` then `--yes` restores the previous
+seed version and evicts caches — the recovery lever for a bad swap (minutes, not days).
 
-**GUARD before evicting (learned 2026-09-20 — a stale local seed regressed production)**:
-publish-and-evict REPLACES CI's corpus with your local one. If CI has run waves since
-your last local sync, CI's cache is the superset and eviction silently DELETES pages
-(they 404 until the nightly expand trickle re-fetches them). Compare first:
-```bash
-ls data/cache/pages | wc -l                                  # local page count
-curl -s https://chalchitra-pied.vercel.app/search-index.json | jq '.docs | length'
-```
-If local ≪ CI docs + ~25k (persons/subpages margin: CI docs ≈ 39k, healthy local pages
-≈ 57k), your cache is behind — catch up locally BEFORE publishing
-(`npm run pipeline:expand 0` re-discovers, then `pipeline:expand N` fetches), or skip
-eviction entirely and let the nightly trickle absorb your local-only pages instead.
-Eviction is only safe when the local cache is the superset.
+**Session-start sweep** (every session): `gh run list` (both slots green?), then compare
+the live doc count against yesterday — a drop means silent page loss even if runs are
+green: `curl -s https://chalchitra-pied.vercel.app/search-index.json | node -p "JSON.parse(require('fs').readFileSync(0)).docs.length"`
 
 ## Deployment (Vercel primary + Render fallback, via GitHub)
 - Repo: github.com/nilukush/chalchitra (public — free Actions minutes).

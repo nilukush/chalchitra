@@ -19,7 +19,9 @@
     "pipeline:expand": "tsx pipeline/expand-titles.ts",
     "pipeline:persons": "tsx pipeline/expand-persons.ts",
     "pipeline:refresh": "tsx pipeline/refresh.ts",
-    "pipeline:tmdb-changes": "tsx pipeline/tmdb-changes.ts"
+    "pipeline:tmdb-changes": "tsx pipeline/tmdb-changes.ts",
+    "check:postdeploy": "tsx pipeline/postdeploy-check.ts",
+    "verify:page": "tsx pipeline/verify-page.ts"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.4.1",

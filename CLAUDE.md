@@ -21,8 +21,13 @@ Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
 - `npm run pipeline:trends` — Wikipedia pageviews → trending rails (NOT in dataset step)
 - `npm test` (vitest, 291 tests — **TDD: extend tests first**) / `npm run build` / dev port **4730**
 - `./scripts-prune-deployments.sh [keep] [projectId]` — Vercel prune (READY-aware:
-  ERRORED/CANCELED never take a keep slot). `./scripts-seed.sh fetch|publish` —
-  split-parts seed release I/O (GitHub caps assets at 2GB; cache grows ~23MB/day)
+  ERRORED/CANCELED never take a keep slot). `./scripts-seed.sh fetch|publish|swap|rollback`
+  — split-parts seed release I/O (2GB asset cap; cache grows ~23MB/day); `swap` is the
+  GUARDED publish+evict (superset check, refuses behind-production caches), `rollback`
+  restores the kept previous seed version; `npm run check:postdeploy` — content
+  invariants (build vs live doc diff; intentional removals in
+  pipeline/intentional-removals.txt); `npm run verify:page -- <slug>` — pageid-anchored
+  our-record/cache/live comparison (required for any "upstream data" verdict)
 
 ## Architecture (load-bearing shapes)
 - **Title chunking (2026-09-05)**: `data/movies.json`/`series.json` are LIGHT summaries
