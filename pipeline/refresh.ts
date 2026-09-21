@@ -144,11 +144,15 @@ async function main() {
       .filter((e): e is CachedIndexEntry => Boolean(e))
       .filter((e) => !renamedIds.has(String(e.pageid))); // already handled above
 
-    // legacy check, bounded per run (each is 1 batched API call per 50 pages)
+    // legacy check, bounded per run (each is 1 batched API call per 50 pages);
+    // OLDEST fetches first — the most-stale pages heal soonest (readdir order
+    // is pageid-numeric, which buried recent-article pageids like 80457127
+    // deep in the deferred tail)
     const LEGACY_CAP = 3_000;
     const legacyEntries = validation.legacy
       .map((id) => byPageid.get(id))
       .filter((e): e is CachedIndexEntry => Boolean(e))
+      .sort((a, b) => a.fetchedAt.localeCompare(b.fetchedAt))
       .slice(0, LEGACY_CAP);
     let legacyStale: CachedIndexEntry[] = [];
     if (legacyEntries.length > 0) {
