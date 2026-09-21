@@ -2110,3 +2110,18 @@ tolerance commit) — deterministic same-cache inputs meant it would fail at
 the gate and discard 4h of work again. CANCELLED it mid-dataset (safe: its
 deploy leg was unreachable) so the queued fixed dispatch 35598873930 could
 start immediately. Watcher active; green expected ~18:00 UTC.
+
+## Session 56 closeout (2026-09-21 ~18:00 UTC) — gate GREEN in CI; drain-order bug found
+
+Run 35598873930 SUCCESS: validation drained (2,343 stamped, 657 refetched),
+gate passed ("tolerated churn 3 ≤ 25: movie:418, vayasu-pilichindi,
+r-b-choudary" — sweep should look at these; savvy returned on its own),
+canaries 10/10, docs 39,103 ALL carrying pid, deploy done. BUT
+Revolutionaries STILL rd=None: the healed copy is LOCAL-only; CI's copy is
+legacy-stale and the drain slice was readdir/pageid ORDER, not oldest-first
+as documented — pageid 80457127 sat deep in the 49.5k deferred tail. Fixed
+(758b0db): drain sorts by fetchedAt ascending → Sep-1 pages (incl.
+Revolutionaries) validate in the NEXT run's first slice. Dispatched
+35635300756; Revolutionaries expected in that build's rail (~21:00 UTC).
+Sweep checklist: Revolutionaries dated+in-rail; the 3 tolerated-churn docs
+(one-off verify:page on each); drain continues 3k/run oldest-first.
