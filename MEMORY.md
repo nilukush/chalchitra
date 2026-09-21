@@ -2103,3 +2103,10 @@ rename awareness cries wolf. Fixes (323 tests):
   compared strings against objects (everything "vanished"); rewrote the
   whole file instead. Batch-smoke before push, every time.
 Pushed 5c… dispatch: run for Revolutionaries + gate re-execution.
+
+Session 56 addendum: the late-firing 05:15 slot (started 10:42 UTC) held
+the concurrency group with the OLD strict gate (pre-save placement, pre-
+tolerance commit) — deterministic same-cache inputs meant it would fail at
+the gate and discard 4h of work again. CANCELLED it mid-dataset (safe: its
+deploy leg was unreachable) so the queued fixed dispatch 35598873930 could
+start immediately. Watcher active; green expected ~18:00 UTC.
