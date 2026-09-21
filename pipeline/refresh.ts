@@ -19,8 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from './env.js';
 
 loadEnv();
-import { fetchPages, fetchLastRevids } from './wiki-api.js';
-import { planRefresh, planRenames } from './refresh-lib.js';
+import { fetchPages, fetchLastRevids, fetchRevidsBefore } from './wiki-api.js';
+import { planRefresh, planRenames, planValidation } from './refresh-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAGES_DIR = path.join(ROOT, 'data', 'cache', 'pages');
@@ -30,6 +30,8 @@ interface CachedIndexEntry {
   pageid: number;
   title: string;
   file: string;
+  revid?: number;
+  fetchedAt: string;
 }
 
 function indexCache(): CachedIndexEntry[] {
@@ -38,7 +40,9 @@ function indexCache(): CachedIndexEntry[] {
     if (!file.endsWith('.json')) continue;
     try {
       const page = JSON.parse(readFileSync(path.join(PAGES_DIR, file), 'utf8'));
-      if (page?.pageid > 0 && page?.title) entries.push({ pageid: page.pageid, title: page.title, file });
+      if (page?.pageid > 0 && page?.title) {
+        entries.push({ pageid: page.pageid, title: page.title, file, revid: page.revid, fetchedAt: page.fetchedAt });
+      }
     } catch {
       /* corrupt cache entry — skip */
     }
@@ -119,6 +123,60 @@ async function main() {
     console.log('  no edited pages — cache is current.');
   }
   if (addedTitles.length > 0) console.log(`  (${addedTitles.length} pages cached since the last snapshot — no refetch needed)`);
+
+  // ---- per-page revid validation (Issue 6) --------------------------------
+  // The snapshot cannot validate pages it has never seen: snapshot-absent
+  // pages used to be assumed fresh and then snapshotted at their LIVE revid,
+  // freezing arbitrarily old cache content (a stale seed swap froze ~30k
+  // pages — The Revolutionaries' release date among them). Cached pages now
+  // carry the revid they were fetched at; legacy files are checked against
+  // the revision Wikipedia had at their fetch timestamp (batched, paced).
+  {
+    const validation = planValidation(index, current);
+    const stampRevid = (entry: CachedIndexEntry, revid: number) => {
+      const full = JSON.parse(readFileSync(path.join(PAGES_DIR, entry.file), 'utf8'));
+      full.revid = revid;
+      writeFileSync(path.join(PAGES_DIR, entry.file), JSON.stringify(full));
+    };
+
+    const staleEntries = validation.stale
+      .map((id) => byPageid.get(id))
+      .filter((e): e is CachedIndexEntry => Boolean(e))
+      .filter((e) => !renamedIds.has(String(e.pageid))); // already handled above
+
+    // legacy check, bounded per run (each is 1 batched API call per 50 pages)
+    const LEGACY_CAP = 3_000;
+    const legacyEntries = validation.legacy
+      .map((id) => byPageid.get(id))
+      .filter((e): e is CachedIndexEntry => Boolean(e))
+      .slice(0, LEGACY_CAP);
+    let legacyStale: CachedIndexEntry[] = [];
+    if (legacyEntries.length > 0) {
+      console.log(`→ Validating ${legacyEntries.length} legacy cache files (revid check at fetch time${validation.legacy.length > LEGACY_CAP ? `, ${validation.legacy.length - LEGACY_CAP} deferred to next runs` : ''})…`);
+      const historical = await fetchRevidsBefore(legacyEntries.map((e) => ({ pageid: e.pageid, fetchedAt: e.fetchedAt })));
+      const confirmedFresh: CachedIndexEntry[] = [];
+      legacyStale = legacyEntries.filter((e) => {
+        const then = historical.get(e.pageid);
+        if (then !== undefined && then === current[String(e.pageid)]) {
+          confirmedFresh.push(e); // unchanged since fetch — stamp and move on
+          return false;
+        }
+        return true; // no revision found before the timestamp = edited since
+      });
+      for (const e of confirmedFresh) stampRevid(e, current[String(e.pageid)]);
+      console.log(`  ${confirmedFresh.length} confirmed unchanged (stamped), ${legacyStale.length} stale → refetch`);
+    }
+
+    const toRefetch = [...staleEntries, ...legacyStale];
+    if (toRefetch.length > 0) {
+      const titles = toRefetch.map((e) => e.title);
+      for (const e of toRefetch) rmSync(path.join(PAGES_DIR, e.file), { force: true });
+      console.log(`→ Refetching ${toRefetch.length} revid-stale pages (paced)…`);
+      const pages = await fetchPages(titles);
+      const recovered = [...pages.values()].filter((p) => p && !p.missing && p.wikitext).length;
+      console.log(`  ${recovered} pages refreshed`);
+    }
+  }
 
   writeFileSync(SNAPSHOT_PATH, JSON.stringify(current));
   console.log('✓ Snapshot updated. Next: npm run pipeline:titles && npm run pipeline:dataset && npm run build');

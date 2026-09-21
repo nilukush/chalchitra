@@ -179,6 +179,9 @@ export interface CachedPage {
   extract?: string;
   missing?: boolean;
   fetchedAt: string;
+  /** revision id the content was fetched at — stamped since 2026-09-21 so
+   *  refresh can diff per page exactly (planValidation); legacy files lack it */
+  revid?: number;
 }
 
 function pageCacheFile(pageid: number): string {
@@ -271,6 +274,7 @@ export async function fetchPages(
         extract: page?.extract,
         missing: page?.missing === true,
         fetchedAt: new Date().toISOString(),
+        revid: page?.revisions?.[0]?.revid,
       };
       if (cached.pageid > 0) {
         mkdirSync(CACHE_PAGES_DIR, { recursive: true });
@@ -341,6 +345,38 @@ export async function resolveImageThumbUrls(
       const thumb = page.imageinfo?.[0]?.thumburl;
       // API appends utm tracking params on unscaled thumbs; the bare URL is canonical
       if (thumb) map.set(canonicalKey(page.title), thumb.split('?')[0]);
+    }
+  }
+  return map;
+}
+
+/** The revid each article had at (or just before) a timestamp — lets refresh
+ *  validate legacy cache files without refetching: if the revision at the
+ *  page's fetch time equals the live revid, the cached content is still
+ *  current. Batched by pageid, paced, NOT disk-cached (like fetchLastRevids). */
+export async function fetchRevidsBefore(
+  entries: Array<{ pageid: number; fetchedAt: string }>,
+): Promise<Map<number, number>> {
+  const map = new Map<number, number>();
+  // sort by fetch time so each batch's members are adjacent, then query at
+  // the batch's LATEST timestamp: an rvstart earlier than a member's true
+  // fetch could falsely validate a page that was edited after that rvstart
+  // (false-fresh); later is merely conservative (a rare extra refetch)
+  const sorted = [...entries].sort((a, b) => a.fetchedAt.localeCompare(b.fetchedAt));
+  for (const batch of chunk(sorted, 50)) {
+    const at = batch.reduce((max, e) => (e.fetchedAt > max ? e.fetchedAt : max), batch[0].fetchedAt);
+    const data = await apiGet({
+      action: 'query',
+      pageids: batch.map((e) => e.pageid).join('|'),
+      prop: 'revisions',
+      rvprop: 'ids',
+      rvdir: 'older', // newest revision at-or-before the timestamp
+      rvstart: at,
+      rvlimit: 1,
+    });
+    for (const page of data.query?.pages ?? []) {
+      const revid = page.revisions?.[0]?.revid;
+      if (page.pageid > 0 && typeof revid === 'number') map.set(page.pageid, revid);
     }
   }
   return map;

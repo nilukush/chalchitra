@@ -38,3 +38,35 @@ export function planRenames(
   }
   return renamed;
 }
+
+export interface ValidationPlan {
+  /** cached pageids whose stored revid differs from the live poll — refetch */
+  stale: number[];
+  /** pageids with no stored revid (legacy cache files) — check the revision
+   *  Wikipedia had at the page's fetch timestamp before trusting them */
+  legacy: number[];
+}
+
+/**
+ * Per-page staleness from the cache's own revid stamps (Issue 6). The
+ * snapshot alone cannot validate pages it has never seen: refresh used to
+ * treat snapshot-absent pages as fresh and then snapshot them at their LIVE
+ * revid, freezing arbitrarily old cache content until the article's next
+ * edit (a stale seed swap froze ~30k pages, incl. The Revolutionaries'
+ * release date). With revid stamped at fetch time, this check is exact;
+ * revid-less legacy files route to a historical-revision check instead.
+ */
+export function planValidation(
+  entries: Array<{ pageid: number; revid?: number }>,
+  live: Record<string, number>,
+): ValidationPlan {
+  const stale: number[] = [];
+  const legacy: number[] = [];
+  for (const entry of entries) {
+    const liveRevid = live[String(entry.pageid)];
+    if (liveRevid === undefined) continue; // deleted/merged — never refreshed
+    if (entry.revid === undefined) legacy.push(entry.pageid);
+    else if (entry.revid !== liveRevid) stale.push(entry.pageid);
+  }
+  return { stale, legacy };
+}

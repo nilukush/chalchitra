@@ -2010,3 +2010,26 @@ drops: Stalin/Tegart/news-presenter) + ~11 titles still trickling at
 300/run with 22 new docs added alongside. Issue 5 closed in docs/ISSUES.md.
 Today's 05:15 slot not yet visible at 06:34 UTC (cron delay normal). Both
 question-1 titles restored; Question 1 + Issue 4 arc fully complete.
+
+## Session 55 (2026-09-21) — Issue 6: refresh "assume-fresh" freeze; revid-stamp fix
+
+User report: Revolutionaries missing from /series top ("was there yesterday").
+Root cause 2-layer: (1) seed swap (Issue 5) gave CI the Sep-1 copy whose
+released field is an HTML-comment placeholder; editors added the real date at
+premiere — edit died in the eviction. (2) planRefresh treats snapshot-absent
+pages as fresh, then SNAPSHOTS them at live revid → staleness permanently
+invisible (~30k pages frozen). CORRECTION: my Sep-20 closeout "live-data
+reality" claim was WRONG — I had probed the reggae-band article at the bare
+title; the series is "The Revolutionaries (TV series)". Lesson: when a
+live-data check drives a "not our bug" verdict, verify the ARTICLE IDENTITY
+(pageid), not a title string.
+
+Fix (TDD, 309 tests): CachedPage.revid stamped at fetch (rvprop=ids was
+already requested); planValidation exact-diffs revid pages, routes revid-less
+files to fetchRevidsBefore (batched historical revid at fetch timestamp,
+batch-max timestamp to stay conservative); refresh.ts validates 3,000
+legacy/run oldest-first (stamps unchanged files free, refetches stale).
+Drain ≈ 10 daily runs; new fetches exact forever. Verified end-to-end on
+pageid 80457127 (stale detected → refetch → revid stamped → date in cache).
+Build 39,410 ✓. Next sweep: Revolutionaries back in rail; watch first
+CI run's validation log line for sane numbers.
