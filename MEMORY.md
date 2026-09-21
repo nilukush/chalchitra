@@ -2081,3 +2081,25 @@ page's top {revid,timestamp}); classifyLegacyByTimestamp (pure, 4 tests incl.
 same-second boundary: fetchedAt ms truncated) marks top-revision-predates-
 fetch as fresh (stamp revid) else stale (refetch). Batch smoke against the
 real API: 110 ids / 2 batches / 110 resolved ✓. Pushed + re-dispatched.
+
+## Session 56 (cont. — 2026-09-21 ~12:40 UTC) — content gate first run: false-positive on rename churn; gate made rename-aware + tolerance
+
+Run 35581100526: validation WORKED (3,000 legacy checked, 2,378 stamped
+unchanged, 622 stale refetched — the top-revision API shape is correct) and
+the dataset built, but the run failed at the CONTENT GATE on first
+execution: 4 vanished docs (418, vayasu-pilichindi, r-b-choudary, savvy) +
+8 new. Root: Wikipedia renames/merges change doc-id strings ROUTINELY
+(≈30/run; Vayasu Pilichindi is now a redirect) — id-level diff without
+rename awareness cries wolf. Fixes (323 tests):
+- search docs now carry `pid` (pageid) → the gate classifies a vanished id
+  whose pageid survives under a new id as RENAMED (never a failure). Live
+  index lacks pid until a pid-carrying build deploys (one-cycle transition).
+- GATE_TOLERANCE (default 25): unexplained churn ≤ tolerance passes but is
+  ALWAYS logged for the sweep; mass loss (Issue 5 was 62) fails.
+- Gate step moved AFTER the cache save (this run's failure discarded 622
+  refetches + 2,378 revid stamps — no longer possible).
+- LESSON: python .replace() patches must be verified line-by-line — two
+  fragments silently failed to apply, producing a half-patched script that
+  compared strings against objects (everything "vanished"); rewrote the
+  whole file instead. Batch-smoke before push, every time.
+Pushed 5c… dispatch: run for Revolutionaries + gate re-execution.

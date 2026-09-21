@@ -99,20 +99,22 @@ jobs:
           NODE_OPTIONS: --max-old-space-size=6144
         run: npm run build
 
-      # no-silent-loss gate (Issue 5 class): the live site is still the
-      # PREVIOUS deployment here, so any page this build DROPPED must be
-      # listed in pipeline/intentional-removals.txt or the run goes red
-      # BEFORE the cache save + seed publish + deploy propagate the loss.
-      - name: Content invariants (no silent page loss vs live site)
-        env:
-          SITE_URL: https://chalchitra-pied.vercel.app
-        run: npx tsx pipeline/postdeploy-check.ts
-
       - name: Save pipeline caches (incremental — pages + api + tmdb + snapshots)
         uses: actions/cache/save@v4
         with:
           path: data/cache
           key: pipeline-cache-${{ github.run_id }}
+
+      # no-silent-loss gate (Issue 5 class): the live site is still the
+      # PREVIOUS deployment here, so any page this build DROPPED must be a
+      # rename (pageid survives), an intentional removal, or small tolerated
+      # churn — anything bigger goes red BEFORE the seed publish + deploy
+      # propagate the loss. Runs AFTER the cache save so a gate failure does
+      # not discard the run's refresh work (refetches + revid stamps).
+      - name: Content invariants (no silent page loss vs live site)
+        env:
+          SITE_URL: https://chalchitra-pied.vercel.app
+        run: npx tsx pipeline/postdeploy-check.ts
 
       # publish the refreshed cache as the seed release — Render's static
       # build (and any future cache-miss CI run) downloads it anonymously

@@ -157,6 +157,8 @@ export interface SearchDoc {
   rd?: string;
   /** portrait URL (persons only) — search result thumbnails */
   i?: string;
+  /** Wikipedia pageid — rename detection for the postdeploy content gate */
+  pid?: number;
   /** extra searchable terms */
   q: string[];
 }
@@ -184,6 +186,7 @@ export function buildSearchDocuments(
       p: item.poster,
       r: item.rating?.value,
       rd: item.releaseDate,
+      pid: item.pageid,
       // top-billed only: full cast arrays made the index 11MB at 39k docs;
       // 8 names keeps the searchable-by-actor experience at a third the size
       q: [...linkedNames].slice(0, 8),
@@ -199,6 +202,7 @@ export function buildSearchDocuments(
       k: 'person',
       t: person.name,
       i: person.image,
+      pid: person.pageid,
       q: [...titles],
     });
   }

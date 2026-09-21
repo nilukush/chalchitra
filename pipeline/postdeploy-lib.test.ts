@@ -2,21 +2,38 @@ import { describe, expect, it } from 'vitest';
 import { diffDocIds, docIdToUrl, sampleCanaryIds } from './postdeploy-lib.js';
 
 describe('diffDocIds (no-silent-loss contract)', () => {
-  const prev = ['movie:a', 'movie:b', 'series:c', 'person:d'];
+  const prev = [
+    { id: 'movie:a', pid: 1 },
+    { id: 'movie:b', pid: 2 },
+    { id: 'series:c', pid: 3 },
+    { id: 'person:d', pid: 4 },
+  ];
 
   it('unexpected vanishings are pages present live but missing from the new build', () => {
-    const plan = diffDocIds(prev, ['movie:a', 'series:c'], []);
+    const plan = diffDocIds(prev, [{ id: 'movie:a', pid: 1 }, { id: 'series:c', pid: 3 }], []);
     expect(plan.unexpected).toEqual(['movie:b', 'person:d']);
   });
 
+  it('a vanished id whose pageid survives under a NEW id is a rename, not loss', () => {
+    // Wikipedia renamed the article: slug 'movie:old-name' → 'movie:new-name', same pageid
+    const plan = diffDocIds([{ id: 'movie:old-name', pid: 7 }], [{ id: 'movie:new-name', pid: 7 }], []);
+    expect(plan.renamed).toEqual(['movie:old-name']);
+    expect(plan.unexpected).toEqual([]);
+  });
+
+  it('pid-less live docs (transitional old index) cannot be rename-classified', () => {
+    const plan = diffDocIds([{ id: 'movie:old-name' }], [{ id: 'movie:new-name', pid: 7 }], []);
+    expect(plan.unexpected).toEqual(['movie:old-name']);
+  });
+
   it('intentional removals are tolerated and reported separately', () => {
-    const plan = diffDocIds(prev, ['movie:a', 'series:c'], ['person:d']);
+    const plan = diffDocIds(prev, [{ id: 'movie:a', pid: 1 }, { id: 'series:c', pid: 3 }], ['person:d']);
     expect(plan.unexpected).toEqual(['movie:b']);
     expect(plan.intentional).toEqual(['person:d']);
   });
 
   it('added docs (new pages) are reported, never a failure', () => {
-    const plan = diffDocIds(prev, [...prev, 'movie:new'], []);
+    const plan = diffDocIds(prev, [...prev, { id: 'movie:new' }], []);
     expect(plan.unexpected).toEqual([]);
     expect(plan.added).toEqual(['movie:new']);
   });
