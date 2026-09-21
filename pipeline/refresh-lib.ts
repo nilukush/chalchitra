@@ -70,3 +70,37 @@ export function planValidation(
   }
   return { stale, legacy };
 }
+
+export interface LegacyClassification {
+  /** validated unchanged since fetch — stamp these revids into the cache files */
+  fresh: Array<{ pageid: number; revid: number }>;
+  /** edited after their fetch — refetch (which stamps the new revid) */
+  stale: number[];
+}
+
+/**
+ * Legacy-file validation via TOP-REVISION timestamps (Issue 6 follow-up).
+ * The MediaWiki API rejects rvstart/rvlimit/rvdir on multi-page queries, so
+ * batched "revid at fetch time" lookups are impossible; the top revision of
+ * many pages IS batchable, and 'top revision predates the fetch' proves the
+ * cached content is still current (it can only be the revision we fetched).
+ * fetchedAt millisecond precision is truncated to seconds before comparing.
+ */
+export function classifyLegacyByTimestamp(
+  entries: Array<{ pageid: number; fetchedAt: string }>,
+  tops: Map<number, { revid: number; timestamp: string }>,
+): LegacyClassification {
+  const fresh: Array<{ pageid: number; revid: number }> = [];
+  const stale: number[] = [];
+  for (const entry of entries) {
+    const top = tops.get(entry.pageid);
+    if (!top) {
+      stale.push(entry.pageid); // unresolved → assume edited (conservative)
+      continue;
+    }
+    const fetchedSec = entry.fetchedAt.slice(0, 19) + 'Z';
+    if (top.timestamp <= fetchedSec) fresh.push({ pageid: entry.pageid, revid: top.revid });
+    else stale.push(entry.pageid);
+  }
+  return { fresh, stale };
+}

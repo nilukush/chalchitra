@@ -350,33 +350,28 @@ export async function resolveImageThumbUrls(
   return map;
 }
 
-/** The revid each article had at (or just before) a timestamp — lets refresh
- *  validate legacy cache files without refetching: if the revision at the
- *  page's fetch time equals the live revid, the cached content is still
- *  current. Batched by pageid, paced, NOT disk-cached (like fetchLastRevids). */
-export async function fetchRevidsBefore(
-  entries: Array<{ pageid: number; fetchedAt: string }>,
-): Promise<Map<number, number>> {
-  const map = new Map<number, number>();
-  // sort by fetch time so each batch's members are adjacent, then query at
-  // the batch's LATEST timestamp: an rvstart earlier than a member's true
-  // fetch could falsely validate a page that was edited after that rvstart
-  // (false-fresh); later is merely conservative (a rare extra refetch)
-  const sorted = [...entries].sort((a, b) => a.fetchedAt.localeCompare(b.fetchedAt));
-  for (const batch of chunk(sorted, 50)) {
-    const at = batch.reduce((max, e) => (e.fetchedAt > max ? e.fetchedAt : max), batch[0].fetchedAt);
+/** Top (current) revision id + timestamp for many pages — lets refresh
+ *  validate legacy cache files: a top revision that PREDATES the page's
+ *  fetchedAt proves the cached content is still current. Batchable: unlike
+ *  rvstart/rvlimit/rvdir (single-page-only params the API rejects on
+ *  multi-page queries — learned the hard way in CI on 2026-09-21), a bare
+ *  prop=revisions returns each page's latest revision in batches of 50. */
+export async function fetchTopRevisions(
+  pageids: number[],
+): Promise<Map<number, { revid: number; timestamp: string }>> {
+  const map = new Map<number, { revid: number; timestamp: string }>();
+  for (const batch of chunk(pageids, 50)) {
     const data = await apiGet({
       action: 'query',
-      pageids: batch.map((e) => e.pageid).join('|'),
+      pageids: batch.join('|'),
       prop: 'revisions',
-      rvprop: 'ids',
-      rvdir: 'older', // newest revision at-or-before the timestamp
-      rvstart: at,
-      rvlimit: 1,
+      rvprop: 'ids|timestamp',
     });
     for (const page of data.query?.pages ?? []) {
-      const revid = page.revisions?.[0]?.revid;
-      if (page.pageid > 0 && typeof revid === 'number') map.set(page.pageid, revid);
+      const rev = page.revisions?.[0];
+      if (page.pageid > 0 && typeof rev?.revid === 'number') {
+        map.set(page.pageid, { revid: rev.revid, timestamp: rev.timestamp });
+      }
     }
   }
   return map;

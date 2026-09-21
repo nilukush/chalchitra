@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planRefresh, planRenames, planValidation } from './refresh-lib.js';
+import { classifyLegacyByTimestamp, planRefresh, planRenames, planValidation } from './refresh-lib.js';
 
 describe('planRefresh', () => {
   it('flags pageids whose revid changed', () => {
@@ -62,5 +62,41 @@ describe('planValidation (revid-aware staleness)', () => {
     const plan = planValidation([{ pageid: 4, revid: 5 }, { pageid: 5 }], live);
     expect(plan.stale).toEqual([]);
     expect(plan.legacy).toEqual([]);
+  });
+});
+
+// ── Issue 6 follow-up: legacy validation via top-revision timestamps ──
+// (rvstart/rvlimit are single-page-only in the MediaWiki API — batched
+// historical queries are rejected; top-revision queries are batchable)
+describe('classifyLegacyByTimestamp', () => {
+  it('stamps pages whose top revision predates their fetch (fresh)', () => {
+    const plan = classifyLegacyByTimestamp(
+      [{ pageid: 1, fetchedAt: '2026-09-10T12:00:00Z' }],
+      new Map([[1, { revid: 500, timestamp: '2026-09-01T00:00:00Z' }]]),
+    );
+    expect(plan.fresh).toEqual([{ pageid: 1, revid: 500 }]);
+    expect(plan.stale).toEqual([]);
+  });
+
+  it('flags pages edited after their fetch as stale', () => {
+    const plan = classifyLegacyByTimestamp(
+      [{ pageid: 1, fetchedAt: '2026-09-01T00:00:00Z' }],
+      new Map([[1, { revid: 500, timestamp: '2026-09-10T12:00:00Z' }]]),
+    );
+    expect(plan.stale).toEqual([1]);
+    expect(plan.fresh).toEqual([]);
+  });
+
+  it('treats a revision in the SAME second as the fetch as fresh (fetchedAt ms are truncated)', () => {
+    const plan = classifyLegacyByTimestamp(
+      [{ pageid: 1, fetchedAt: '2026-09-10T12:00:00.857Z' }],
+      new Map([[1, { revid: 500, timestamp: '2026-09-10T12:00:00Z' }]]),
+    );
+    expect(plan.fresh).toEqual([{ pageid: 1, revid: 500 }]);
+  });
+
+  it('pages with no top revision resolved stay stale (conservative)', () => {
+    const plan = classifyLegacyByTimestamp([{ pageid: 1, fetchedAt: '2026-09-01T00:00:00Z' }], new Map());
+    expect(plan.stale).toEqual([1]);
   });
 });

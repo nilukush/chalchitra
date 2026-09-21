@@ -19,8 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { loadEnv } from './env.js';
 
 loadEnv();
-import { fetchPages, fetchLastRevids, fetchRevidsBefore } from './wiki-api.js';
-import { planRefresh, planRenames, planValidation } from './refresh-lib.js';
+import { fetchPages, fetchLastRevids, fetchTopRevisions } from './wiki-api.js';
+import { classifyLegacyByTimestamp, planRefresh, planRenames, planValidation } from './refresh-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PAGES_DIR = path.join(ROOT, 'data', 'cache', 'pages');
@@ -152,19 +152,19 @@ async function main() {
       .slice(0, LEGACY_CAP);
     let legacyStale: CachedIndexEntry[] = [];
     if (legacyEntries.length > 0) {
-      console.log(`→ Validating ${legacyEntries.length} legacy cache files (revid check at fetch time${validation.legacy.length > LEGACY_CAP ? `, ${validation.legacy.length - LEGACY_CAP} deferred to next runs` : ''})…`);
-      const historical = await fetchRevidsBefore(legacyEntries.map((e) => ({ pageid: e.pageid, fetchedAt: e.fetchedAt })));
-      const confirmedFresh: CachedIndexEntry[] = [];
-      legacyStale = legacyEntries.filter((e) => {
-        const then = historical.get(e.pageid);
-        if (then !== undefined && then === current[String(e.pageid)]) {
-          confirmedFresh.push(e); // unchanged since fetch — stamp and move on
-          return false;
-        }
-        return true; // no revision found before the timestamp = edited since
-      });
-      for (const e of confirmedFresh) stampRevid(e, current[String(e.pageid)]);
-      console.log(`  ${confirmedFresh.length} confirmed unchanged (stamped), ${legacyStale.length} stale → refetch`);
+      console.log(`→ Validating ${legacyEntries.length} legacy cache files (top-revision timestamp check${validation.legacy.length > LEGACY_CAP ? `, ${validation.legacy.length - LEGACY_CAP} deferred to next runs` : ''})…`);
+      const tops = await fetchTopRevisions(legacyEntries.map((e) => e.pageid));
+      const classified = classifyLegacyByTimestamp(
+        legacyEntries.map((e) => ({ pageid: e.pageid, fetchedAt: e.fetchedAt })),
+        tops,
+      );
+      const freshSet = new Set(classified.fresh.map((f) => f.pageid));
+      legacyStale = legacyEntries.filter((e) => !freshSet.has(e.pageid));
+      for (const { pageid, revid } of classified.fresh) {
+        const entry = byPageid.get(pageid);
+        if (entry) stampRevid(entry, revid);
+      }
+      console.log(`  ${classified.fresh.length} confirmed unchanged (stamped), ${legacyStale.length} stale → refetch`);
     }
 
     const toRefetch = [...staleEntries, ...legacyStale];

@@ -2063,3 +2063,21 @@ no-previous-version. Local verify:page on the-revolutionaries shows cache revid
 1375729867 == live, date present (healed by the Issue 6 fix).
 Dispatched Issue-6 run 35571072883 still in flight at session end (43m/≈3-4h) —
 verify Revolutionaries back in the production rail next sweep.
+
+## Session 56 (cont. — 2026-09-21 ~09:15 UTC) — first CI run of Issue-6 fix FAILED: rvstart is single-page-only; timestamp redesign shipped
+
+Run 35571072883 failed at the legacy-validation step: MediaWiki REJECTS
+rvstart/rvlimit/rvdir on multi-page queries ("may only be used on a single
+page"). My local smoke had used ONE pageid (allowed) — the 50-page batch
+shape never ran locally. **LESSON: API-helper changes must be smoke-tested
+at the real BATCH shape, not a single-item call.** No production impact
+(run died before dataset/build; snapshot+cache unsaved → next run re-diffs
+cleanly). Refresh leg stats before the crash: 470 edited refetched fine,
+52,585 legacy files found (3,000/run drain).
+
+Redesign (TDD, 321 tests): fetchRevidsBefore deleted; fetchTopRevisions
+queries bare prop=revisions (NO traversal params → batchable, returns each
+page's top {revid,timestamp}); classifyLegacyByTimestamp (pure, 4 tests incl.
+same-second boundary: fetchedAt ms truncated) marks top-revision-predates-
+fetch as fresh (stamp revid) else stale (refetch). Batch smoke against the
+real API: 110 ids / 2 batches / 110 resolved ✓. Pushed + re-dispatched.
