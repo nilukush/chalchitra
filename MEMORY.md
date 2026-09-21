@@ -1998,3 +1998,15 @@ slot fired late — delay, not drop) / tomorrow 05:15. Revolutionaries fell
 out of the rail but that is LIVE data: the article's infobox currently has
 no air date (API-checked) — returns automatically when editors re-add one.
 Next session sweep: docs ≥39,102, spot-check urfi/masoom-5 200.
+
+## Session 54 closeout (2026-09-21 06:34 UTC) — Issue 5 CLOSED, steady state
+
+Final verification: delayed 19:25 run green (4h17m). Rail = Waiting Hai,
+Panchanama, Chumbak, The Court, Kerala Underground, Dilon Ki Ram Leela.
+urfi/masoom-5 200 (they are MOVIE slugs — probe the right kind). Docs
+39,098/39,102; remaining 26-doc diff decomposes into 5 correct Pakistani
+evictions + 10 old-wave non-cinema persons (likely correct classify-person
+drops: Stalin/Tegart/news-presenter) + ~11 titles still trickling at
+300/run with 22 new docs added alongside. Issue 5 closed in docs/ISSUES.md.
+Today's 05:15 slot not yet visible at 06:34 UTC (cron delay normal). Both
+question-1 titles restored; Question 1 + Issue 4 arc fully complete.
