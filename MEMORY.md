@@ -1892,265 +1892,76 @@ Next session starts here. State of the world:
   the runbook pipe form for cache eviction); trailing `[ ] && echo` after
   a break returns exit 1 — end watch scripts with explicit `exit 0`.
 
-## Session 54 (2026-09-20) — "New on the small screen" question answered; archive-flag class root-caused
+## Sessions 54-56 CONSOLIDATED (2026-09-20 to 09-21) - Question 1, Issues 4/5/6, foolproofing: ALL CLOSED
 
-Session-start sweep: 10 consecutive daily runs green (both slots firing,
-latest 2 on Sep 19). User question (docs/QUESTIONS.md #1): why do
-Panchanama & Chumbak appear on /series but not in the homepage rail?
+**The arc.** User Q (why are Panchanama & Chumbak missing from 'New on the
+small screen'?) -> 3-agent consensus -> Issue 4 (current-year debuts misfiled
+archive, 25% of 2026 series debuts) -> fix shipped -> my seed-swap regressed
+production (Issue 5, ~62 pages 404) -> recovery + Issue 6 discovered (refresh
+'assume-fresh' froze the stale pages) -> revid fix + foolproofing package ->
+The Revolutionaries (wrongly declared 'live-data' by me) restored via
+REFRESH_TITLES. Final production rail: Waiting Hai, The Revolutionaries
+(rd 2026-09-11), Panchanama, Chumbak, The Court, Kerala Underground - every
+Question-1 title present. HEAD at close: 5ebe7cb; 323 tests.
 
-**Answer (3-agent consensus, all links file:line confirmed).** Rail =
-recentTitles('series', 6): non-archive + released (date <= build day),
-date desc, top 6 (data.ts:163-168, index.astro:136). Shaque excluded
-correctly (upcoming). Panchanama (rd 09-11) / Chumbak (rd 09-10) excluded
-SOLELY by !archive: archive means "discovered by a wave, never seen by the
-category walk" (build-dataset :538 + seenPageIds dedupe), and the series
-walk reads ONE root (extract-titles.ts:23) while films got 12 language
-roots in the Bethlehem fix (19743b8). Wikipedia-side: Chumbak only in the
-GLOBAL 2026-television-series-debuts cat (3-page untriaged queue);
-Panchanama (2026 TV series) has NO year cat at all. Class size (Verifier,
-prod 09-19 data): 25/99 (25%) of 2026 series debuts misfiled, 4/13 of the
-recent window; movies ~4% (Beep). Per-title self-heal exists (editors
-categorize → next nightly promotes; Revolutionaries is the live proof).
+**Issue 4 (8a18c0e).** archive = discovery provenance, not age. Series walk
+now: Indian-debuts root + TWO GLOBAL roots ('2026 television series debuts'
++ '2026 web series debuts') at depth 0 (recursion would walk 41 country
+subcats); global entries carry indiaCheck -> classifyTitlePage gate at
+ingest. Wave works with infobox year === titles.json catalogueYear promote
+out of archive (archiveTierForWaveYear). Wikipedia fact: only Tamil has a
+language year-cat; streaming debuts leak into global/web cats or no cat at
+all (Panchanama has zero year categories).
 
-**Fix designed, consensus, NOT implemented (awaiting user go — recorded
-as docs/ISSUES.md Issue 4):** (1) two GLOBAL series roots in
-extract-titles fetched WITHOUT subcat recursion (2026 television series
-debuts direct-pages + 2026 web series debuts), Indian-gated via
-classifyTitlePage — recursion OFF is mandatory (41 country subcats);
-(2) build-dataset archive expansion promotes archive:false when infobox
-year === catalogue year (catches zero-cat Panchanama/Beep class);
-(3) keep !archive on rails; clean stale data.ts:127 comment + dead
-catalogueMovies/catalogueSeries exports. Side finding: 2 non-Indian
-series in dataset (Headline/BD, Bas Tera Saath Ho/PK) — classify-gate
-scope leak, look during Issue 4.
+**Issue 5 (self-inflicted).** Published my weeks-stale local cache as seed +
+evicted CI caches -> CI bootstrapped my corpus -> ~56 CI-only titles + 11
+persons 404'd. Count deltas were invisible (corpora differ in CONTENT, not
+size). Recovery: CI's expand trickle re-discovers (+83/run); persons
+self-heal via dataset fetchPages. ~10 non-cinema persons from old waves
+stayed gone (correct classify drops: Stalin/Tegart).
 
-Answer written to docs/QUESTIONS.md; Issue 4 opened in docs/ISSUES.md.
-No code changed; 291 tests untouched. Local data/*.json stale vs CI
-(several weeks) — production questions must be answered from the
-production build (search-index.json rd/y fields) or live site, not local
-data.
+**Issue 6 (2-layer).** Seed swap gave CI a Sep-1 copy whose infobox released
+param was an HTML-comment placeholder; editors added the real date at
+premiere; edit died in the eviction. planRefresh treated snapshot-absent
+pages as fresh then SNAPSHOTTED them at live revid -> staleness permanently
+invisible (~30k pages frozen). Fix: CachedPage.revid stamped at fetch;
+planValidation exact-diffs; legacy files validated via TOP-REVISION
+TIMESTAMPS (fetchTopRevisions - bare prop=revisions, NO rvstart/rvlimit/
+rvdir: those are SINGLE-PAGE-ONLY params, learned via CI failure
+35581100526); classifyLegacyByTimestamp (fetchedAt truncated to seconds).
+Drain: 3k/run OLDEST-first (~46k left at close, stale rate dropping:
+622->657->660->307). REFRESH_TITLES env/dispatch-input = surgical heal lever.
 
-## Session 54 (cont. — 2026-09-20 afternoon) — Issue 4 fix SHIPPED (8a18c0e, 305 tests)
+**Foolproofing package (6327e70 + cb59a24 + ad9a937).** Content gate in CI
+between cache-save and seed-publish (live = previous deployment there ->
+build-vs-live doc diff; rename-aware via pid now in ALL search docs;
+GATE_TOLERANCE 25 with always-logged tolerated churn; canaries 10). Guarded
+scripts-seed.sh swap (count tripwire + EXACT doc-id superset via
+postdeploy-check --from-data) + rollback --yes (one prev seed version
+kept). npm run verify:page (pageid-anchored record/cache/live; GOTCHA:
+raw MediaWiki fetches need formatversion=2). AGENTS #7 postmortem->test, #8
+pageid-anchored verdicts. Intentional removals: pipeline/intentional-removals.txt.
 
-User "ok" → implemented the consensus fix, TDD-first:
-- extract-titles: series walk = Indian-debuts root + TWO GLOBAL roots
-  (`2026 television series debuts`, `2026 web series debuts`) at **depth 0**
-  (recursion would walk 41 country subcats); titles.json gains catalogueYear;
-  global-only entries carry indiaCheck → build-dataset gates them through
-  classifyTitlePage (kind verdict ignored; root fixes kind). Walk: 99 series
-  (70 Indian + 29 global-only, 4 overlap).
-- build-dataset: indiaCheck gate at catalogue ingest; wave works with
-  infobox year === catalogueYear promoted via archiveTierForWaveYear
-  (dataset-lib); expansion evicts via shouldEvictNonIndian.
-- **Mid-impl correction (important precedent)**: first category-gate cut
-  rejected ANY page with a `<year> (Bangladeshi|Pakistani|…)…` category →
-  798 evicted, 561 of them ALSO Indian-categorised (Indian Bengali films
-  routinely carry "YYYY Bangladeshi films" too — shared industry). Audited
-  BEFORE shipping by diffing the drop set against Indian markers. Corrected
-  rule: the category decides ONLY for signal-free infoboxes (no
-  country/language); infobox country=India always wins. Final local
-  eviction: exactly 6 Pakistani Hum-TV dramas. Lesson: any eviction-style
-  gate MUST be audited against the actual drop set before it ships.
-- resolveImageThumbUrls batches now SORTED: membership changes no longer
-  reshuffle every 50-title batch cache key → no mass imageinfo re-fetch →
-  no 429 trip (that instability caused two throttled runs; 7-min cooldown
-  + re-run per runbook works, phases are cache-resumable).
-- Verified locally: dataset 25,787/3,836/9,414; build 39,410 pages; built
-  rail = Waiting Hai, **Chumbak**, The Court, Kerala Underground, Dilon Ki
-  Ram Leela, Bigg Boss; 792 shared-category Indian titles kept (Bengali
-  1,514→1,760); Aga Aai Aaho Aai promoted. Panchanama is CI-corpus-only
-  locally — CI's build is its live proof.
-- Ship sequence: commit 8a18c0e → seed republished (926MB, 1 part; local
-  cache behind CI's so smaller — CI merges with its actions/cache) → 4 CI
-  caches evicted → pushed → refresh-daily dispatched (run 35512142493,
-  ~2-3h). Check its completion + rail on production next session start.
-- data.ts: dead catalogueMovies/catalogueSeries removed, comment fixed.
+**Durable lessons (each cost a real incident):**
+1. Any eviction-style gate MUST be audited against the actual drop set
+   before shipping (first cut wrongly evicted 561 Indian titles carrying
+   shared Bengali-industry categories; infobox country=India wins).
+2. A runbook step that REPLACES a remote corpus needs a superset check.
+3. 'Upstream data / not our bug' verdicts require pageid-anchored checks -
+   the bare title 'The Revolutionaries' is a reggae band; the series is
+   '(TV series)' (my false 'live-data reality' claim delayed the fix a day).
+4. API-helper changes must be smoke-tested at the real BATCH shape (the
+   single-page smoke passed a query the API rejects at 50 pages).
+5. python .replace() patches must be verified applied - silent no-ops
+   shipped a half-patched script once; prefer rewriting whole files.
+6. Failed runs save NOTHING (snapshot post-success) -> failures re-diff
+   cleanly; but gate-before-cache-save discarded refresh work once - gates
+   run AFTER saves now.
+7. Sort math: 'oldest-first' over 52k files at 3k/run is days for a Sep-1
+   page - targeted levers beat queue tuning when a specific page matters.
 
-## Session 54 (cont. — 2026-09-20 evening) — post-deploy verification caught a self-inflicted regression; guard shipped
-
-Dispatched Issue 4 run 35512142493 went GREEN (4h7m) — and was the first
-natural CI bootstrap-from-seed-parts (validated Issue 3's residual). Production
-rail verified: **Chumbak live in "New on the small screen"**. But /series/
-panchanama 404'd: I had published my weeks-stale LOCAL cache as the seed AND
-evicted all 4 CI caches → CI bootstrapped from my corpus → ~56 CI-only titles
-+ 11 persons regressed (~6 other 404s were the CORRECT Pakistani evictions).
-Docs 39,102→39,040; size delta (−51) invisible in logs — content differs, not
-size. CI's own trickle re-discovered the set same-day (+83 accepted, 326
-pending); 17:15 slot was cron-dropped so I dispatched run 35527499604 (~9h
-sooner restore); persons self-heal via dataset's fetchPages. Nothing is lost
-— all pages re-derive from Wikipedia; Panchanama back with the next build or
-two. **Guard shipped** (AGENTS.md + CLAUDE.md): evict only when local
-page-cache ⊇ production (compare data/cache/pages count vs search-index docs);
-else catch up locally first or skip eviction.
-
-LESSON (matches the permanent-fixes memory): a runbook step that REPLACES a
-remote corpus needs a superset check, not just "I fetched new pages locally".
-The Issue 4 code fix itself is verified good end-to-end (local + production
-rail); the regression was purely the cache-swap mechanics around it.
-
-## Session 54 (cont. — 2026-09-20 ~21:05 UTC) — Issue 5 recovery VERIFIED on production
-
-Restore run 35527499604 green (3h3m). Production now: **panchanama 200 and
-IN the rail** — Waiting Hai, Panchanama, Chumbak, The Court, Kerala
-Underground, Dilon Ki Ram Leela (both Question-1 titles restored). Docs
-39,040→39,070; remaining ~26-title tail builds in the 19:25 run (the 17:15
-slot fired late — delay, not drop) / tomorrow 05:15. Revolutionaries fell
-out of the rail but that is LIVE data: the article's infobox currently has
-no air date (API-checked) — returns automatically when editors re-add one.
-Next session sweep: docs ≥39,102, spot-check urfi/masoom-5 200.
-
-## Session 54 closeout (2026-09-21 06:34 UTC) — Issue 5 CLOSED, steady state
-
-Final verification: delayed 19:25 run green (4h17m). Rail = Waiting Hai,
-Panchanama, Chumbak, The Court, Kerala Underground, Dilon Ki Ram Leela.
-urfi/masoom-5 200 (they are MOVIE slugs — probe the right kind). Docs
-39,098/39,102; remaining 26-doc diff decomposes into 5 correct Pakistani
-evictions + 10 old-wave non-cinema persons (likely correct classify-person
-drops: Stalin/Tegart/news-presenter) + ~11 titles still trickling at
-300/run with 22 new docs added alongside. Issue 5 closed in docs/ISSUES.md.
-Today's 05:15 slot not yet visible at 06:34 UTC (cron delay normal). Both
-question-1 titles restored; Question 1 + Issue 4 arc fully complete.
-
-## Session 55 (2026-09-21) — Issue 6: refresh "assume-fresh" freeze; revid-stamp fix
-
-User report: Revolutionaries missing from /series top ("was there yesterday").
-Root cause 2-layer: (1) seed swap (Issue 5) gave CI the Sep-1 copy whose
-released field is an HTML-comment placeholder; editors added the real date at
-premiere — edit died in the eviction. (2) planRefresh treats snapshot-absent
-pages as fresh, then SNAPSHOTS them at live revid → staleness permanently
-invisible (~30k pages frozen). CORRECTION: my Sep-20 closeout "live-data
-reality" claim was WRONG — I had probed the reggae-band article at the bare
-title; the series is "The Revolutionaries (TV series)". Lesson: when a
-live-data check drives a "not our bug" verdict, verify the ARTICLE IDENTITY
-(pageid), not a title string.
-
-Fix (TDD, 309 tests): CachedPage.revid stamped at fetch (rvprop=ids was
-already requested); planValidation exact-diffs revid pages, routes revid-less
-files to fetchRevidsBefore (batched historical revid at fetch timestamp,
-batch-max timestamp to stay conservative); refresh.ts validates 3,000
-legacy/run oldest-first (stamps unchanged files free, refetches stale).
-Drain ≈ 10 daily runs; new fetches exact forever. Verified end-to-end on
-pageid 80457127 (stale detected → refetch → revid stamped → date in cache).
-Build 39,410 ✓. Next sweep: Revolutionaries back in rail; watch first
-CI run's validation log line for sane numbers.
-
-## Session 56 (2026-09-21) — foolproofing package SHIPPED (user "ok" on the P1-P6 plan)
-
-Built and verified (317 tests, +8):
-1. **CI content gate**: pipeline/postdeploy-check.ts (+postdeploy-lib pure diff,
-   8 tests) wired into refresh-daily BETWEEN build and cache-save — live site is
-   still the previous deployment there, so any doc the new build dropped fails
-   the run unless declared in pipeline/intentional-removals.txt. Canary fetches
-   sample 10 live docs. Flags: --live-only (triage), --from-data (guard mode,
-   reads data/*.json instead of dist).
-2. **Guarded swap**: scripts-seed.sh swap [--dry-run] = count tripwire (MIN_MARGIN
-   15k, FORCE=1 escape) + EXACT doc-id superset check via postdeploy-check
-   --from-data, then publish + evict. KEY INSIGHT while building: the count
-   tripwire alone could NOT have caught Issue 5 (corpora differed by CONTENT
-   ~60 pages each way, same size) — the exact diff is the real guard.
-3. **Rollback**: publish now renames current parts → seed-prev-NN.part (one
-   previous version kept; stale higher-numbered prev parts retired);
-   rollback --dry-run/--yes restores + evicts. First prev version appears after
-   the next CI publish.
-4. **verify:page**: pageid-anchored record/cache/live comparison (GOTCHA: raw
-   API fetches need formatversion=2 — v1 puts slot content under slots.main['*'],
-   bit me once). AGENTS.md #8 mandates it for "upstream data" verdicts.
-5. AGENTS.md #7: postmortem→test rule; #8: verify rule; session sweep += live
-   doc-count vs yesterday; CLAUDE.md commands/ops updated.
-Smokes: --from-data correctly refuses my behind-CI corpus (78 live ids missing
-locally — true positive); swap dry-run reports refusal; rollback dry-run reports
-no-previous-version. Local verify:page on the-revolutionaries shows cache revid
-1375729867 == live, date present (healed by the Issue 6 fix).
-Dispatched Issue-6 run 35571072883 still in flight at session end (43m/≈3-4h) —
-verify Revolutionaries back in the production rail next sweep.
-
-## Session 56 (cont. — 2026-09-21 ~09:15 UTC) — first CI run of Issue-6 fix FAILED: rvstart is single-page-only; timestamp redesign shipped
-
-Run 35571072883 failed at the legacy-validation step: MediaWiki REJECTS
-rvstart/rvlimit/rvdir on multi-page queries ("may only be used on a single
-page"). My local smoke had used ONE pageid (allowed) — the 50-page batch
-shape never ran locally. **LESSON: API-helper changes must be smoke-tested
-at the real BATCH shape, not a single-item call.** No production impact
-(run died before dataset/build; snapshot+cache unsaved → next run re-diffs
-cleanly). Refresh leg stats before the crash: 470 edited refetched fine,
-52,585 legacy files found (3,000/run drain).
-
-Redesign (TDD, 321 tests): fetchRevidsBefore deleted; fetchTopRevisions
-queries bare prop=revisions (NO traversal params → batchable, returns each
-page's top {revid,timestamp}); classifyLegacyByTimestamp (pure, 4 tests incl.
-same-second boundary: fetchedAt ms truncated) marks top-revision-predates-
-fetch as fresh (stamp revid) else stale (refetch). Batch smoke against the
-real API: 110 ids / 2 batches / 110 resolved ✓. Pushed + re-dispatched.
-
-## Session 56 (cont. — 2026-09-21 ~12:40 UTC) — content gate first run: false-positive on rename churn; gate made rename-aware + tolerance
-
-Run 35581100526: validation WORKED (3,000 legacy checked, 2,378 stamped
-unchanged, 622 stale refetched — the top-revision API shape is correct) and
-the dataset built, but the run failed at the CONTENT GATE on first
-execution: 4 vanished docs (418, vayasu-pilichindi, r-b-choudary, savvy) +
-8 new. Root: Wikipedia renames/merges change doc-id strings ROUTINELY
-(≈30/run; Vayasu Pilichindi is now a redirect) — id-level diff without
-rename awareness cries wolf. Fixes (323 tests):
-- search docs now carry `pid` (pageid) → the gate classifies a vanished id
-  whose pageid survives under a new id as RENAMED (never a failure). Live
-  index lacks pid until a pid-carrying build deploys (one-cycle transition).
-- GATE_TOLERANCE (default 25): unexplained churn ≤ tolerance passes but is
-  ALWAYS logged for the sweep; mass loss (Issue 5 was 62) fails.
-- Gate step moved AFTER the cache save (this run's failure discarded 622
-  refetches + 2,378 revid stamps — no longer possible).
-- LESSON: python .replace() patches must be verified line-by-line — two
-  fragments silently failed to apply, producing a half-patched script that
-  compared strings against objects (everything "vanished"); rewrote the
-  whole file instead. Batch-smoke before push, every time.
-Pushed 5c… dispatch: run for Revolutionaries + gate re-execution.
-
-Session 56 addendum: the late-firing 05:15 slot (started 10:42 UTC) held
-the concurrency group with the OLD strict gate (pre-save placement, pre-
-tolerance commit) — deterministic same-cache inputs meant it would fail at
-the gate and discard 4h of work again. CANCELLED it mid-dataset (safe: its
-deploy leg was unreachable) so the queued fixed dispatch 35598873930 could
-start immediately. Watcher active; green expected ~18:00 UTC.
-
-## Session 56 closeout (2026-09-21 ~18:00 UTC) — gate GREEN in CI; drain-order bug found
-
-Run 35598873930 SUCCESS: validation drained (2,343 stamped, 657 refetched),
-gate passed ("tolerated churn 3 ≤ 25: movie:418, vayasu-pilichindi,
-r-b-choudary" — sweep should look at these; savvy returned on its own),
-canaries 10/10, docs 39,103 ALL carrying pid, deploy done. BUT
-Revolutionaries STILL rd=None: the healed copy is LOCAL-only; CI's copy is
-legacy-stale and the drain slice was readdir/pageid ORDER, not oldest-first
-as documented — pageid 80457127 sat deep in the 49.5k deferred tail. Fixed
-(758b0db): drain sorts by fetchedAt ascending → Sep-1 pages (incl.
-Revolutionaries) validate in the NEXT run's first slice. Dispatched
-35635300756; Revolutionaries expected in that build's rail (~21:00 UTC).
-Sweep checklist: Revolutionaries dated+in-rail; the 3 tolerated-churn docs
-(one-off verify:page on each); drain continues 3k/run oldest-first.
-
-## Session 56 final (2026-09-21 ~21:00 UTC) — REFRESH_TITLES lever; drain-order arithmetic
-
-Run 35635300756 green (drain slice 2: 2,340 stamped, 660 refetched; gate
-clean, churn down to 2: livingston+savvy — the earlier 3 resolved
-themselves). BUT Revolutionaries STILL undated: oldest-first drain has
-~46k pages fetched BEFORE its Sep-1 date ahead of it (~5-8 days at 3k/run
-x2 runs/day) — my "oldest-first fixes it" claim was wrong arithmetic.
-Durable fix instead: **REFRESH_TITLES** — a force-refresh lever (env +
-workflow_dispatch input `refresh_titles`): named articles are invalidated
-+ refetched through the paced path BEFORE the diff. Surgical heal for
-stuck-stale pages AND future user-reported staleness. Locally proven
-(80457127 rewritten, revid stamped). Dispatching with
-refresh_titles="The Revolutionaries (TV series)" → dated + in-rail on
-that build. Also: snapshot saves happen ONLY on success — failed runs
-re-diff stale snapshots (harmless, noted).
-
-## Session 56 END (2026-09-21 23:24 UTC) — Revolutionaries BACK; full arc closed
-
-Run 35654524052 (REFRESH_TITLES dispatch): success. "1/1 pages
-force-refreshed" at 21:01; gate ZERO churn + canaries 10/10. Production
-rail NOW: Waiting Hai, **The Revolutionaries (rd 2026-09-11, slot 2)**,
-Panchanama, Chumbak, The Court, Kerala Underground — every title from
-Question 1 present. The full Issues 4/5/6 + foolproofing arc is closed:
-323 tests, content gate live, pid-index live, swap/rollback/verify:page
-shipped, REFRESH_TITLES lever proven end-to-end in CI. Steady state: the
-legacy drain continues 3k/run oldest-first (~46k left, ~8 days); sweep
-watches churn lists (livingston/savvy flip-flop — likely slug churn, check
-with verify:page if it recurs).
+**Steady state / sweep.** Both slots green; drain continues nightly;
+tolerated-churn lists in gate logs are the sweep's eyeball item (livingston/
+savvy flip-flopped once, tom-and-jerry leaked+dropped once - classify
+cleanup working). Watch: docs count (~39.1k, slow growth normal),
+'Validating N legacy... deferred' shrinking toward 0.
