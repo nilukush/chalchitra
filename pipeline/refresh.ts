@@ -50,6 +50,14 @@ function indexCache(): CachedIndexEntry[] {
   return entries;
 }
 
+
+/** Validated page-cache path: entries come from readdirSync of PAGES_DIR and
+ *  must be plain <digits>.json names — anything else fails closed. */
+function pagesCacheFile(file: string): string {
+  if (!/^\d{1,12}\.json$/.test(file)) throw new Error(`unsafe page cache file name: ${file.slice(0, 24)}`);
+  return `${PAGES_DIR}/${file}`;
+}
+
 async function main() {
   // targeted force-refresh lever (foolproofing, 2026-09-21): REFRESH_TITLES
   // is a comma/newline-separated list of article titles whose cached copies
@@ -160,9 +168,10 @@ async function main() {
   {
     const validation = planValidation(index, current);
     const stampRevid = (entry: CachedIndexEntry, revid: number) => {
-      const full = JSON.parse(readFileSync(path.join(PAGES_DIR, entry.file), 'utf8'));
+      const file = pagesCacheFile(entry.file);
+      const full = JSON.parse(readFileSync(file, 'utf8'));
       full.revid = revid;
-      writeFileSync(path.join(PAGES_DIR, entry.file), JSON.stringify(full));
+      writeFileSync(file, JSON.stringify(full));
     };
 
     const staleEntries = validation.stale
@@ -200,7 +209,7 @@ async function main() {
     const toRefetch = [...staleEntries, ...legacyStale];
     if (toRefetch.length > 0) {
       const titles = toRefetch.map((e) => e.title);
-      for (const e of toRefetch) rmSync(path.join(PAGES_DIR, e.file), { force: true });
+      for (const e of toRefetch) rmSync(pagesCacheFile(e.file), { force: true });
       console.log(`→ Refetching ${toRefetch.length} revid-stale pages (paced)…`);
       const pages = await fetchPages(titles);
       const recovered = [...pages.values()].filter((p) => p && !p.missing && p.wikitext).length;

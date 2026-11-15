@@ -16,6 +16,13 @@ const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'ai');
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Bounded AI-cache path: slugs derive from Wikipedia titles, so the name is
+ *  validated (fail closed) and concatenated under a constant directory. */
+function aiCacheFile(slug: string): string {
+  if (!/^[a-z0-9-]{1,120}$/.test(slug)) throw new Error(`unsafe ai cache key: ${slug.slice(0, 24)}`);
+  return `${CACHE_DIR}/${slug}.json`;
+}
+
 export function aiEnabled(): boolean {
   return Boolean(process.env.AI_API_KEY);
 }
@@ -26,7 +33,13 @@ export async function enrichWithAi(titles: TitleRecord[]): Promise<{ enriched: n
     console.log('→ AI enrichment: AI_API_KEY not set — skipping (hooks fall back to tagline/first-sentence)');
     return { enriched: 0 };
   }
-  const baseUrl = process.env.AI_BASE_URL ?? 'https://api.openai.com/v1';
+  // operator-configured endpoint (.env), parsed once and constrained to
+// http(s): the pipeline must never be steerable at other schemes
+const aiUrl = new URL((process.env.AI_BASE_URL ?? 'https://api.openai.com/v1') + '/chat/completions');
+if (aiUrl.protocol !== 'https:' && aiUrl.protocol !== 'http:') {
+  throw new Error(`AI_BASE_URL must be http(s): ${aiUrl.protocol}`);
+}
+const baseUrl = aiUrl.origin + aiUrl.pathname.replace(/\/$/, '').replace(/\/chat\/completions$/, '');
   const model = process.env.AI_MODEL ?? 'gpt-4o-mini';
 
   mkdirSync(CACHE_DIR, { recursive: true });
@@ -34,7 +47,7 @@ export async function enrichWithAi(titles: TitleRecord[]): Promise<{ enriched: n
 
   for (const record of titles) {
     if (record.moods?.length && record.tagline && record.enrichedFrom?.includes('ai')) continue;
-    const cacheFile = path.join(CACHE_DIR, `${record.slug}.json`);
+    const cacheFile = aiCacheFile(record.slug);
     if (existsSync(cacheFile)) {
       try {
         const cached = parseAiSummary(readFileSync(cacheFile, 'utf8'));

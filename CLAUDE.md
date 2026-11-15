@@ -81,6 +81,11 @@ Current scale (2026-09-19): ~29.7k titles, ~39.5k pages, ~9.4k persons.
   Vercel retention policy (prod 1w, pre-prod/cancelled 1d) + nightly keep-2 prune
   after every deploy. Archive deploys are the ONLY viable free host at this scale
   (Cloudflare 20k-file / Netlify 10k / GH-Pages 1GB caps all exclude ~39k pages).
+- **Storage chart semantics (2026-09-23)**: the dashboard switched from showing
+  the 30-day CUMULATIVE GB-months series (150+ GB, only grows) to CURRENT held
+  storage (8.47/10 at the switch; matches audit-census math). Current-held is
+  the binding number under reported Hobby enforcement — re-run the audit census
+  occasionally; levers: vercel-prune.yml, keep-1, trimming other projects.
 - The permanent VERCEL_TOKEN lives ONLY in the GitHub Actions secret (the old
   expat-salary copy is GONE; no local CLI token exists) — Vercel state is audited
   via the dispatched `vercel-storage-audit.yml` (read-only census) and

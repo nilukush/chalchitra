@@ -25,16 +25,22 @@ import { fileURLToPath } from 'node:url';
 import { diffDocIds, docIdToUrl, sampleCanaryIds, type DocRef } from './postdeploy-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const SITE = (process.env.SITE_URL ?? 'https://chalchitra-pied.vercel.app').replace(/\/$/, '');
+const siteUrl = new URL(process.env.SITE_URL ?? 'https://chalchitra-pied.vercel.app');
+if (siteUrl.protocol !== 'https:' && siteUrl.protocol !== 'http:') throw new Error('SITE_URL must be http(s)');
+const SITE = siteUrl.origin;
 const liveOnly = process.argv.includes('--live-only');
 const fromData = process.argv.includes('--from-data');
 const canaryCount = Number(process.argv.join(' ').match(/--canaries (\d+)/)?.[1] ?? 10);
 const TOLERANCE = Number(process.env.GATE_TOLERANCE ?? 25);
 
-async function fetchJson(url: string, tries = 3): Promise<any> {
+async function fetchJson(pathname: string, tries = 3): Promise<any> {
+  // no URL parameter by design: the target is ALWAYS constructed here from
+  // the module-level validated origin + a relative path — callers cannot
+  // steer the checker at another host
+  const target = new URL(pathname, siteUrl);
   for (let i = 1; i <= tries; i++) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(30_000) });
+      const res = await fetch(target, { signal: AbortSignal.timeout(30_000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return await res.json();
     } catch (err) {
@@ -58,7 +64,7 @@ function readRemovals(): string[] {
 
 async function main() {
   console.log(`→ Content invariants vs live site (${SITE})`);
-  const liveIndex = await fetchJson(`${SITE}/search-index.json`);
+  const liveIndex = await fetchJson('/search-index.json');
   const liveIds: DocRef[] = liveIndex.docs.map((d: any) => ({ id: d.id, pid: d.pid }));
 
   if (!liveOnly) {
@@ -104,7 +110,8 @@ async function main() {
   const canaries = sampleCanaryIds(liveIds.map((d) => d.id), canaryCount);
   let bad = 0;
   for (const id of canaries) {
-    const url = `${SITE}${docIdToUrl(id)}`;
+    const url = new URL(docIdToUrl(id), siteUrl);
+    if (url.origin !== siteUrl.origin) { console.error(`  ✗ canary ${id} → off-origin`); bad++; continue; }
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(30_000), redirect: 'follow' });
       if (!res.ok) {

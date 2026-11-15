@@ -68,7 +68,9 @@ export function planFreshnessRefresh(
   todayIso: string,
   windowDays = 45,
 ): TmdbInvalidation[] {
-  const cutoff = new Date(Date.now() - windowDays * 86_400_000).toISOString().slice(0, 10);
+  // derive the cutoff from todayIso (the caller's clock), not Date.now():
+  // the function stays deterministic for its declared inputs
+  const cutoff = new Date(new Date(todayIso).getTime() - windowDays * 86_400_000).toISOString().slice(0, 10);
   const plan: TmdbInvalidation[] = [];
   for (const title of tracked) {
     if (!title.tmdbId || !title.releaseDate) continue;

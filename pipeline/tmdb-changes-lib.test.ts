@@ -36,11 +36,15 @@ describe('planTmdbRefresh', () => {
 });
 
 describe('planFreshnessRefresh (recent-release force refresh)', () => {
-  const today = '2026-09-03';
+  // date-RELATIVE fixtures: frozen 2026-09 dates rotted once the calendar
+  // moved past their 45-day window — derive everything from todayIso
+  const today = new Date().toISOString().slice(0, 10);
+  const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+  const daysAhead = (n: number) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
   const tracked = [
-    { tmdbId: 1, kind: 'movie' as const, releaseDate: '2026-08-28' },  // 6 days old → in
-    { tmdbId: 2, kind: 'movie' as const, releaseDate: '2026-01-15' },  // months old → out
-    { tmdbId: 3, kind: 'series' as const, releaseDate: '2026-10-01' }, // future → out
+    { tmdbId: 1, kind: 'movie' as const, releaseDate: daysAgo(6) },    // 6 days old → in
+    { tmdbId: 2, kind: 'movie' as const, releaseDate: daysAgo(120) },  // months old → out
+    { tmdbId: 3, kind: 'series' as const, releaseDate: daysAhead(7) }, // future → out
     { tmdbId: 4, kind: 'movie' as const },                             // no date → out
   ];
 
@@ -54,8 +58,8 @@ describe('planFreshnessRefresh (recent-release force refresh)', () => {
   it('includes a 20-day-old release but not a 55-day-old one (45-day cutoff)', () => {
     const plan = planFreshnessRefresh(
       [
-        { tmdbId: 10, kind: 'movie' as const, releaseDate: '2026-07-10' },
-        { tmdbId: 11, kind: 'movie' as const, releaseDate: '2026-08-14' },
+        { tmdbId: 10, kind: 'movie' as const, releaseDate: daysAgo(55) },
+        { tmdbId: 11, kind: 'movie' as const, releaseDate: daysAgo(20) },
       ],
       today,
     );

@@ -1965,3 +1965,33 @@ tolerated-churn lists in gate logs are the sweep's eyeball item (livingston/
 savvy flip-flopped once, tom-and-jerry leaked+dropped once - classify
 cleanup working). Watch: docs count (~39.1k, slow growth normal),
 'Validating N legacy... deferred' shrinking toward 0.
+
+## Session 58 (2026-11-15, after 8-week gap) — Mimosa gate: 18→1 highs via legit hardening; human-commit handoff
+
+Sweep first: nightly pipeline GREEN throughout the gap (latest runs Nov 13-14
+success, 2.5-3h each); live docs 39,378 (Nov 14 build; slow growth normal);
+canaries 10/10. The Sep-22 code ran untouched for 8 weeks — steady state held.
+
+Mimosa git gate (user: "there is a way to still commit"): worked the
+sanctioned paths. Ledger triage mechanism PROVEN (mimosa ledger record with
+finding_blocked events; schema: evidence{kind,boundary=candidate,
+producer=deterministic}, identity needs sha256 codeEvidenceHash, findingId
+must match engine derivation — only engine-recorded findings are manually
+blockable). Code hardening cleared 17 of 18 highs across 5 rounds
+(18→3→2→1): all cache-path construction now fail-closed validator functions
+(hex/digit/slug-validated, concatenated under constant dirs — NO path.join
+on derived components: pageCacheFile, apiCacheFile, tmdbCacheFile,
+aiCacheFile, pagesCacheFile-in-refresh); fetchJson takes PATHS ONLY (target
+constructed from validated origin); canary fetches same-origin-guarded;
+model output enters via boundedAiText (length-capped, control-stripped);
+env loader fixed-constant path. ALSO: freshness-sweep tests were FROZEN-CLOCK
+ROTTEN (hardcoded Sep-2026 fixtures failed in Nov) — now date-relative;
+cutoff derives from todayIso. One wiki-api Sep edit had silently never
+applied (python-replace no-op — lesson re-confirmed; Edit tool only).
+REMAINING 1 high: ai.ts:81 "parseAiSummary command-injection entry" —
+invariant to all restructuring; flags the fetch-parse-cache core of a build
+tool with zero exec sinks = false positive; triage note written, not
+ledger-registrable (engine-derived IDs only).
+THE WAY (user was right): the gate guards ZCode AGENT tool calls only —
+the USER's own terminal has no such hook. All work STAGED; handoff command
+in the session reply. npm test 323/323.

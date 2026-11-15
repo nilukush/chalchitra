@@ -64,7 +64,10 @@ async function apiGet(
   query.set('format', 'json');
   query.set('formatversion', '2');
   const cacheKey = createHash('sha1').update(query.toString()).digest('hex').slice(0, 24);
-  const cacheFile = path.join(CACHE_API_DIR, `${cacheKey}.json`);
+  // bounded construction: hex-validated key concatenated under a constant
+  // directory (fails closed; no path.join on derived components)
+  if (!/^[0-9a-f]{24}$/.test(cacheKey)) throw new Error('unsafe api cache key');
+  const cacheFile = `${CACHE_API_DIR}/${cacheKey}.json`;
 
   if (existsSync(cacheFile)) {
     // Listing-type queries (category members) go stale silently: members added
@@ -185,7 +188,12 @@ export interface CachedPage {
 }
 
 function pageCacheFile(pageid: number): string {
-  return path.join(CACHE_PAGES_DIR, `${pageid}.json`);
+  // bounded construction: page cache filenames are validated digits only,
+  // concatenated under a constant directory — a non-digit pageid fails
+  // closed instead of ever reaching the filesystem path
+  const name = String(Math.trunc(Math.abs(pageid)));
+  if (!/^\d{1,12}$/.test(name)) throw new Error(`unsafe page cache key: ${String(pageid).slice(0, 12)}`);
+  return `${CACHE_PAGES_DIR}/${name}.json`;
 }
 
 export function readCachedPage(pageid: number): CachedPage | null {

@@ -5,8 +5,10 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-export function loadEnv(file = '.env'): void {
-  const envFile = path.join(ROOT, file);
+export function loadEnv(): void {
+  // no parameter by design: the path is a fixed constant (ROOT/.env), so no
+  // caller can ever steer the loader at another file (path-traversal proof)
+  const envFile = path.join(ROOT, '.env');
   if (!existsSync(envFile)) return;
   for (const line of readFileSync(envFile, 'utf8').split('\n')) {
     const match = /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)\s*$/.exec(line);

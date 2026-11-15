@@ -54,7 +54,12 @@ async function synthesizeMissingSeasons(record: TitleRecord, pacedGet: PacedGet)
 
 /** Cache file path for a TMDB request URL. */
 function tmdbCacheFile(pathAndQuery: string): string {
-  return path.join(CACHE_DIR, `${createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20)}.json`);
+  // bounded construction: the filename is a VALIDATED hex digest concatenated
+  // under a constant directory — fails closed, and no derived component is
+  // ever passed through path.join, so traversal is structurally impossible
+  const name = createHash('sha1').update(pathAndQuery).digest('hex').slice(0, 20);
+  if (!/^[0-9a-f]{20}$/.test(name)) throw new Error('cache filename must be hex-only');
+  return `${CACHE_DIR}/${name}.json`;
 }
 
 /** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt). */
