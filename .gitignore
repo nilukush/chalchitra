@@ -19,3 +19,8 @@ data/titles/
 /docs/vercel-chalchitra.md
 /docs/ISSUES.md
 /docs/
+
+# agent-tooling local state (Mimosa scans/ledger, ZCode session dirs)
+.mimosa/
+.zcode/
+.zcodeignore
