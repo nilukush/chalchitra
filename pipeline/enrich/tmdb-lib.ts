@@ -168,6 +168,34 @@ export function languageBonus(originalLanguage: string | undefined, recordLangua
 }
 
 
+/** How long a cached "no results" search answer stays trusted. A hit is a
+ *  durable fact about a query; a miss is a claim about a moment — TMDB
+ *  retitles cycle entries through miss windows (Ramayana: Part 1's empty
+ *  search was cached 2026-08-30 mid-retitle and blocked the re-match for
+ *  three months while the live API returned the movie). */
+export const EMPTY_SEARCH_TTL_MS = 7 * 86_400_000;
+
+/** True when a cached search response is an empty result set old enough to
+ *  retry. Non-search endpoints always return false — details/seasons age via
+ *  the change-list invalidation, not a clock. */
+export function staleEmptySearch(pathAndQuery: string, payload: unknown, ageMs: number, ttlMs = EMPTY_SEARCH_TTL_MS): boolean {
+  if (!pathAndQuery.startsWith('/search/')) return false;
+  if (!payload || typeof payload !== 'object') return false;
+  const p = payload as { total_results?: unknown; results?: unknown };
+  const empty = p.total_results === 0 || (Array.isArray(p.results) && p.results.length === 0);
+  return empty && ageMs > ttlMs;
+}
+
+/** Current-year and future-year titles are TMDB's churn zone — retitles and
+ *  merges cluster in the pre-release marketing window. Their search lookups
+ *  skip the disk cache entirely so a retitle can never wedge a catalogue page
+ *  out of enrichment. Once a record carries a tmdbId the change list owns
+ *  its freshness instead. */
+export function needsFreshSearch(record: { tmdbId?: number; year?: number }, now: Date = new Date()): boolean {
+  if (record.tmdbId) return false;
+  return (record.year ?? 0) >= now.getUTCFullYear();
+}
+
 /** Canonical TMDB request URLs — SHARED by enrichment and the change-list
  *  invalidation (tmdb-changes-lib). They MUST live in one place: the
  *  invalidation once drifted from the fetch shapes and silently deleted

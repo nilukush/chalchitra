@@ -59,6 +59,37 @@ export function planTmdbRefresh(
   return plan;
 }
 
+/** Cache sweep for changed ids we NO LONGER track. A retitle can cost us the
+ *  match outright: the search misses, the id drops out of tmdb-tracked.json,
+ *  and its stale details cache then survives every future invalidation
+ *  because neither planner can see it (Ramayana: Part 1 kept an Aug-29
+ *  pre-release payload with 0 votes for three months). Deleting an untracked
+ *  id's cache files is free — refetch only happens if a search ever hits it
+ *  again, and then it deserves fresh data. `alreadyPlanned` ids (tracked plan
+ *  + freshness plan) are skipped so nothing is deleted twice. */
+export function planOrphanSweep(
+  changedMovieIds: number[],
+  changedTvIds: number[],
+  alreadyPlanned: Set<number> = new Set(),
+): TmdbInvalidation[] {
+  const plan: TmdbInvalidation[] = [];
+  const push = (kind: 'movie' | 'tv', tmdbId: number) => {
+    if (alreadyPlanned.has(tmdbId)) return;
+    plan.push({
+      kind,
+      tmdbId,
+      urls: [
+        liteDetailsUrl(kind, tmdbId),
+        catalogueDetailsUrl(kind, tmdbId),
+        ...FALLBACK_LANG_ISO.map((iso) => videosFallbackUrl(kind, tmdbId, iso)),
+      ],
+    });
+  };
+  for (const id of changedMovieIds) push('movie', id);
+  for (const id of changedTvIds) push('tv', id);
+  return plan;
+}
+
 /** Titles released within `windowDays` of today — their ratings move fastest
  *  (votes accumulate right after release) and the /changes feed is LOSSY for
  *  them (10k/day result cap vs our ~21k tracked ids), so we force-refresh

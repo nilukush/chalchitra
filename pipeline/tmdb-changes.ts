@@ -15,7 +15,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { tmdbGet } from './enrich/tmdb.js';
-import { planFreshnessRefresh, planTmdbRefresh, type TrackedTitle } from './tmdb-changes-lib.js';
+import { planFreshnessRefresh, planOrphanSweep, planTmdbRefresh, type TrackedTitle } from './tmdb-changes-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -102,10 +102,18 @@ async function main() {
     ...feedPlan,
     ...planFreshnessRefresh(tracked, end).filter((f) => !feedIds.has(f.tmdbId)),
   ];
+  // orphan sweep: changed ids that LEFT our tracked list still own cache files
+  // (a retitle can cost us the match → the id drops out of tmdb-tracked.json →
+  // every future invalidation goes blind to its stale details). Deleting an
+  // untracked id's files is free — refetch only happens if a search hits it
+  // again, and then it deserves fresh data. Not added to tmdb-dirty: records
+  // carrying these ids are rebuilt empty, so fill-only merges already apply.
+  const orphans = planOrphanSweep(changedMovies, changedTv, new Set(plan.map((p) => p.tmdbId)));
   // dirty ids: the next dataset run may OVERWRITE TMDB-owned fields for these
   // (rating/trailer/backdrop/tagline) instead of fill-only-empty
   writeFileSync(path.join(DATA, 'cache', 'tmdb-dirty.json'), JSON.stringify({ ids: plan.map((p) => p.tmdbId) }));
   let removed = 0;
+  let orphanRemoved = 0;
   for (const entry of plan) {
     for (const url of entry.urls) {
       const key = createHash('sha1').update(url).digest('hex').slice(0, 20);
@@ -116,7 +124,17 @@ async function main() {
       }
     }
   }
-  console.log(`  ${plan.length} tracked titles changed → ${removed} cache entries invalidated`);
+  for (const entry of orphans) {
+    for (const url of entry.urls) {
+      const key = createHash('sha1').update(url).digest('hex').slice(0, 20);
+      const file = path.join(TMDB_CACHE, `${key}.json`);
+      if (existsSync(file)) {
+        rmSync(file, { force: true });
+        orphanRemoved++;
+      }
+    }
+  }
+  console.log(`  ${plan.length} tracked titles changed → ${removed} cache entries invalidated; ${orphans.length} untracked changed ids swept → ${orphanRemoved} orphaned entries deleted`);
 
   writeFileSync(LAST_RUN_PATH, JSON.stringify({ date: end }));
   console.log('✓ Next pipeline:dataset re-fetches these fresh. Runbook: tmdb-changes → dataset → build.');

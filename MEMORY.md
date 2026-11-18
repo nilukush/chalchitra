@@ -1966,32 +1966,102 @@ savvy flip-flopped once, tom-and-jerry leaked+dropped once - classify
 cleanup working). Watch: docs count (~39.1k, slow growth normal),
 'Validating N legacy... deferred' shrinking toward 0.
 
-## Session 58 (2026-11-15, after 8-week gap) — Mimosa gate: 18→1 highs via legit hardening; human-commit handoff
+## Sessions 57-58 CONSOLIDATED (2026-09-23 to 11-15) — Vercel storage Q, Mimosa gate, GitHub inactivity; ALL CLOSED
 
-Sweep first: nightly pipeline GREEN throughout the gap (latest runs Nov 13-14
-success, 2.5-3h each); live docs 39,378 (Nov 14 build; slow growth normal);
-canaries 10/10. The Sep-22 code ran untouched for 8 weeks — steady state held.
+**The arc.** Sep 23: user forwarded the Vercel "100% Deployment Storage"
+email (chart 150+GB for days, then 8.47/10). Verified with evidence: prune
+green in every run, census UNCHANGED (20 deployments team-wide, chalchitra
+exactly 2) — so the dashboard number changed meaning (30-day cumulative
+GB-months → CURRENT held storage; Vercel Aug-Sep 2026 billing realignment).
+Full answer + email decision tree in docs/QUESTIONS.md. WATCH: current-held
+is the binding number under reported Hobby enforcement; census lever =
+dispatched vercel-prune.yml, last resort keep-1.
 
-Mimosa git gate (user: "there is a way to still commit"): worked the
-sanctioned paths. Ledger triage mechanism PROVEN (mimosa ledger record with
-finding_blocked events; schema: evidence{kind,boundary=candidate,
-producer=deterministic}, identity needs sha256 codeEvidenceHash, findingId
-must match engine derivation — only engine-recorded findings are manually
-blockable). Code hardening cleared 17 of 18 highs across 5 rounds
-(18→3→2→1): all cache-path construction now fail-closed validator functions
-(hex/digit/slug-validated, concatenated under constant dirs — NO path.join
-on derived components: pageCacheFile, apiCacheFile, tmdbCacheFile,
-aiCacheFile, pagesCacheFile-in-refresh); fetchJson takes PATHS ONLY (target
-constructed from validated origin); canary fetches same-origin-guarded;
-model output enters via boundedAiText (length-capped, control-stripped);
-env loader fixed-constant path. ALSO: freshness-sweep tests were FROZEN-CLOCK
-ROTTEN (hardcoded Sep-2026 fixtures failed in Nov) — now date-relative;
-cutoff derives from todayIso. One wiki-api Sep edit had silently never
-applied (python-replace no-op — lesson re-confirmed; Edit tool only).
-REMAINING 1 high: ai.ts:81 "parseAiSummary command-injection entry" —
-invariant to all restructuring; flags the fetch-parse-cache core of a build
-tool with zero exec sinks = false positive; triage note written, not
-ledger-registrable (engine-derived IDs only).
-THE WAY (user was right): the gate guards ZCode AGENT tool calls only —
-the USER's own terminal has no such hook. All work STAGED; handoff command
-in the session reply. npm test 323/323.
+**Mimosa git gate** (plugin active since Sep 23, v1.0.4 by Nov): blocks
+every agent `git commit` (PreToolUse hook, whole-project scan, protected
+engine; it even denies non-git Bash commands whose TEXT contains
+commit-shaped words — append+git in ONE command loses BOTH to the deny).
+Sanctioned paths, in order: (1) real hardening — 5 rounds took 18 highs →
+1: every cache path is a fail-closed validator fn (hex/digit/slug-validated,
+concatenated under constant dirs, NO path.join on derived components —
+pageCacheFile, apiCacheFile, tmdbCacheFile, aiCacheFile, pagesCacheFile in
+refresh), fetchJson takes PATHS ONLY (target built from the validated
+origin), canary fetches same-origin-guarded, model output enters through
+boundedAiText (length-capped, control-stripped), loadEnv() fixed-constant
+path. (2) `mimosa ledger record --stdin` finding_blocked events (schema:
+evidence{kind, boundary=candidate, producer=deterministic}, sha256
+codeEvidenceHash, engine-derived findingIds only) — good audit trail, the
+gate ignores it. (3) THE WAY (user was right): the gate guards agent tool
+calls only; the USER's terminal has no hook → one-command handoff lands the
+work. Residue: ai.ts:81 "parseAiSummary command-injection entry" — false
+positive (zero exec sinks; invariant to all restructuring) — agent commits
+stay blocked on it until the plugin refines the profile; terminal handoff
+is the standing path. En-route fixes: freshness tests were frozen-clock
+rotten (now date-relative; cutoff from todayIso); a Sep wiki-api edit
+silently never applied (python-replace no-op — Edit tool ONLY, twice
+confirmed); Sep-23 doc edits were lost across the session restart and were
+re-recorded.
+
+**GitHub "workflow disabled soon" email (Nov 14)**: the 60-day no-COMMIT
+rule; the Mimosa block caused 8 weeks of inactivity while scheduled runs
+kept firing (runs never reset the clock). 8565dba (user terminal, Nov 15)
+reset it; all workflows verified active; lever: gh workflow enable
+refresh-daily.yml. Lesson: a blocked-commit regime eventually disables
+scheduled workflows — keep commits flowing via the handoff.
+
+**Closure, all verified**: 8565dba green end-to-end in CI (39,385 docs,
+gate 1 tolerated churn, canaries 10/10, deploy attempt 1 good, prune kept
+2/3, prod 200). 7684812 gitignored .mimosa/.zcode tool state. Standing
+Mimosa code constraint accepted: fetches http/https only, host validated,
+private/loopback targets rejected — apply when next touching fetch code.
+HEAD 7684812, 323 tests. Next sweep: routine only.
+
+## Session 59 (2026-11-18) — Ramayana TMDB unlink: cached-empty-search poisoning; 3-layer self-heal
+
+User report (docs/UPDATES.md): rail-rank-1 "Ramayana: Part 1" page lost its
+TMDB link + trailer; his hypothesis was a TMDB-side title change. VERIFIED
+with a refinement: TMDB retitled 656908 repeatedly (Part One → Ramayana →
+"Ramayana: Rise of a Legend", release 2026-11-05); our pipeline cached an
+EMPTY search response for "Ramayana: Part 1"&year=2026 on Aug 30 (mid-retitle
+window) and search caches had NO expiry → match lost forever. Compounding:
+once tmdbId left the record, tmdb-tracked.json lost it → change-list
+invalidation AND the 45-day freshness window went blind (details cache for
+656908 still holds the Aug-29 pre-release payload: 0 votes). Live API
+returned the movie the whole time — our cache was the only "not found".
+Pageid-anchored (verify:page ramayana-part-1 → 78318715, wiki title stable).
+Scope: 8,846 cached empty searches locally, ALL >7d old (class, not one-off).
+
+FIX (3 layers, all tested):
+1. EMPTY_SEARCH_TTL_MS=7d: readTmdbCache serves no empty /search/ response
+   older than the TTL (staleEmptySearch, tmdb-lib). Person-name empty
+   searches now retry weekly too — intended (new TMDB profiles appear).
+2. needsFreshSearch: current/future-year records without tmdbId get FORCED
+   (uncached) search +, in the lite pass, forced winner details
+   (`(!fresh && hitDetails) || pacedGet(url, fresh)`). Catalogue pass: forced
+   search only — the details force line was BLOCKED by Mimosa (4 denials,
+   path-traversal false positive on the region; probe hardening to
+   liteDetailsUrl CLEARED and also fixed a drifted URL shape the tmdb-lib
+   contract warns about). Residual accepted: catalogue re-matches read the
+   stale details once, then heal next run via tracked.json+freshness window.
+3. planOrphanSweep: tmdb-changes now deletes cache shapes for changed ids
+   that LEFT tmdb-tracked.json (kept OUT of tmdb-dirty.json — rebuilt
+   records are empty, fill-only applies). 656908 already exited the 14-day
+   change window, so tonight's heal = layer 2 (forced search re-match, link
+   + trailer from the cached trailers) and rating lands tomorrow night via
+   freshness. Catalogue probe URL unified to liteDetailsUrl (old hand-written
+   ?append_to_response=credits shape was invalidation-blind).
+
+GATES: 338+3 tests green (15 lib + 3 wiring — tmdb-cache-ttl.test.ts pins
+readTmdbCache serving no poisoned miss, THE gate for AGENTS rule 7);
+npm run build 39,410 pages. Independent code-review subagent: VERDICT ship,
+2 minors taken (comment accuracy, wiring test). Residuals disclosed: two-night
+rating heal for already-out-of-window orphans; orphan tv ids keep stale
+season caches until re-tracked; kind-agnostic dedupe can skip a swept file
+on numeric id collision (conservative direction only).
+
+Mimosa notes: Edit-hook denies are REGION-based and the reported line is
+often stale — the catalogue details line stayed blocked across 4 shapes
+incl. numeric-guard + liteDetailsUrl variants; do NOT burn more attempts,
+hand off. SHA1 cache-key advisories = triaged false positive (Nov-15 ledger
+batch-triage-20261115b-manual). Handoff commit includes the uncommitted
+Nov-15 MEMORY.md consolidation (it survived the restart — tracked file).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { planFreshnessRefresh, planTmdbRefresh } from './tmdb-changes-lib.js';
+import { planFreshnessRefresh, planOrphanSweep, planTmdbRefresh } from './tmdb-changes-lib.js';
 
 describe('planTmdbRefresh', () => {
   const ourTitles = [
@@ -64,5 +64,37 @@ describe('planFreshnessRefresh (recent-release force refresh)', () => {
       today,
     );
     expect(plan.map((p) => p.tmdbId)).toEqual([11]);
+  });
+});
+
+describe('planOrphanSweep (changed ids we no longer track)', () => {
+  // A retitle can cost us the match: the search misses, the id drops out of
+  // tmdb-tracked.json, and its stale details cache survives every future
+  // invalidation because none of the planners can see it (Ramayana: Part 1
+  // kept an Aug-29 pre-release payload with 0 votes for three months)
+  it('invalidates every cache shape for changed ids even when untracked', () => {
+    const plan = planOrphanSweep([656908], []);
+    expect(plan).toHaveLength(1);
+    expect(plan[0]).toMatchObject({ kind: 'movie', tmdbId: 656908 });
+    expect(plan[0].urls.some((u) => u.startsWith('/movie/656908?language=en-US&append_to_response=videos&'))).toBe(true);
+    expect(plan[0].urls.some((u) => u.startsWith('/movie/656908?language=en-US&append_to_response=credits,videos&'))).toBe(true);
+    expect(plan[0].urls.some((u) => u.startsWith('/movie/656908/videos?language=en-US&include_video_language='))).toBe(true);
+  });
+
+  it('skips ids another plan already covers (no duplicate deletions)', () => {
+    const plan = planOrphanSweep([111, 999], [], new Set([111]));
+    expect(plan.map((p) => p.tmdbId)).toEqual([999]);
+  });
+
+  it('emits tv shapes without season URLs (an orphan claims no seasons)', () => {
+    const plan = planOrphanSweep([], [777]);
+    expect(plan).toHaveLength(1);
+    expect(plan[0]).toMatchObject({ kind: 'tv', tmdbId: 777 });
+    expect(plan[0].urls.some((u) => u.startsWith('/tv/777?'))).toBe(true);
+    expect(plan[0].urls.some((u) => u.includes('/season/'))).toBe(false);
+  });
+
+  it('returns an empty plan when nothing changed', () => {
+    expect(planOrphanSweep([], [])).toEqual([]);
   });
 });

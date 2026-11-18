@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, pickTmdbMatch, scoreNameOverlap } from './tmdb-lib.js';
+import { applyLiteEnrichment, episodesFromTmdbSeason, mergeEpisodeSummaries, needsFreshSearch, pickTmdbMatch, scoreNameOverlap, staleEmptySearch } from './tmdb-lib.js';
 
 describe('scoreNameOverlap', () => {
   const credits = {
@@ -233,5 +233,61 @@ describe('languageIsoFor / languageBonus (TMDB concordance)', () => {
     expect(languageBonus('ta', 'Tamil')).toBeGreaterThan(0);
     expect(languageBonus('th', 'Tamil')).toBeLessThan(0);
     expect(languageBonus(undefined, 'Tamil')).toBe(0);
+  });
+});
+
+describe('staleEmptySearch (search-cache TTL)', () => {
+  // A cached "no results" is a claim about a moment, not a durable fact —
+  // TMDB retitles freeze it into a permanent match loss (Ramayana: Part 1,
+  // empty search cached 2026-08-30 while TMDB cycled Part One → Ramayana →
+  // Rise of a Legend; live search returned the movie the whole final month)
+  it('flags an empty search response older than the TTL', () => {
+    expect(staleEmptySearch('/search/movie?query=x', { total_results: 0, results: [] }, 8 * 86_400_000)).toBe(true);
+  });
+
+  it('keeps a fresh empty search cached (bounded retry budget)', () => {
+    expect(staleEmptySearch('/search/movie?query=x', { total_results: 0, results: [] }, 6 * 86_400_000)).toBe(false);
+  });
+
+  it('never expires non-empty search responses (a hit is a stable fact)', () => {
+    expect(staleEmptySearch('/search/movie?query=x', { total_results: 1, results: [{ id: 1 }] }, 365 * 86_400_000)).toBe(false);
+  });
+
+  it('never expires non-search endpoints (details/seasons age via the change list)', () => {
+    expect(staleEmptySearch('/movie/1?language=en-US', { total_results: 0 }, 365 * 86_400_000)).toBe(false);
+    expect(staleEmptySearch('/tv/2/season/1?language=en-US', {}, 365 * 86_400_000)).toBe(false);
+  });
+
+  it('treats a malformed payload (no counts) as non-expiring', () => {
+    expect(staleEmptySearch('/search/person?query=x', undefined, 999 * 86_400_000)).toBe(false);
+    expect(staleEmptySearch('/search/movie?query=x', null, 999 * 86_400_000)).toBe(false);
+  });
+
+  it('accepts a custom TTL (caller tightens or loosens the window)', () => {
+    expect(staleEmptySearch('/search/movie?query=x', { total_results: 0, results: [] }, 2 * 86_400_000, 86_400_000)).toBe(true);
+    expect(staleEmptySearch('/search/movie?query=x', { total_results: 0, results: [] }, 2 * 86_400_000, 7 * 86_400_000)).toBe(false);
+  });
+});
+
+describe('needsFreshSearch (current-year churn zone)', () => {
+  const now = new Date('2026-11-18T00:00:00Z');
+  it('forces a fresh search for unmatched current-year titles', () => {
+    expect(needsFreshSearch({ year: 2026 }, now)).toBe(true);
+  });
+
+  it('forces a fresh search for future-year titles too (early next-year pages)', () => {
+    expect(needsFreshSearch({ year: 2027 }, now)).toBe(true);
+  });
+
+  it('does not force for past years (the archive is a stable not-on-TMDB fact)', () => {
+    expect(needsFreshSearch({ year: 2025 }, now)).toBe(false);
+  });
+
+  it('does not force once the record carries a tmdbId (change list owns it)', () => {
+    expect(needsFreshSearch({ tmdbId: 656908, year: 2026 }, now)).toBe(false);
+  });
+
+  it('does not force when the year is missing', () => {
+    expect(needsFreshSearch({}, now)).toBe(false);
   });
 });

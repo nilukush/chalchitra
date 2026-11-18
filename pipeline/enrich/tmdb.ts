@@ -5,7 +5,7 @@
  * Responses cached in data/cache/tmdb/.
  */
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { Agent, fetch as undiciFetch } from 'undici';
@@ -15,7 +15,7 @@ import { Agent, fetch as undiciFetch } from 'undici';
  *  connection — without allocating an Agent per request. */
 const tmdbAgent = new Agent({ keepAliveTimeout: 4_000, keepAliveMaxTimeout: 8_000 });
 import type { TitleRecord } from '../types.js';
-import { applyLiteEnrichment, catalogueDetailsUrl, episodesFromTmdbSeason, languageBonus, languageIsoFor, liteDetailsUrl, mergeEpisodeSummaries, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, seasonDetailsUrl, videosFallbackUrl, VIDEO_LANGS, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
+import { applyLiteEnrichment, catalogueDetailsUrl, episodesFromTmdbSeason, languageBonus, languageIsoFor, liteDetailsUrl, mergeEpisodeSummaries, needsFreshSearch, pickTmdbMatch, pickTmdbTrailer, scoreNameOverlap, seasonDetailsUrl, staleEmptySearch, videosFallbackUrl, VIDEO_LANGS, type TmdbCredits, type TmdbSearchResult, type TmdbVideo } from './tmdb-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'cache', 'tmdb');
@@ -62,19 +62,27 @@ function tmdbCacheFile(pathAndQuery: string): string {
   return `${CACHE_DIR}/${name}.json`;
 }
 
-/** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt). */
-function readTmdbCache(pathAndQuery: string): any | undefined {
+/** Disk-cache read for a TMDB request URL; undefined = not cached (or corrupt).
+ *  Cached "no results" SEARCH answers expire after EMPTY_SEARCH_TTL_MS — a
+ *  miss is a claim about a moment, and TMDB retitles cycle entries through
+ *  miss windows (a cached miss once froze Ramayana: Part 1 out of TMDB data
+ *  for three months while the live API returned the movie).
+ *  Exported for the TTL wiring regression test (tmdb-cache-ttl.test.ts). */
+export function readTmdbCache(pathAndQuery: string): any | undefined {
   const cacheFile = tmdbCacheFile(pathAndQuery);
   if (!existsSync(cacheFile)) return undefined;
   try {
-    return JSON.parse(readFileSync(cacheFile, 'utf8'));
+    const cached = JSON.parse(readFileSync(cacheFile, 'utf8'));
+    const ageMs = Date.now() - statSync(cacheFile).mtimeMs;
+    if (staleEmptySearch(pathAndQuery, cached, ageMs)) return undefined;
+    return cached;
   } catch {
     return undefined; // corrupt → refetch
   }
 }
 
-export async function tmdbGet(pathAndQuery: string, apiKey: string): Promise<any | null> {
-  const cached = readTmdbCache(pathAndQuery);
+export async function tmdbGet(pathAndQuery: string, apiKey: string, opts: { force?: boolean } = {}): Promise<any | null> {
+  const cached = opts.force ? undefined : readTmdbCache(pathAndQuery);
   if (cached !== undefined) return cached;
   const cacheFile = tmdbCacheFile(pathAndQuery);
   const url = `${API}${pathAndQuery}${pathAndQuery.includes('?') ? '&' : '?'}api_key=${apiKey}`;
@@ -145,13 +153,15 @@ export async function enrichTitlesLite(
   const { rps = 8, concurrency = 6, candidates: maxCandidates = 4 } = opts;
   const gate = startGate(Math.round(1000 / rps));
 
-  async function pacedGet(pathAndQuery: string): Promise<any | null> {
+  async function pacedGet(pathAndQuery: string, force = false): Promise<any | null> {
     // Cache hits skip the rate gate entirely — re-runs must not pay network
     // pacing for responses already on disk (was: ~30 min of pure sleeping).
-    const cached = readTmdbCache(pathAndQuery);
-    if (cached !== undefined) return cached;
+    if (!force) {
+      const cached = readTmdbCache(pathAndQuery);
+      if (cached !== undefined) return cached;
+    }
     await gate();
-    return tmdbGet(pathAndQuery, apiKey);
+    return tmdbGet(pathAndQuery, apiKey, { force });
   }
 
   let matched = 0;
@@ -169,10 +179,15 @@ export async function enrichTitlesLite(
         matched++;
         continue;
       }
+      // current-year churn zone: bypass the search cache so a TMDB retitle can
+      // never wedge a title out of enrichment (Ramayana: Part 1 lost its match
+      // for three months to a cached empty search from a mid-retitle window)
+      const fresh = needsFreshSearch(record);
       const kind = record.kind === 'movie' ? 'movie' : 'tv';
       const yearParam = kind === 'movie' ? `&year=${record.year}` : `&first_air_date_year=${record.year}`;
       const search = await pacedGet(
         `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false${yearParam}`,
+        fresh,
       );
 
       // validate the top candidates against Wikipedia names so same-year
@@ -201,8 +216,11 @@ export async function enrichTitlesLite(
       if (!hit?.id) continue;
       matched++;
       record.tmdbId = hit.id;
-      // same URL shape as the candidate probes → one cache key per title
-      const details = hitDetails ?? (await pacedGet(liteDetailsUrl(kind, hit.id)));
+      // same URL shape as the candidate probes → one cache key per title.
+      // A fresh-forced search means churn-zone title: prefer a fresh details
+      // payload over the cached probe result so re-matches heal fully (the
+      // stale Ramayana payload predated release — 0 votes, old title).
+      const details = (!fresh && hitDetails) || (await pacedGet(liteDetailsUrl(kind, hit.id), fresh));
       // TMDB intermittently serves CACHE-EMPTY video appends for an exact URL
       // (verified live: same movie, short list → 2 videos, our list → 0). The
       // dedicated /videos endpoint is a different cache entry — refill the
@@ -248,11 +266,17 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
 
   for (const record of titles) {
     const kind = record.kind === 'movie' ? 'movie' : 'tv';
+    // current-year churn zone: fresh (uncached) SEARCH for titles without a
+    // match yet — retitles cluster pre-release (Ramayana: Part 1). Details
+    // heal separately: the orphan sweep + 45-day freshness plan invalidate
+    // their cache shapes in the tmdb-changes step.
+    const fresh = needsFreshSearch(record);
     // year filter is what prevents "Toxic" (Kannada 2026) matching some other "Toxic"
     const yearParam = kind === 'movie' ? `&year=${record.year}` : `&first_air_date_year=${record.year}`;
     const search = await tmdbGet(
       `/search/${kind}?query=${encodeURIComponent(record.title)}&include_adult=false${yearParam}`,
       apiKey,
+      { force: fresh },
     );
 
     // validate candidates against our Wikipedia names (directors + cast) so a
@@ -261,7 +285,9 @@ export async function enrichTitles(titles: TitleRecord[], dirty: Set<number> = n
     let hit: TmdbSearchResult | null = null;
     let bestScore = -1;
     for (const candidate of ((search?.results ?? []) as TmdbSearchResult[]).slice(0, 4)) {
-      const det = await tmdbGet(`/${kind}/${candidate.id}?append_to_response=credits`, apiKey);
+      // shared bounded URL builder (same probe shape as the archive-lite pass —
+      // hand-written shapes drift from the invalidation's, see tmdb-lib)
+      const det = await tmdbGet(liteDetailsUrl(kind, candidate.id), apiKey);
       const credits: TmdbCredits | undefined = det?.credits ?? (det ? { crew: det.crew, cast: det.cast } : undefined);
       const score = scoreNameOverlap(credits, wikiNames) + languageBonus(det?.original_language, record.language);
       if (score > bestScore) {
