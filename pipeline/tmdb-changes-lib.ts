@@ -90,22 +90,28 @@ export function planOrphanSweep(
   return plan;
 }
 
-/** Titles released within `windowDays` of today — their ratings move fastest
- *  (votes accumulate right after release) and the /changes feed is LOSSY for
- *  them (10k/day result cap vs our ~21k tracked ids), so we force-refresh
- *  their TMDB details on every run instead of waiting for a change flag. */
+/** Titles released within `windowDays` of today (ratings move fastest right
+ *  after release) AND titles releasing within the next `forwardWindowDays`
+ *  (the pre-release churn zone: retitles, new trailers and merges land while
+ *  marketing ramps — the Ramayana window). Both force-refresh their TMDB
+ *  details on every run because the /changes feed is LOSSY for them (10k/day
+ *  result cap vs our ~21k tracked ids). The forward cap exists to bound a
+ *  pathological wiki date (a 2199 typo would otherwise refresh forever). */
 export function planFreshnessRefresh(
   tracked: TrackedTitle[],
   todayIso: string,
   windowDays = 45,
+  forwardWindowDays = 548,
 ): TmdbInvalidation[] {
-  // derive the cutoff from todayIso (the caller's clock), not Date.now():
+  // derive the cutoffs from todayIso (the caller's clock), not Date.now():
   // the function stays deterministic for its declared inputs
-  const cutoff = new Date(new Date(todayIso).getTime() - windowDays * 86_400_000).toISOString().slice(0, 10);
+  const day = (offset: number) => new Date(new Date(todayIso).getTime() + offset * 86_400_000).toISOString().slice(0, 10);
+  const cutoff = day(-windowDays);
+  const forwardCutoff = day(forwardWindowDays);
   const plan: TmdbInvalidation[] = [];
   for (const title of tracked) {
     if (!title.tmdbId || !title.releaseDate) continue;
-    if (title.releaseDate < cutoff || title.releaseDate > todayIso) continue; // only released, recent
+    if (title.releaseDate < cutoff || title.releaseDate > forwardCutoff) continue; // recent or upcoming only
     plan.push({
       kind: title.kind === 'movie' ? 'movie' : 'tv',
       tmdbId: title.tmdbId,

@@ -2065,3 +2065,31 @@ incl. numeric-guard + liteDetailsUrl variants; do NOT burn more attempts,
 hand off. SHA1 cache-key advisories = triaged false positive (Nov-15 ledger
 batch-triage-20261115b-manual). Handoff commit includes the uncommitted
 Nov-15 MEMORY.md consolidation (it survived the restart — tracked file).
+
+Session 59 closeout: user committed+pushed bcd024a (8 files, +360/−47) and
+dispatched refresh-daily (run 44286918782 on bcd024a; my duplicate 44286965098
+cancelled). gh run watch running in background — on completion verify
+/movies/ramayana-part-1/ shows themoviedb link + trailer (night 1) and expect
+rating 7.5/57 votes + new title tomorrow night via freshness. Next session
+sweep: confirm both landed.
+
+Session 59 HEAL CONFIRMED (run 44286918782, success, ~3h): live page
+/movies/ramayana-part-1/ now carries themoviedb.org/movie/656908 + a YouTube
+trailer (AYkPRN874m8, from CI's cached pool). Orphan sweep first live run
+deleted 48 orphaned entries (Ramayana-class stale caches). Docs 39,413
+(+1, healthy). TOMORROW's scheduled runs land rating 7.5/57 votes + new title
+"Ramayana: Rise of a Legend" + live 34-video pool via freshness window —
+verify at next session sweep. Issue 7 fully closed pending that check.
+
+Session 59 addendum ("ok" follow-up): planFreshnessRefresh now ALSO sweeps
+UPCOMING releases (forwardWindowDays=548 cap, 18-month data-error guard) —
+pre-release titles get daily details refresh (new trailers/retitles land the
+night they appear; trailer overwrite rides tmdb-dirty). This closes the
+pre-release gap the Mimosa-blocked catalogue force-line left, through the
+scanner-clean lib file — the blocked line is formally RETIRED as unneeded.
+342 tests. Freshness contract change: "recent OR upcoming within window",
+date-relative fixtures extended. Heals also accelerate: any re-match with a
+dated release gets fresh details on the NEXT tmdb-changes run regardless of
+the change-list window. Note: scheduled slots queue-delayed 6-9h lately
+(Nov 17 runs executed 23:49/14:22 UTC) — the "today 17:15" slot may land
+late tonight; rating-7.5 verification belongs to the next session sweep.

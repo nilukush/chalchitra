@@ -35,7 +35,7 @@ describe('planTmdbRefresh', () => {
   });
 });
 
-describe('planFreshnessRefresh (recent-release force refresh)', () => {
+describe('planFreshnessRefresh (recent + upcoming force refresh)', () => {
   // date-RELATIVE fixtures: frozen 2026-09 dates rotted once the calendar
   // moved past their 45-day window — derive everything from todayIso
   const today = new Date().toISOString().slice(0, 10);
@@ -44,13 +44,13 @@ describe('planFreshnessRefresh (recent-release force refresh)', () => {
   const tracked = [
     { tmdbId: 1, kind: 'movie' as const, releaseDate: daysAgo(6) },    // 6 days old → in
     { tmdbId: 2, kind: 'movie' as const, releaseDate: daysAgo(120) },  // months old → out
-    { tmdbId: 3, kind: 'series' as const, releaseDate: daysAhead(7) }, // future → out
+    { tmdbId: 3, kind: 'series' as const, releaseDate: daysAhead(7) }, // upcoming → in (pre-release churn zone: trailers/retitles land before release — the Ramayana window)
     { tmdbId: 4, kind: 'movie' as const },                             // no date → out
   ];
 
   it('flags released titles within the 45-day window with every cache shape', () => {
     const plan = planFreshnessRefresh(tracked, today);
-    expect(plan.map((p) => p.tmdbId)).toEqual([1]);
+    expect(plan.map((p) => p.tmdbId)).toEqual([1, 3]);
     expect(plan[0].urls.some((u) => u.startsWith('/movie/1?language=en-US&append_to_response=videos&'))).toBe(true);
     expect(plan[0].urls.some((u) => u.startsWith('/movie/1/videos?language=en-US&include_video_language='))).toBe(true);
   });
@@ -64,6 +64,17 @@ describe('planFreshnessRefresh (recent-release force refresh)', () => {
       today,
     );
     expect(plan.map((p) => p.tmdbId)).toEqual([11]);
+  });
+
+  it('includes an upcoming title (pre-release details churn daily) but caps absurd far-future dates', () => {
+    const plan = planFreshnessRefresh(
+      [
+        { tmdbId: 20, kind: 'movie' as const, releaseDate: daysAhead(30) },
+        { tmdbId: 21, kind: 'movie' as const, releaseDate: daysAhead(600) }, // > 18-month forward cap (data-error guard)
+      ],
+      today,
+    );
+    expect(plan.map((p) => p.tmdbId)).toEqual([20]);
   });
 });
 
