@@ -41,7 +41,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, isMainspaceTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, isMainspaceTitle, mergeAdmittedTitles, toTitleSummary, wikiUrlFor, type AdmittedTitle } from './dataset-lib.js';
 import { classifyTitlePage, shouldEvictNonIndian } from './classify-title.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
@@ -252,8 +252,25 @@ async function main() {
   console.log('→ Loading titles & cached pages…');
   const titles = JSON.parse(readFileSync(path.join(DATA, 'titles.json'), 'utf8'));
   const catalogueYear: number = titles.catalogueYear ?? new Date().getFullYear();
-  const movieTitles: string[] = titles.movies.map((m: any) => m.title);
-  const seriesTitles: string[] = titles.series.map((s: any) => s.title);
+  let movieTitles: string[] = titles.movies.map((m: any) => m.title);
+  let seriesTitles: string[] = titles.series.map((s: any) => s.title);
+  // admit watchlist (data/cache/extra-titles.json, written by pipeline:admit):
+  // reported-missing titles admitted pageid-anchored. Lives in data/cache so
+  // it rides the seed release + actions cache — nightly rebuilds keep them.
+  const watchlistPath = path.join(DATA, 'cache', 'extra-titles.json');
+  let admittedTitles: AdmittedTitle[] = [];
+  if (existsSync(watchlistPath)) {
+    try {
+      admittedTitles = JSON.parse(readFileSync(watchlistPath, 'utf8')).titles ?? [];
+    } catch {
+      // a corrupt watchlist must never fail the build — the guard below
+      // filters junk entries
+    }
+  }
+  const mergedAdmits = mergeAdmittedTitles(movieTitles, seriesTitles, admittedTitles);
+  movieTitles = mergedAdmits.movies;
+  seriesTitles = mergedAdmits.series;
+  const admittedByTitle = mergedAdmits.byTitle;
   // entries from GLOBAL debuts categories (worldwide membership) — classify
   // them before admitting; Indian-root entries are trusted as before
   const indiaCheckTitles = new Set<string>(
@@ -289,10 +306,20 @@ async function main() {
       if ('reject' in verdict) { globalRootRejected++; continue; }
     }
     const slug = kind === 'movie' ? movieRegistry.slug(wikiTitle, page.pageid) : seriesRegistry.slug(wikiTitle, page.pageid);
-    const record = parseTitlePage(kind, wikiTitle, page, slug);
+    const box = parseInfobox(page.wikitext) ?? {};
+    // admitted titles carry their REAL year (not the catalogue year) and the
+    // wave archive tier: a 2024 admit lands as back-catalogue with a page,
+    // a current-year admit reaches the homepage rails
+    const admitted = admittedByTitle.get(wikiTitle);
+    const record = admitted
+      ? (() => {
+          const rel = parseStartDate(box.released) ?? parseStartDate(box.first_aired);
+          const year = rel ? Number(String(rel).slice(0, 4)) : undefined;
+          return parseTitlePage(kind, wikiTitle, page, slug, { year, archive: archiveTierForWaveYear(year, catalogueYear) });
+        })()
+      : parseTitlePage(kind, wikiTitle, page, slug);
     (kind === 'movie' ? movies : series).push(record);
 
-    const box = parseInfobox(page.wikitext) ?? {};
     const cast = extractCast(page.wikitext);
     titleCast.set(wikiTitle, cast);
     const links = collectPersonLinks(box, cast, [...CREW_FIELDS, 'starring']);
@@ -304,7 +331,7 @@ async function main() {
     for (const member of cast) if (member.wikiTitle) personLinkTargets.add(member.wikiTitle);
   }
 
-  console.log(`→ Parsed ${movies.length} movies, ${series.length} series${globalRootRejected > 0 ? ` (global roots: ${globalRootRejected} non-Indian skipped)` : ''}${nonMainspaceSkipped > 0 ? ` (${nonMainspaceSkipped} non-mainspace skipped)` : ''}`);
+  console.log(`→ Parsed ${movies.length} movies, ${series.length} series${globalRootRejected > 0 ? ` (global roots: ${globalRootRejected} non-Indian skipped)` : ''}${nonMainspaceSkipped > 0 ? ` (${nonMainspaceSkipped} non-mainspace skipped)` : ''}${admittedByTitle.size > 0 ? ` (+${admittedByTitle.size} admitted)` : ''}`);
   console.log(`→ Discovering ${personLinkTargets.size} candidate person pages…`);
   const candidates = [...personLinkTargets];
   const personPages = await fetchPages(candidates, (d, t) => {

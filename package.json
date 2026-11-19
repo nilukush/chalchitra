@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "pipeline:titles": "tsx pipeline/extract-titles.ts",
+    "pipeline:admit": "tsx pipeline/admit.ts",
     "pipeline:fetch": "tsx pipeline/fetch-pages.ts",
     "pipeline:dataset": "tsx pipeline/build-dataset.ts",
     "pipeline:trends": "tsx pipeline/fetch-trends.ts",

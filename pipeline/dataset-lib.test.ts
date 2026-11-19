@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, isMainspaceTitle, isNonTitleTargetName, mergeSeriesRoots, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, isMainspaceTitle, mergeAdmittedTitles, isNonTitleTargetName, mergeSeriesRoots, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -430,6 +430,43 @@ describe('isMainspaceTitle (Issue 8: draft-namespace guard)', () => {
   it('tolerates whitespace around the colon like MediaWiki does', () => {
     expect(isMainspaceTitle('Draft : Partner')).toBe(false);
     expect(isMainspaceTitle('  Draft:Partner')).toBe(false);
+  });
+});
+
+describe('mergeAdmittedTitles (admit watchlist merge)', () => {
+  const walkMovies = ['Matka King'];
+  const walkSeries = ['Mayasabha'];
+  const pyre = { title: 'Pyre (film)', pageid: 79483994, kind: 'movie' as const, admittedAt: '2026-11-19T00:00:00.000Z' };
+  const laapataa = { title: 'Laapataa Ladies', pageid: 1, kind: 'movie' as const };
+
+  it('appends watchlist titles to the right kind list', () => {
+    const merged = mergeAdmittedTitles(walkMovies, walkSeries, [pyre, { ...laapataa, kind: 'series' }]);
+    expect(merged.movies).toEqual(['Matka King', 'Pyre (film)']);
+    expect(merged.series).toEqual(['Mayasabha', 'Laapataa Ladies']);
+  });
+
+  it('dedupes against the category walk by title (a film that gains its category entry hands over cleanly)', () => {
+    const merged = mergeAdmittedTitles([...walkMovies, 'Pyre (film)'], walkSeries, [pyre]);
+    expect(merged.movies.filter((t) => t === 'Pyre (film)')).toHaveLength(1);
+    expect(merged.byTitle.has('Pyre (film)')).toBe(false); // walk-owned now, no admit opts
+  });
+
+  it('dedupes watchlist entries by pageid so a re-admit is a no-op', () => {
+    const merged = mergeAdmittedTitles(walkMovies, walkSeries, [pyre, { ...pyre, title: 'Pyre (film) ' }]);
+    expect(merged.movies.filter((t) => t === 'Pyre (film)')).toHaveLength(1);
+  });
+
+  it('keeps the byTitle map aligned with only the appended entries', () => {
+    const merged = mergeAdmittedTitles(walkMovies, walkSeries, [pyre]);
+    expect(merged.byTitle.get('Pyre (film)')).toEqual(pyre);
+    expect(merged.byTitle.has('Matka King')).toBe(false);
+  });
+
+  it('tolerates an empty watchlist', () => {
+    const merged = mergeAdmittedTitles(walkMovies, walkSeries, []);
+    expect(merged.movies).toEqual(walkMovies);
+    expect(merged.series).toEqual(walkSeries);
+    expect(merged.byTitle.size).toBe(0);
   });
 });
 

@@ -84,6 +84,45 @@ export function isMainspaceTitle(title: string | undefined | null): boolean {
   return !!title && !NON_MAINSPACE_PREFIX_RE.test(title.trim());
 }
 
+/** One entry of the admit watchlist (data/cache/extra-titles.json): a title
+ *  reported missing and admitted by `pipeline:admit` (pageid-anchored,
+ *  classify-gated). The file lives in data/cache so it rides the seed
+ *  release and CI's actions cache — nightly rebuilds keep admitted titles. */
+export interface AdmittedTitle {
+  title: string;
+  pageid: number;
+  kind: 'movie' | 'series';
+  admittedAt?: string;
+}
+
+/** Merge the admit watchlist into the category-walk title lists (Pyre
+ *  class: a film outside the current-year walk that no covered person
+ *  references yet). Entries already covered by the walk are dropped from
+ *  the merge — the day Wikipedia categorizes the film, ownership passes to
+ *  the walk with zero duplicates. Re-admitting the same pageid twice is a
+ *  no-op. Returns the appended lists plus a byTitle map the build uses to
+ *  give admitted titles their real year and archive tier. */
+export function mergeAdmittedTitles(
+  movies: string[],
+  series: string[],
+  admitted: AdmittedTitle[],
+): { movies: string[]; series: string[]; byTitle: Map<string, AdmittedTitle> } {
+  const outMovies = [...movies];
+  const outSeries = [...series];
+  const walk = new Set([...movies, ...series]);
+  const byTitle = new Map<string, AdmittedTitle>();
+  const seenPageIds = new Set<number>();
+  for (const entry of admitted) {
+    if (!entry?.title || !(entry.pageid > 0)) continue;
+    if (walk.has(entry.title) || byTitle.has(entry.title)) continue;
+    if (seenPageIds.has(entry.pageid)) continue;
+    seenPageIds.add(entry.pageid);
+    byTitle.set(entry.title, entry);
+    (entry.kind === 'series' ? outSeries : outMovies).push(entry.title);
+  }
+  return { movies: outMovies, series: outSeries, byTitle };
+}
+
 /** A person counts as Indian-cinema when any filmography row/section carries
  *  an Indian-language marker — used to weight expansion targets: works cited
  *  only by foreign persons (Stallone-class cameos importing whole Hollywood
