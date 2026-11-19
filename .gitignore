@@ -20,6 +20,13 @@ data/titles/
 /docs/ISSUES.md
 /docs/
 
+# local-only project docs (user instruction: these should not be in git)
+/CLAUDE.md
+/AGENTS.md
+/MEMORY.md
+/ANALYSIS.md
+/PLAN.md
+
 # agent-tooling local state (Mimosa scans/ledger, ZCode session dirs)
 .mimosa/
 .zcode/
