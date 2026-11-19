@@ -8,3 +8,13 @@
 # series:mushk
 # series:rasm-e-duniya
 # movie:shadi-aur-tum-say
+# Issue 8 (docs/ISSUES.md, 2026-11-19): draft-namespace pages leave the
+# catalogue via the mainspace guard. The 8 live docs below predate the guard.
+movie:draft-dhabkaaro
+movie:draft-partner
+movie:draft-titans
+movie:draft-athimanoharam
+movie:draft-operation-cambodia
+movie:draft-merri-boys
+movie:draft-players
+person:draft-gangavathi-pranesh
