@@ -18,7 +18,7 @@ loadEnv();
 import { fetchPages, readCachedPage } from './wiki-api.js';
 import { classifyTitlePage } from './classify-title.js';
 import { loadPersons } from './persons-store.js';
-import { isNonTitleTargetName, personIsIndianCinema } from './dataset-lib.js';
+import { isMainspaceTitle, isNonTitleTargetName, personIsIndianCinema } from './dataset-lib.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = path.join(ROOT, 'data');
@@ -65,6 +65,9 @@ async function main() {
   const personTitles = new Set<string>(persons.map((p: any) => p.wikiTitle).filter(Boolean));
   const bump = (wikiTitle: string | undefined, year?: string, indian = false) => {
     if (!wikiTitle || catalogue.has(wikiTitle)) return;
+    // Issue 8: filmography rows can wikilink into Draft:/User:/… space —
+    // never enqueue a namespace-prefixed target
+    if (!isMainspaceTitle(wikiTitle)) return;
     if (personTitles.has(wikiTitle) || isNonTitleTargetName(wikiTitle)) return;
     const cur = targets.get(wikiTitle) ?? { refs: 0, year, indian };
     cur.refs++;
@@ -89,10 +92,11 @@ async function main() {
   let purged = 0;
   for (const [name, entry] of Object.entries(frontier.targets)) {
     if (entry.status !== 'pending') continue;
-    if (personTitles.has(name)) { entry.status = 'rejected'; entry.reason = 'filtered:person'; purged++; }
+    if (!isMainspaceTitle(name)) { entry.status = 'rejected'; entry.reason = 'filtered:namespace'; purged++; }
+    else if (personTitles.has(name)) { entry.status = 'rejected'; entry.reason = 'filtered:person'; purged++; }
     else if (isNonTitleTargetName(name)) { entry.status = 'rejected'; entry.reason = 'filtered:pattern'; purged++; }
   }
-  if (purged > 0) console.log(`  pre-fetch filters: ${purged} pending entries retired (person/award/season links)`);
+  if (purged > 0) console.log(`  pre-fetch filters: ${purged} pending entries retired (person/award/season/namespace links)`);
 
   const names = [...targets.keys()].sort();
   for (const name of names) {
@@ -113,6 +117,17 @@ async function main() {
     if (entry.pageid <= 0 || (entry.status !== 'accepted' && entry.status !== 'rejected')) continue;
     const page = readCachedPage(entry.pageid);
     if (!page?.wikitext) continue;
+    // Issue 8: a draftified page keeps its pageid under a Draft: title — the
+    // content verdict is irrelevant until it returns to mainspace (refresh
+    // updates page.title, so this flips back the day the draft is accepted)
+    if (!isMainspaceTitle(page.title)) {
+      if (entry.status === 'accepted') {
+        entry.status = 'rejected';
+        entry.reason = 'filtered:namespace';
+        reclassified++;
+      }
+      continue;
+    }
     const verdict = classifyTitlePage(page.wikitext);
     if ('reject' in verdict) {
       if (entry.status === 'accepted') {
@@ -184,6 +199,12 @@ async function main() {
     }
     entry.pageid = page.pageid;
     entry.finalTitle = page.title;
+    // Issue 8: a wikilink can resolve into a namespace we never catalogue
+    if (!isMainspaceTitle(page.title)) {
+      entry.status = 'rejected';
+      entry.reason = 'filtered:namespace';
+      continue;
+    }
     const verdict = classifyTitlePage(page.wikitext);
     if ('reject' in verdict) {
       entry.status = 'rejected';

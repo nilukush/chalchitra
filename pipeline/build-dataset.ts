@@ -41,7 +41,7 @@ import { loadEnv } from './env.js';
 
 loadEnv();
 import { fetchPages, readCachedPage, resolveImageThumbUrls, type CachedPage } from './wiki-api.js';
-import { SlugRegistry, archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
+import { SlugRegistry, archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, chunkPersons, computeKnownFor, computeSlugRedirects, displayTitle, isMainspaceTitle, toTitleSummary, wikiUrlFor } from './dataset-lib.js';
 import { classifyTitlePage, shouldEvictNonIndian } from './classify-title.js';
 import type { PersonRecord, SiteStats, TitleRecord } from './types.js';
 
@@ -274,9 +274,13 @@ async function main() {
   const titleCrew = new Map<string, { name: string; role: string; target: string }[]>();
 
   let globalRootRejected = 0;
+  let nonMainspaceSkipped = 0;
   for (const [wikiTitle, page] of titlePages) {
     const kind = movieTitles.includes(wikiTitle) ? 'movie' : 'series';
     if (page.missing || !page.wikitext) continue;
+    // Issue 8: a draftified article keeps its pageid under a Draft:/Talk:…
+    // title; the category walk drops it but cached fetches can still carry it
+    if (!isMainspaceTitle(page.title ?? wikiTitle)) { nonMainspaceSkipped++; continue; }
     if (kind === 'series' && indiaCheckTitles.has(wikiTitle)) {
       // global-root entry: worldwide membership, so gate on Indian-ness.
       // classifyTitlePage's own kind verdict is ignored — the root it came
@@ -300,7 +304,7 @@ async function main() {
     for (const member of cast) if (member.wikiTitle) personLinkTargets.add(member.wikiTitle);
   }
 
-  console.log(`→ Parsed ${movies.length} movies, ${series.length} series${globalRootRejected > 0 ? ` (global roots: ${globalRootRejected} non-Indian skipped)` : ''}`);
+  console.log(`→ Parsed ${movies.length} movies, ${series.length} series${globalRootRejected > 0 ? ` (global roots: ${globalRootRejected} non-Indian skipped)` : ''}${nonMainspaceSkipped > 0 ? ` (${nonMainspaceSkipped} non-mainspace skipped)` : ''}`);
   console.log(`→ Discovering ${personLinkTargets.size} candidate person pages…`);
   const candidates = [...personLinkTargets];
   const personPages = await fetchPages(candidates, (d, t) => {
@@ -312,6 +316,9 @@ async function main() {
   const finalPersons = new Map<string, CachedPage>();
   for (const [requested, page] of personPages) {
     if (page.missing || !page.wikitext || page.pageid <= 0) continue;
+    // Issue 8: draftified persons (pageid survives under Draft:Foo) never
+    // become person records; the link-out stays a plain chip until mainspace
+    if (!isMainspaceTitle(page.title)) continue;
     canonical.set(requested, page.title);
     if (!finalPersons.has(page.title)) finalPersons.set(page.title, page);
   }
@@ -331,7 +338,10 @@ async function main() {
       if (entry.status !== 'accepted' || entry.pageid <= 0) continue;
       const page = readCachedPage(entry.pageid);
       if (!page?.wikitext) continue;
-      const finalTitle = entry.finalTitle ?? page.title;
+      // page.title is authoritative (refresh updates it on moves/draftify);
+      // the frontier's stored finalTitle can lag — Issue 8 guard rides on it
+      const finalTitle = page.title ?? entry.finalTitle;
+      if (!isMainspaceTitle(finalTitle)) continue;
       canonical.set(requested, finalTitle);
       if (!finalPersons.has(finalTitle)) {
         finalPersons.set(finalTitle, page);
@@ -546,6 +556,10 @@ async function main() {
       // page.title is authoritative (Wikipedia renames update it via refresh);
       // the frontier's stored finalTitle can lag a move
       const finalTitle = page.title ?? entry.finalTitle ?? requested;
+      // Issue 8: drafts admitted by filmography links and wave titles
+      // draftified after acceptance never become archive pages; a draft
+      // accepted back to mainspace re-enters here under its clean title
+      if (!isMainspaceTitle(finalTitle)) continue;
       if (seenFinal.has(finalTitle)) continue;
       seenPageIds.add(entry.pageid);
       titlePages.set(finalTitle, page); // poster resolution + plot-link lookup

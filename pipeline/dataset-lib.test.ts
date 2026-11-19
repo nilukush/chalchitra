@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, isNonTitleTargetName, mergeSeriesRoots, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
+import { archiveTierForWaveYear, bucketKeyForSlug, buildSearchDocuments, isMainspaceTitle, isNonTitleTargetName, mergeSeriesRoots, personIsIndianCinema, computeSlugRedirects, slugify, toTitleSummary, SlugRegistry, wikiUrlFor } from './dataset-lib.js';
 
 describe('slugify', () => {
   it('kebab-cases plain titles', () => {
@@ -392,6 +392,44 @@ describe('mergeSeriesRoots (global series roots)', () => {
     const merged = mergeSeriesRoots([], [[chumbak], [chumbak, devkhel]]);
     expect(merged.filter((e) => e.pageid === 2)).toHaveLength(1);
     expect(merged).toHaveLength(2);
+  });
+});
+
+describe('isMainspaceTitle (Issue 8: draft-namespace guard)', () => {
+  it('rejects draft-namespace titles in any case', () => {
+    expect(isMainspaceTitle('Draft:Partner')).toBe(false);
+    expect(isMainspaceTitle('draft:athimanoharam')).toBe(false);
+    expect(isMainspaceTitle('DRAFT: Merri Boys')).toBe(false);
+  });
+
+  it('rejects other non-mainspace namespaces and their talk variants', () => {
+    for (const t of [
+      'Draft talk:Partner', 'User:Sandbox', 'User talk:Editor', 'Wikipedia:AFD/Foo',
+      'Wikipedia talk:X', 'Template:Infobox film', 'Category:2026 films',
+      'File:Poster.jpg', 'Talk:Pyre (film)', 'Help:Contents', 'Portal:India',
+      'Special:AllPages', 'MediaWiki:Common.js', 'Module:Infobox',
+    ]) {
+      expect(isMainspaceTitle(t)).toBe(false);
+    }
+  });
+
+  it('keeps mainspace titles, including colon-carrying film names', () => {
+    expect(isMainspaceTitle('Ramayana: Part 1')).toBe(true);
+    expect(isMainspaceTitle('Dhurandhar: The Revenge')).toBe(true);
+    expect(isMainspaceTitle('Pyre (film)')).toBe(true);
+    expect(isMainspaceTitle('Draft Day')).toBe(true); // film NAME, no namespace colon
+    expect(isMainspaceTitle('Players 2')).toBe(true);
+  });
+
+  it('rejects empty or missing titles', () => {
+    expect(isMainspaceTitle('')).toBe(false);
+    expect(isMainspaceTitle(undefined)).toBe(false);
+    expect(isMainspaceTitle(null)).toBe(false);
+  });
+
+  it('tolerates whitespace around the colon like MediaWiki does', () => {
+    expect(isMainspaceTitle('Draft : Partner')).toBe(false);
+    expect(isMainspaceTitle('  Draft:Partner')).toBe(false);
   });
 });
 

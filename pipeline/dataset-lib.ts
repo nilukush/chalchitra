@@ -61,6 +61,29 @@ export function isNonTitleTargetName(name: string): boolean {
   );
 }
 
+/** Namespace prefixes that can never head a mainspace article title. A real
+ *  film name may contain a colon ("Ramayana: Part 1") but never STARTS with
+ *  one of these canonical namespace names (Issue 8). Talk variants listed
+ *  before their base so the regex alternation matches the longest form. */
+const NON_MAINSPACE_NAMESPACES = [
+  'draft talk', 'user talk', 'wikipedia talk', 'file talk', 'template talk',
+  'category talk', 'portal talk', 'help talk', 'mediawiki talk', 'module talk',
+  'book talk', 'gadget talk', 'wikiproject talk',
+  'draft', 'user', 'wikipedia', 'file', 'image', 'media', 'template',
+  'category', 'portal', 'help', 'mediawiki', 'module', 'book', 'gadget',
+  'wikiproject', 'topic', 'talk', 'special',
+];
+const NON_MAINSPACE_PREFIX_RE = new RegExp(`^(?:${NON_MAINSPACE_NAMESPACES.join('|')})\\s*:`, 'i');
+
+/** Mainspace gate for every Wikipedia-derived record (Issue 8): filmography
+ *  links into Draft:/User:/… space and post-fetch editor draftifications must
+ *  never become catalogue pages. Checked on the page's CURRENT title, so the
+ *  guard self-heals both directions: a draft accepted back to mainspace
+ *  returns under its clean title, a draftified page leaves the corpus. */
+export function isMainspaceTitle(title: string | undefined | null): boolean {
+  return !!title && !NON_MAINSPACE_PREFIX_RE.test(title.trim());
+}
+
 /** A person counts as Indian-cinema when any filmography row/section carries
  *  an Indian-language marker — used to weight expansion targets: works cited
  *  only by foreign persons (Stallone-class cameos importing whole Hollywood

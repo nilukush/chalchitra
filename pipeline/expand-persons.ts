@@ -21,6 +21,7 @@ import { loadEnv } from './env.js';
 loadEnv();
 import { fetchPages, readCachedPage } from './wiki-api.js';
 import { classifyPersonPage } from './classify-person.js';
+import { isMainspaceTitle } from './dataset-lib.js';
 import { loadPersons } from './persons-store.js';
 import { extractCast, collectPersonLinks, parseInfobox } from './wikitext/index.js';
 
@@ -68,6 +69,8 @@ function discoverPersonTargets(): Map<string, number> {
     // interwiki-prefixed links (":ml:…", ":te::…") point at other-language
     // wikis — not fetchable on en.wikipedia; they pollute the pending pool
     if (!wikiTitle || /^:[a-z]{2,3}:/i.test(wikiTitle) || knownTitles.has(wikiTitle) || knownPersons.has(wikiTitle)) return;
+    // Issue 8: cast/crew links into Draft:/User:/… space stay out of the pool
+    if (!isMainspaceTitle(wikiTitle)) return;
     targets.set(wikiTitle, (targets.get(wikiTitle) ?? 0) + 1);
   };
 
@@ -91,28 +94,47 @@ async function main() {
   const frontier = loadFrontier();
   // sweep: retire interwiki-prefixed pendings from before the filter existed
   for (const [name, entry] of Object.entries(frontier.targets)) {
-    if (entry.status === 'pending' && /^:[a-z]{2,3}:/i.test(name)) {
+    if (entry.status !== 'pending') continue;
+    if (/^:[a-z]{2,3}:/i.test(name)) {
       entry.status = 'rejected';
       entry.reason = 'interwiki';
+    } else if (!isMainspaceTitle(name)) {
+      // Issue 8: namespace-prefixed person targets never get fetched
+      entry.status = 'rejected';
+      entry.reason = 'filtered:namespace';
     }
   }
   // sweep: classifier fixes can rescue previously-rejected people (e.g.
   // actor-politicians whose articles lead with {{Infobox officeholder}}) —
   // re-run classification on rejected entries whose pages are already
   // cached; purely local, no network involved.
+  // Issue 8 rides first on the CURRENT cached title: draftified people flip
+  // to rejected, and a draft accepted back to mainspace becomes rescuable
+  // again (refresh keeps page.title current).
   let rescued = 0;
+  let draftified = 0;
   for (const entry of Object.values(frontier.targets)) {
-    if (entry.status !== 'rejected' || entry.pageid <= 0) continue;
+    if (entry.pageid <= 0) continue;
+    if (entry.status !== 'accepted' && entry.status !== 'rejected') continue;
     const page = readCachedPage(entry.pageid);
     if (!page?.wikitext) continue;
+    if (!isMainspaceTitle(page.title)) {
+      if (entry.status === 'accepted') {
+        entry.status = 'rejected';
+        entry.reason = 'filtered:namespace';
+        draftified++;
+      }
+      continue;
+    }
+    if (entry.status !== 'rejected') continue;
     if ('ok' in classifyPersonPage(page.wikitext)) {
       entry.status = 'accepted';
       delete entry.reason;
       rescued++;
     }
   }
-  if (rescued > 0) {
-    console.log(`  re-classification sweep: ${rescued} rejected → accepted (cached pages only)`);
+  if (rescued > 0 || draftified > 0) {
+    console.log(`  re-classification sweep: ${rescued} rejected → accepted, ${draftified} accepted → draftified-out (cached pages only)`);
     writeFileSync(FRONTIER_PATH, JSON.stringify(frontier));
   }
   const names = [...targets.keys()].sort();
@@ -181,6 +203,12 @@ async function main() {
     }
     entry.pageid = page.pageid;
     entry.finalTitle = page.title;
+    // Issue 8: a person wikilink can resolve into a namespace we never catalogue
+    if (!isMainspaceTitle(page.title)) {
+      entry.status = 'rejected';
+      entry.reason = 'filtered:namespace';
+      continue;
+    }
     const verdict = classifyPersonPage(page.wikitext);
     if ('reject' in verdict) {
       entry.status = 'rejected';
